@@ -31,7 +31,7 @@ def compile_prompt(src: Path, out: Path | None = None, mode: str = "inline",
     fm, body = load_frontmatter(entry)
 
     parts: list[str] = []
-    parts.append("<!-- 由 rulai-skill td.py compile-prompt 生成。\n"
+    parts.append("<!-- 由 rulai-distill td.py compile-prompt 生成。\n"
                  f"     mode={mode} 源={entry} 生成于 {now_iso()}\n"
                  "     这是压缩产物：完整分节与引用关系请以原技能包为准。 -->")
     parts.append(f"# {fm.get('title') or fm.get('name') or entry.parent.name}")
@@ -71,7 +71,7 @@ def compile_prompt(src: Path, out: Path | None = None, mode: str = "inline",
     out_path = Path(out) if out else entry.with_suffix(".prompt.md")
     out_path.write_text(text, encoding="utf-8")
     result = {
-        "schema": "rulai-skill/prompt-compile@1",
+        "schema": "rulai-distill/prompt-compile@1",
         "generated_at": now_iso(),
         "mode": mode,
         "entry": str(entry),

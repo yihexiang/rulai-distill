@@ -4,7 +4,7 @@
 ## 为什么有这一层
 
 v1.2.0 之前的错误：把上游的**算法**继承过来，却自己另定义了一套**数据契约**
-（`rulai-skill/*`）。结果分块器、编译器、registry 各说各话——契约的价值恰恰在于只有一套。
+（`rulai-distill/*`）。结果分块器、编译器、registry 各说各话——契约的价值恰恰在于只有一套。
 
 本模块把 `scripts/vendor/cangjie/schemas/` 里的 13 份 schema 变成**权威契约**：
 本包的产物**直接按它们产出**，并可用它们校验。校验优先用 `jsonschema`；
@@ -62,7 +62,7 @@ def schema_path(name: str) -> Path:
     p = CONTRACT_DIR / MAP[name]
     if not p.exists():
         raise ToolError(f"上游契约文件缺失：{p}",
-                        "本包应自带 vendored 副本；若被删除请重新安装 rulai-skill")
+                        "本包应自带 vendored 副本；若被删除请重新安装 rulai-distill")
     return p
 
 

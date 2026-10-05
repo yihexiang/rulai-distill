@@ -210,7 +210,7 @@ DEFECTS = [
      "对照上游 nuwa-skill 的 FIDELITY 三条铁律逐条清点时发现——"
      "前两条有代码，第三条只有散文",
      ["t_cross_review_gate"]),
-    ("全局副本同步", "改完项目目录没同步 `~/.workbuddy/skills/rulai-skill`，"
+    ("全局副本同步", "改完项目目录没同步 `~/.workbuddy/skills/rulai-distill`，"
      "技能实际加载的是旧版——cross-review 门禁、3 个 workflow、VENDOR.sha256 全都没生效",
      "回归测试跑的是项目目录，永远绿；**两处开发、无守卫**",
      "开发目录与已安装副本必须逐文件一致，由 `t_installed_copy_in_sync` 强制"

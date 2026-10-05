@@ -1,13 +1,13 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://rulai-skill.local/schemas/transcript.schema.json",
-  "title": "rulai-skill Transcript（带时间戳逐字稿）",
+  "$id": "https://rulai-distill.local/schemas/transcript.schema.json",
+  "title": "rulai-distill Transcript（带时间戳逐字稿）",
   "description": "td.py transcript 的 JSON 产物。时间戳可直接作为能力卡 source_locator。",
   "type": "object",
   "required": ["schema", "source", "cue_count", "paragraph_count", "paragraphs"],
   "additionalProperties": true,
   "properties": {
-    "schema": { "const": "rulai-skill/transcript@1" },
+    "schema": { "const": "rulai-distill/transcript@1" },
     "mode": { "enum": ["single", "merge"] },
     "source": { "type": "string" },
     "files": { "type": "array", "items": { "type": "string" } },

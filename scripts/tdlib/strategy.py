@@ -9,7 +9,7 @@
 为什么默认 single-first：一个包被拆成 8 个技能，触发面会互相污染；
 先用单一入口收敛，等触发评测证明「拆得动」再拆。这条策略的价值在于**默认保守**。
 
-输出可解释 decision report（rulai-skill/output-decision@1），每条理由都写清触发条件。
+输出可解释 decision report（rulai-distill/output-decision@1），每条理由都写清触发条件。
 """
 from __future__ import annotations
 
@@ -55,7 +55,7 @@ def decide(bundle_dir: Path, requested: str | None = None, purpose: str | None =
                    f"pack（{len(promoted)} 个独立可发现入口 + {len(router)} 张路由卡）")
 
     return {
-        "schema": "rulai-skill/output-decision@1",
+        "schema": "rulai-distill/output-decision@1",
         "policy": POLICY,
         "generated_at": now_iso(),
         "requested": requested,

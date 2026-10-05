@@ -1,6 +1,6 @@
 name: pipeline-check
 
-# rulai-skill 回归网。vendored 上游代码随之同步，测试必须仍全绿。
+# rulai-distill 回归网。vendored 上游代码随之同步，测试必须仍全绿。
 on:
   push:
     branches: [main, master]

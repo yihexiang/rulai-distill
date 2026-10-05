@@ -1,5 +1,5 @@
 ---
-name: rulai-skill
+name: rulai-distill
 description: |
   蒸馏工厂：把书籍/长视频/播客/访谈/人物素材蒸馏成可执行、可验证、可追溯的 Agent Skills。
   融合 RIA-TV++ 七阶段管线（cangjie）+ FIDELITY 独立双 Agent 出厂质检（nuwa）+ 认知植入结构（yeadon）。
@@ -12,7 +12,7 @@ metadata:
   license: MIT
 ---
 
-# rulai-skill · 蒸馏工厂
+# rulai-distill · 蒸馏工厂
 
 > 输入是内容，输出是**可执行 + 可验证 + 可追溯**的技能资产。
 

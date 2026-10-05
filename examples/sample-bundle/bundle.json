@@ -1,5 +1,5 @@
 {
-  "schema": "rulai-skill/bundle/v1",
+  "schema": "rulai-distill/bundle/v1",
   "version": "0.1.0",
   "source": {
     "material": "《孙子兵法·計篇》",

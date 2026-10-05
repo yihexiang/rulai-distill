@@ -1,5 +1,5 @@
 {
-  "schema": "rulai-skill/trigger-split@1",
+  "schema": "rulai-distill/trigger-split@1",
   "split_seed": 42,
   "train_ratio": 0.6,
   "train": [

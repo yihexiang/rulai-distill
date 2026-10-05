@@ -118,7 +118,7 @@ def diff_sources(a: Path, b: Path) -> dict:
         warn("change-set 未通过上游契约校验：" + "; ".join(cres["errors"][:3]))
 
     return {
-        "schema": "rulai-skill/diff@1",
+        "schema": "rulai-distill/diff@1",
         "change_set": str(cs_path) if cres["ok"] else None,
         "change_set_errors": [] if cres["ok"] else cres["errors"],
         "generated_at": now_iso(),
@@ -149,7 +149,7 @@ def impact_analysis(root: Path, slug: str) -> dict:
             refs += re.findall(rf"`{re.escape(slug)}`", body)
         if refs:
             hits.append({"skill": name, "file": str(path), "refs": sorted(set(refs))})
-    return {"schema": "rulai-skill/impact@1", "generated_at": now_iso(),
+    return {"schema": "rulai-distill/impact@1", "generated_at": now_iso(),
             "target": slug, "affected": hits, "affected_count": len(hits)}
 
 
@@ -183,7 +183,7 @@ def repair(dirpath: Path, apply: bool = False) -> dict:
             fixes.append({"file": str(path), "notes": notes})
             if apply:
                 path.write_text(new, encoding="utf-8")
-    return {"schema": "rulai-skill/repair@1", "generated_at": now_iso(),
+    return {"schema": "rulai-distill/repair@1", "generated_at": now_iso(),
             "applied": apply, "fixable": fixes, "count": len(fixes)}
 
 

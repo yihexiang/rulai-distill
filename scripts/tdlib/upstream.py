@@ -3,7 +3,7 @@
 
 ## 为什么保留上游代码而不是全部重写
 
-rulai-skill v1.1.0 曾把 cangjie 的能力**重新实现**一遍。实测核证后发现，
+rulai-distill v1.1.0 曾把 cangjie 的能力**重新实现**一遍。实测核证后发现，
 上游在四处确实更深，重写版本是**变浅**的：
 
 | 上游做法 | v1.1.0 的做法 | 后果 |
@@ -15,7 +15,7 @@ rulai-skill v1.1.0 曾把 cangjie 的能力**重新实现**一遍。实测核证
 
 **结论**：契约化与跨版本溯源确实是 cangjie 质量的主要来源，不是锦上添花。
 因此 v1.2.0 起，上游脚本以 **vendored 形式原样保留**（MIT，署名见 PROVENANCE.md），
-rulai-skill 自己的实现定位为「零依赖统一入口 + 上游没有的部分」。
+rulai-distill 自己的实现定位为「零依赖统一入口 + 上游没有的部分」。
 
 本模块负责：
   1. 体检 vendored 目录（是否齐全、依赖是否满足）
@@ -73,7 +73,7 @@ def _script_for(tool: str) -> Path:
     p = CANGJIE_DIR / MAPPING[tool][0]
     if not p.exists():
         raise ToolError(f"上游脚本缺失：{p}",
-                        "本包应自带 vendored 副本；若被删除请重新安装 rulai-skill")
+                        "本包应自带 vendored 副本；若被删除请重新安装 rulai-distill")
     return p
 
 

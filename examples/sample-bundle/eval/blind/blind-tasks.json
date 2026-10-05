@@ -1,5 +1,5 @@
 {
-  "schema": "rulai-skill/trigger-blind@1",
+  "schema": "rulai-distill/trigger-blind@1",
   "instruction": "对每条 prompt，从候选技能中选出唯一应激活的一项；都不适用则选 none。只输出 JSON。",
   "skills_in_scope": [
     {

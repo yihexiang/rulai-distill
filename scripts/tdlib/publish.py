@@ -6,7 +6,7 @@
   * pack   —— 每个能力一个独立 SKILL.md（默认）
   * single —— 编译为单一 SKILL.md + 能力卡目录（single-first 策略，见 strategy.py）
 
-关键安全属性（cangjie 同样具备，rulai-skill 保留并强化）：
+关键安全属性（cangjie 同样具备，rulai-distill 保留并强化）：
   * 拒绝绝对路径 / .. 逃逸 / 符号链接
   * FIDELITY 门槛不达标 → 拒绝发布（--force 可强发但 manifest 留 forced=true）
   * 发布前检测本地手工改动 → 拒绝静默覆盖（--overwrite 才放行）
@@ -232,7 +232,7 @@ def compile_bundle(bundle_path: Path, out: Path, allow_grade: str | None = None,
             _write_single_entry(staging, bundle, results, published)
 
         manifest = {
-            "schema": "rulai-skill/manifest/v1",
+            "schema": "rulai-distill/manifest/v1",
             "generator": "td.py compile",
             "mode": mode,
             "built_at": now_iso(),
@@ -274,7 +274,7 @@ def compile_bundle(bundle_path: Path, out: Path, allow_grade: str | None = None,
                 write_json(reg / f"{r['slug']}.json", entry)
         if td_meta.get("entries"):
             write_json(reg / "_td-meta.json", {
-                "schema": "rulai-skill/registry-meta@1",
+                "schema": "rulai-distill/registry-meta@1",
                 "note": "registry-entry-v2 是 additionalProperties:false，"
                         "本包自有的质检与溯源信息只能旁挂在此文件",
                 **td_meta,
@@ -361,7 +361,7 @@ def _registry_entry(bundle: dict, r: dict, manifest: dict, mode: str, staging: P
 def _summary(fm: dict, src: dict, r: dict) -> str:
     desc = str(fm.get("description") or "").strip()
     head = desc.splitlines()[0] if desc else ""
-    base = head or f"由 rulai-skill 从《{src.get('material', '未知素材')}》蒸馏的能力卡"
+    base = head or f"由 rulai-distill 从《{src.get('material', '未知素材')}》蒸馏的能力卡"
     return f"{base}（FIDELITY {r.get('fidelity_score')}/{r.get('fidelity_grade')}）"
 
 
@@ -446,7 +446,7 @@ def _write_single_entry(staging: Path, bundle: dict, results: list, published: d
         "name: " + str(bundle.get("source", {}).get("material", "distilled-pack")).lower()
         .replace(" ", "-").replace("《", "").replace("》", "")[:40] + "-pack",
         "description: |",
-        "  本包由 rulai-skill 蒸馏产出，包含以下能力的路由入口："
+        "  本包由 rulai-distill 蒸馏产出，包含以下能力的路由入口："
         + "、".join(r["slug"] for r in results[:6]),
         "  适用：在本包能力范围内的问题。不做：与上述能力无关的通用问答。",
         "---",

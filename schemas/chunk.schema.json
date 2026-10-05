@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://rulai-skill.local/schemas/chunk.schema.json",
-  "title": "rulai-skill Chunk（结构感知块）",
+  "$id": "https://rulai-distill.local/schemas/chunk.schema.json",
+  "title": "rulai-distill Chunk（结构感知块）",
   "description": "chunks.jsonl 的单行结构。由 td.py chunk 生成，chunk_id 在单个 sidecar 内唯一且稳定。",
   "type": "object",
   "required": ["chunk_id", "heading_path", "chars", "text"],

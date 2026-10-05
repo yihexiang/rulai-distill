@@ -22,7 +22,7 @@ from . import contracts
 from .util import (ToolError, count_tokens, ensure_dir, info, jaccard, ngrams, now_iso,
                    ok, read_json, read_text, token_source, warn, write_json)
 
-TRIGGER_SUITE_SCHEMA = "rulai-skill/testsuite/v1"
+TRIGGER_SUITE_SCHEMA = "rulai-distill/testsuite/v1"
 
 
 # --------------------------------------------------------------------------
@@ -123,7 +123,7 @@ def split_cases(suite: dict, seed: int | None = None, train_ratio: float | None 
     k = round(len(cases) * ratio)
     train = [_case_id(c) for c in cases[:k]]
     val = [_case_id(c) for c in cases[k:]]
-    return {"schema": "rulai-skill/trigger-split@1", "split_seed": seed,
+    return {"schema": "rulai-distill/trigger-split@1", "split_seed": seed,
             "train_ratio": ratio, "train": train, "validation": val,
             "note": "validation 在选版前保持隐藏；选版后只跑一次，否则结果没有意义"}
 
@@ -161,7 +161,7 @@ def prepare_blind(suite: dict, case_ids: list[str], out_dir: Path) -> Path:
     all_cases = _cases_of(suite)
     cases = [c for c in all_cases if not case_ids or _case_id(c) in case_ids]
     payload = {
-        "schema": "rulai-skill/trigger-blind@1",
+        "schema": "rulai-distill/trigger-blind@1",
         "instruction": "对每条 prompt，从候选技能中选出唯一应激活的一项；都不适用则选 none。只输出 JSON。",
         "skills_in_scope": suite.get("skills_in_scope", []),
         "cases": [{"case_id": _case_id(c), "prompt": c.get("prompt", "")} for c in cases],
@@ -256,7 +256,7 @@ def score_suite(suite: dict, answers: dict) -> dict:
         if r["status"] == "pass":
             agg["pass"] += 1
     return {
-        "schema": "rulai-skill/trigger-eval@1",
+        "schema": "rulai-distill/trigger-eval@1",
         "generated_at": now_iso(),
         "suite_id": suite.get("suite_id") or suite.get("package"),
         "target": suite.get("target"),
@@ -322,7 +322,7 @@ def export_failure_cases(cases: list[dict], out: Path) -> dict:
         r = contracts.validate("failure-case", c)
         (ok if r["ok"] else bad).append(c if r["ok"] else {"case": c, "errors": r["errors"]})
     report = {
-        "schema": "rulai-skill/failure-set@1",
+        "schema": "rulai-distill/failure-set@1",
         "generated_at": now_iso(),
         "total": len(cases),
         "valid": len(ok),
@@ -349,7 +349,7 @@ def output_eval(card: Path) -> dict:
     warns = [m for lvl, m in problems if lvl == "warn"]
     quote = re.findall(r"^>\s*[「\"](.+?)[」\"]", text, re.M)
     return {
-        "schema": "rulai-skill/output-eval@1",
+        "schema": "rulai-distill/output-eval@1",
         "generated_at": now_iso(),
         "card": str(card),
         "chars": len(text),
@@ -801,7 +801,7 @@ def verify_quotes(card: Path, corpus: Path) -> dict:
         verified.extend({"ref": f"@{v['ref']}", "quote": v["quote"]} for v in ts_verified)
 
     return {
-        "schema": "rulai-skill/quote-verification@1",
+        "schema": "rulai-distill/quote-verification@1",
         # 引用总数必须能**加总还原**，否则报告会自相矛盾（评分员抓过：
         # "核验通过 9 条但 quotes_checked=0"）。恒等式：
         #   refs_total = entry_refs + timestamp_refs
@@ -912,7 +912,7 @@ def audit_coverage(card: Path, corpus: Path, threshold: float = 0.60,
                      f"最低 cov={_min_cov}，距阈值 {_margin}，结论稳定。")
 
     return {
-        "schema": "rulai-skill/coverage-audit@2",
+        "schema": "rulai-distill/coverage-audit@2",
         "generated_at": now_iso(),
         "card": str(card), "corpus": str(corpus),
         "threshold": threshold,
@@ -955,7 +955,7 @@ def token_metrics(root: Path, enc: str = "cl100k_base") -> dict:
     totals = [e["tokens"] for e in entries]
     skill_files = [e for e in entries if e["file"].endswith("SKILL.md")]
     return {
-        "schema": "rulai-skill/token-metrics@1",
+        "schema": "rulai-distill/token-metrics@1",
         "generated_at": now_iso(),
         "root": str(root),
         "counter": token_source(),

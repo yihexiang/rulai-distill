@@ -8,7 +8,7 @@
 |---|---|---|---|---|
 | C1 | 「YouTube 访问在我这里已解决，字幕下载能力可以保留」 | 存在**可执行**的字幕获取命令，且**不得**以内网不可达为由省略 | `t_fetch_subtitle_exists`：`fetch-subtitle --help` 可用 + 无网络时降级为 dry-run 而非报错 | ✅ v1.2.0 |
 | C2 | 「完全具备仓颉 cangjie-skill 的完全能力」 | 上游 16 类能力逐项有归属（vendored / 自有 / 声明不做），**无未归属** | `t_upstream_coverage`：比对 `MAPPING` 与能力台账 | ✅ v1.2.0（算法层）<br>⚠️ 契约层未达成，见 C3 |
-| C3 | 「为什么不能直接使用它的代码，保留深度契约」 | 产物必须能**被上游 schema 校验**；不得另起一套并行的 `rulai-skill/*` 契约 | `t_contract_list` + `t_contract_source_document` + `t_contract_registry_entry` + `t_contract_source_manifest` + `t_contract_change_set` | ✅ **v1.4.0 达成** |
+| C3 | 「为什么不能直接使用它的代码，保留深度契约」 | 产物必须能**被上游 schema 校验**；不得另起一套并行的 `rulai-distill/*` 契约 | `t_contract_list` + `t_contract_source_document` + `t_contract_registry_entry` + `t_contract_source_manifest` + `t_contract_change_set` | ✅ **v1.4.0 达成** |
 | C4 | 「不要让我一遍一遍地去纠正你」 | 每个已发现的自身缺陷必须对应一条回归测试 | `t_defect_regression_ledger`：缺陷台账条目数 == 回归测试标记数 | ✅ v1.3.0 |
 | C5 | 「能力优先于 token」 | 能力缺口清单未清空前，不接受以"token 更省"作为结论 | 人工审查项，结论段必须同时列出能力缺口 | ✅ 持续 |
 | C6 | 「你完全独立的去仿照…会不会反而不如仓颉」 | 重写不得降级上游能力；改动上游逻辑须在上游提 PR | `scripts/vendor/PROVENANCE.md` 记录「不修改上游文件」原则 | ✅ v1.2.0 |

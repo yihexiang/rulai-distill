@@ -324,7 +324,7 @@ def chunk_file(src: Path, sidecar: Path | None = None, max_chars: int = 4000,
     write_json(sidecar / "index.json", index)
 
     result = {
-        "schema": "rulai-skill/chunk-manifest@1",
+        "schema": "rulai-distill/chunk-manifest@1",
         "run_id": run_id,
         "impl_version": IMPL_VERSION,
         "schema_version": SCHEMA_VERSION,

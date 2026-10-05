@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""tests/e2e.py — rulai-skill 工具链端到端回归测试。
+"""tests/e2e.py — rulai-distill 工具链端到端回归测试。
 
 用法：
   python3 tests/e2e.py                 # 用当前解释器（验证零依赖可跑）
@@ -214,7 +214,7 @@ def setup(tmp: Path) -> Path:
     (b / "skills" / "sequence-execution" / "FIDELITY.md").write_text(FIDELITY_MD, encoding="utf-8")
     write = lambda p, d: (Path(p).write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8"))
     write(b / "bundle.json", {
-        "schema": "rulai-skill/bundle/v1", "version": "0.2.0",
+        "schema": "rulai-distill/bundle/v1", "version": "0.2.0",
         "source": {"material": "示例书", "material_type": "book", "coverage": 100},
         "skills": [
             {"slug": "major-contradiction", "role": "promoted", "promotion": "promoted",
@@ -1662,7 +1662,7 @@ def t_ci_present():
 
 
 def t_installed_copy_in_sync():
-    """C11：已安装副本（`~/.workbuddy/skills/rulai-skill`）必须与项目目录一致。
+    """C11：已安装副本（`~/.workbuddy/skills/rulai-distill`）必须与项目目录一致。
 
     缺陷 #44：本包在项目里开发，但**技能被调用时加载的是全局副本**。
     改完项目目录忘了同步 → 修复在真实使用中根本没生效，而且没有任何报错
@@ -1671,7 +1671,7 @@ def t_installed_copy_in_sync():
     全局副本还停在改名前那一版 —— 门禁写了等于没写。
     """
     import filecmp
-    installed = Path(os.path.expanduser("~/.workbuddy/skills/rulai-skill"))
+    installed = Path(os.path.expanduser("~/.workbuddy/skills/rulai-distill"))
     if not installed.exists():
         # 未安装（CI / 别人的机器）不是缺陷，但要说清楚，不能静默跳过
         assert os.environ.get("TD_SKIP_INSTALL_CHECK") is None, "检查逻辑异常"
@@ -1921,7 +1921,7 @@ def t_docs_no_drift():
                 assert int(num) == n_tests, (
                     f"{name} 声明回归 {num} 项，实际 {n_tests} 项：{line.strip()[:60]}")
     # 能力对齐表的表头版本必须等于当前版本（它列的是"本包现状"，不是历史版本）
-    mtab = re.search(r"^\| 能力 \| 来源 \| rulai-skill v(\d+\.\d+\.\d+) \|", rd, re.M)
+    mtab = re.search(r"^\| 能力 \| 来源 \| rulai-distill v(\d+\.\d+\.\d+) \|", rd, re.M)
     assert mtab, "README.md 能力对齐表缺少版本标注"
     assert mtab.group(1) == ver, (
         f"README 能力对齐表表头是 v{mtab.group(1)}，实际当前版本是 v{ver}")
@@ -1962,7 +1962,7 @@ def main() -> int:
             print("⚠️  未安装 tiktoken，跳过该路径")
             args.tiktoken = False
 
-    print(f"rulai-skill 端到端回归（解释器：{sys.executable}）\n")
+    print(f"rulai-distill 端到端回归（解释器：{sys.executable}）\n")
     tests = [
         ("doctor 环境自检与能力矩阵", t_doctor),
         ("init 生成 bundle + 六路调研骨架", t_init),

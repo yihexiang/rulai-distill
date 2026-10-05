@@ -1,8 +1,8 @@
-# 开源前评估 · rulai-skill
+# 开源前评估 · rulai-distill
 
 > 评估时间：2026-10-05 11:30
 > **状态：阻塞项已全部处理完毕（见文末"已执行"）**
-> 评估对象：本仓库 `rulai-skill/` v1.6.0
+> 评估对象：本仓库 `rulai-distill/` v1.6.0
 > 评估方式：**实际查文件 + 联网核实上游许可证**，不是凭印象。
 
 ---
@@ -176,7 +176,7 @@ runs/
 |---|---|---|
 | `SKILL.md:281` | 回归「29 项」 | **63 项** |
 | `README.md` 快速开始 | 回归「25 项」 | **63 项** |
-| `README.md:40` 表头 | `rulai-skill v1.1.0` | **v1.6.0** |
+| `README.md:40` 表头 | `rulai-distill v1.1.0` | **v1.6.0** |
 | `README.md:5` 与 `:10` | 同一段 v1.6.0 说明**重复两遍** | 重复 |
 
 → **这正是你自己写进 CONSTRAINTS 的那条教训**："清单永远不完整"。
@@ -239,7 +239,7 @@ runs/
 
 | 文件 | 状态 |
 |---|---|
-| `LICENSE` | **新建**（MIT 全文）。版权行 = `Copyright (c) 2026 rulai-skill contributors`（GitHub 上最常见做法，不需要个人用户名） |
+| `LICENSE` | **新建**（MIT 全文）。版权行 = `Copyright (c) 2026 rulai-distill contributors`（GitHub 上最常见做法，不需要个人用户名） |
 | `NOTICE` | **新建**。四个上游逐个列出：来源 URL、授权（标注"已通过 GitHub API 核实"）、取回时间、使用范围、是�� vendored；并明确区分了 `kangarooking/cangjie-skill` 与 `Yeadon8888/cangjie-skill` 是**两个不同作者的不同项目** |
 | `.gitignore` | **新建**。覆盖 `__pycache__`、`*.md.td/`、`runs/`、`.snapshots/`、`.staging/`，以及**逐字稿/字幕/源素材目录**（版权原因不入库），并留了显式放行的写法 |
 
@@ -295,7 +295,7 @@ runs/
 
 ### 版权署名已定
 
-`LICENSE` 版权行 = **`Copyright (c) 2026 rulai-skill contributors`**。
+`LICENSE` 版权行 = **`Copyright (c) 2026 rulai-distill contributors`**。
 
 **为什么不用个人用户名**：GitHub 社区的通行做法是 contributors（本项目是单人项目，
 将来有人贡献也无需改）。若你想署个人名，改这一行即可。

@@ -15,7 +15,7 @@
 
 ```
 $ python3 scripts/td.py doctor
-td.py v1.0.0 · rulai-skill 环境自检
+td.py v1.0.0 · rulai-distill 环境自检
 
 ✅ Python 3.13.12（要求 ≥3.10）
 ⚠️  PyYAML 缺失 —— 已降级到内置最小解析器，够用但不严格

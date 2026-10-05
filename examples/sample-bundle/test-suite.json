@@ -1,5 +1,5 @@
 {
-  "schema": "rulai-skill/testsuite/v1",
+  "schema": "rulai-distill/testsuite/v1",
   "package": "sample-bundle",
   "split_seed": 42,
   "train_ratio": 0.6,

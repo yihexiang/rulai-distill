@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://rulai-skill.local/schemas/registry-entry.schema.json",
+  "$id": "https://rulai-distill.local/schemas/registry-entry.schema.json",
   "title": "Registry Entry",
   "description": "一个已发布蒸馏产物在 registry/<slug>/entry.yaml 的登记契约。",
   "type": "object",

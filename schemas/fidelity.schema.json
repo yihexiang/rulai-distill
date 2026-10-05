@@ -1,13 +1,13 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://rulai-skill.local/schemas/fidelity.schema.json",
+  "$id": "https://rulai-distill.local/schemas/fidelity.schema.json",
   "title": "FIDELITY Report",
   "description": "出厂质检报告的机器可读部分。Markdown 报告可当详细版，本 JSON 用于 td.py gate 判定。",
   "type": "object",
   "required": ["schema", "subject", "eval_mode", "dimensions", "total", "grade"],
   "additionalProperties": false,
   "properties": {
-    "schema": { "const": "rulai-skill/fidelity/v1" },
+    "schema": { "const": "rulai-distill/fidelity/v1" },
     "subject": { "type": "string" },
     "version": { "type": "string" },
     "date": { "type": "string", "format": "date" },

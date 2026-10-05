@@ -1,6 +1,6 @@
 # PROVENANCE · 内置上游代码的来源与授权
 
-本目录包含**原样取回**的第三方开源实现。rulai-skill 不修改这些文件，
+本目录包含**原样取回**的第三方开源实现。rulai-distill 不修改这些文件，
 只在自己的 `scripts/tdlib/` 里做适配与增强。
 
 ---
@@ -13,7 +13,7 @@
 - 取回方式：`raw.githubusercontent.com` 拉取 `scripts/*.py`（17 个）+ `schemas/**`（13 个）+ `LICENSE`
 - 版本对应：v2.5.0 时期的 scripts 目录
 
-| 文件 | 在 rulai-skill 中的定位 |
+| 文件 | 在 rulai-distill 中的定位 |
 |---|---|
 | `cangjie_common.py` | 上游公共原语：版本化缓存键、run_id/workdir、WriterLock、atomic_publish、snapshot |
 | `cangjie.py` | 上游统一 CLI |
@@ -29,7 +29,7 @@
 
 ### 契约层：从"参考"升级为"权威"（v1.4.0）
 
-早期把 `schemas/` 当参考资料放在一边，本包另起一套 `rulai-skill/*` 契约——**这是错的**：
+早期把 `schemas/` 当参考资料放在一边，本包另起一套 `rulai-distill/*` 契约——**这是错的**：
 契约的价值恰恰在于只有一套，另起一套等于把分块器、编译器、registry 拆成互不认的孤岛。
 
 现在 `scripts/tdlib/contracts.py` 把这 13 份 schema 作为**权威契约**：

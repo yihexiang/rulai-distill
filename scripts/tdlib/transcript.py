@@ -191,7 +191,7 @@ def build_transcript(src: Path, out_base: Path | None = None, gap_ms: int = 2500
     md_path.write_text("\n".join(lines), encoding="utf-8")
 
     write_json(json_path, {
-        "schema": "rulai-skill/transcript@1",
+        "schema": "rulai-distill/transcript@1",
         "source": str(src),
         "source_sha_note": "生成时刻稿内容已定稿；重复运行请以 md 为准",
         "generated_at": now_iso(),
@@ -248,7 +248,7 @@ def merge_transcripts(srcs: list[Path], out_base: Path, gap_ms: int = 2500,
         Path(r["md"]).unlink(missing_ok=True)
         Path(r["json"]).unlink(missing_ok=True)
     write_json(Path(str(out_base) + ".transcript.json"), {
-        "schema": "rulai-skill/transcript@1", "mode": "merge",
+        "schema": "rulai-distill/transcript@1", "mode": "merge",
         "generated_at": now_iso(), "files": [str(s) for s in srcs],
         "paragraph_count": len(all_paras), "md": str(md),
     })

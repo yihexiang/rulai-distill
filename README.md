@@ -1,4 +1,4 @@
-# rulai-skill · 蒸馏工厂 v1.6.0
+# rulai-distill · 蒸馏工厂 v1.6.0
 
 把书籍 / 长视频 / 播客 / 访谈 / 人物素材，蒸馏成**可执行、可验证、可追溯**的 Agent Skills。
 
@@ -57,13 +57,13 @@
 大多数蒸馏技能解决了「生成」，没解决「证明」。产物看起来像样，但没人知道它是否忠于原文、
 是否会编造、是否会和邻近技能抢调用。
 
-rulai-skill 把**出厂质检**写进流水线：不打分不发版，不由自己打分。
+rulai-distill 把**出厂质检**写进流水线：不打分不发版，不由自己打分。
 
 ---
 
 ## 二、与三个来源技能的能力对齐
 
-| 能力 | 来源 | rulai-skill v1.6.0 |
+| 能力 | 来源 | rulai-distill v1.6.0 |
 |---|---|---|
 | 结构感知分块 + 缓存 | cangjie `build_chunks` | **上游内置** `td.py upstream run chunk`；本包 `td.py chunk` 兜底 |
 | SQLite FTS5 词法索引 + 邻接块 | cangjie `build_index` | **上游内置** `td.py upstream run lexindex` |
@@ -165,7 +165,7 @@ python3 scripts/td.py trigger score suite.json answers.json
 ## 五、目录结构
 
 ```
-rulai-skill/
+rulai-distill/
 ├── SKILL.md                  ← Agent 加载的入口（渐进式披露）
 ├── methodology/              ← 00 全景 / 01 提取 / 02 三重验证 / 03 晋级门 / 04 压力测试 / 05 FIDELITY
 ├── extractors/               ← framework / principle / case / counter-example / glossary / persona

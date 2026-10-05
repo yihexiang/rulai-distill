@@ -18,7 +18,7 @@ from pathlib import Path
 MANIFEST_NAME = "BUILD_MANIFEST.json"
 GRADE_ORDER = ["A", "B", "C", "D"]
 VERSION = "1.1.0"
-PKG_ROOT = Path(__file__).resolve().parent.parent.parent   # rulai-skill/
+PKG_ROOT = Path(__file__).resolve().parent.parent.parent   # rulai-distill/
 METHOD_DIR = PKG_ROOT / "methodology"
 TEMPLATE_DIR = PKG_ROOT / "templates"
 SCHEMA_DIR = PKG_ROOT / "schemas"

@@ -1,5 +1,5 @@
 {
-  "schema": "rulai-skill/trigger-eval@1",
+  "schema": "rulai-distill/trigger-eval@1",
   "generated_at": "2026-10-04T10:24:51",
   "package": "sample-bundle",
   "total": 7,

@@ -1,13 +1,13 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://rulai-skill.local/schemas/bundle.schema.json",
-  "title": "rulai-skill Bundle",
+  "$id": "https://rulai-distill.local/schemas/bundle.schema.json",
+  "title": "rulai-distill Bundle",
   "description": "待编译发布的技能包描述。所有路径相对 bundle 根目录，禁止绝对路径与 .. 逃逸。",
   "type": "object",
   "required": ["schema", "version", "source", "skills"],
   "additionalProperties": false,
   "properties": {
-    "schema": { "const": "rulai-skill/bundle/v1" },
+    "schema": { "const": "rulai-distill/bundle/v1" },
     "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
     "source": {
       "type": "object",

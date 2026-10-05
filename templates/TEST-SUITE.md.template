@@ -4,7 +4,7 @@
 > 通过线：`should_trigger` 100% 命中，`should_not_trigger` 命中率 100%（容错 0）。
 
 ```yaml
-schema: rulai-skill/testsuite/v1
+schema: rulai-distill/testsuite/v1
 package: <package-name>
 skills_in_scope:            # 被测时，整包列表要一次性给到被测 Agent
   - name: <slug-1>

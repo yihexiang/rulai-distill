@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""tdlib — rulai-skill 确定性工具库。
+"""tdlib — rulai-distill 确定性工具库。
 
 模块划分（每个模块对应来源技能的一组能力）：
   util        基础设施：异常/输出/frontmatter/路径安全/token 计量

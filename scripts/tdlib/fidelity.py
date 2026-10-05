@@ -2,7 +2,7 @@
 """tdlib.fidelity — FIDELITY 出厂质检报告的解析、门槛判定与自检降级规则。
 
 对标 alchaincyf/nuwa-skill 的 references/fidelity-scorecard.md，改为可执行判定：
-  * 支持 Markdown 报告与 JSON 报告（rulai-skill/fidelity/v1）
+  * 支持 Markdown 报告与 JSON 报告（rulai-distill/fidelity/v1）
   * fallback-self 模式识别 + 打折（见 references/scoring-rubric.md）
   * 四个一票否决项：编造(维度3=0) / 自评自证 / 伪装双 Agent / 伪造引语
 
@@ -134,7 +134,7 @@ def cross_review(scores, threshold: float = CROSS_REVIEW_THRESHOLD,
         reasons.append("多个评分给出完全相同分数：请确认它们是独立评分而非互相抄录")
 
     return {
-        "schema": "rulai-skill/cross-review@1",
+        "schema": "rulai-distill/cross-review@1",
         "subject": subject,
         "scorers": len(vals),
         "scores": list(vals),

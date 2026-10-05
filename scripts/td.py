@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-td.py — rulai-skill 工具链（薄 CLI）
+td.py — rulai-distill 工具链（薄 CLI）
 
 设计原则
   1. 薄 CLI：脚本只做**确定性文件操作**，语义提取与评分全部交给 Agent。
@@ -50,7 +50,7 @@ EXIT_OK, EXIT_FAIL = 0, 1
 # doctor / init
 # --------------------------------------------------------------------------
 def cmd_doctor(args) -> int:
-    print(f"td.py v{VERSION} · rulai-skill 环境自检\n")
+    print(f"td.py v{VERSION} · rulai-distill 环境自检\n")
     bad = 0
     major, minor = sys.version_info[:2]
     if (major, minor) >= (3, 10):
@@ -108,7 +108,7 @@ def cmd_init(args) -> int:
     (target / "sources").mkdir(parents=True, exist_ok=True)
 
     write_json(target / "bundle.json", {
-        "schema": "rulai-skill/bundle/v1",
+        "schema": "rulai-distill/bundle/v1",
         "version": "0.1.0",
         "source": {"material": "待填素材名", "material_type": "book", "author": "", "coverage": 100},
         "skills": [{"slug": "example-capability", "role": "router", "src": "skills/example-capability.md"}],
@@ -834,7 +834,7 @@ def cmd_fetch_subtitle(args) -> int:
 # --------------------------------------------------------------------------
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        prog="td.py", description="rulai-skill 工具链（纯本地 · 零网络 · 零依赖可跑）",
+        prog="td.py", description="rulai-distill 工具链（纯本地 · 零网络 · 零依赖可跑）",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="典型流程：init → chunk/transcript → research init（人物）→ validate → gate "
                "→ strategy → compile → trigger build/record/score")
@@ -915,7 +915,7 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("scores", help="各评分 Agent 的总分，逗号分隔，如 95,88")
     q.add_argument("--threshold", type=float, default=fid.CROSS_REVIEW_THRESHOLD)
     q.add_argument("--subject", help="被复核对象标识，写进结果便于事后审计")
-    q.add_argument("--out", help="写出 rulai-skill/cross-review@1 JSON")
+    q.add_argument("--out", help="写出 rulai-distill/cross-review@1 JSON")
     q.set_defaults(func=cmd_cross_review)
 
     q = sub.add_parser("anchor", help="引语段号锚定：验引语是否真在它声明的 §N 段内")

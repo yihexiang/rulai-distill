@@ -1,13 +1,13 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://rulai-skill.local/schemas/output-decision.schema.json",
+  "$id": "https://rulai-distill.local/schemas/output-decision.schema.json",
   "title": "Output Decision（single / pack 形态决策）",
   "description": "td.py strategy 的可解释决策记录。policy=single-first-v1：默认保守。",
   "type": "object",
   "required": ["schema", "policy", "selected", "reasons", "counts"],
   "additionalProperties": false,
   "properties": {
-    "schema": { "const": "rulai-skill/output-decision@1" },
+    "schema": { "const": "rulai-distill/output-decision@1" },
     "policy": { "const": "single-first-v1" },
     "generated_at": { "type": "string" },
     "requested": { "type": ["string", "null"], "enum": ["single", "pack", null] },
