@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rulai-skill.local/schemas/cross-review.schema.json",
+  "title": "Cross Review Result",
+  "description": "多个独立评分 Agent 的交叉复核判定结果（nuwa-skill FIDELITY 第三条铁律：分差 >10 分须人工复核）。",
+  "type": "object",
+  "required": ["schema", "scorers", "scores", "spread", "threshold", "verdict", "needs_human_review", "threshold_fragile"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "rulai-skill/cross-review@1" },
+    "subject": {
+      "type": ["string", "null"],
+      "description": "被复核的对象标识（卡片 slug / 报告名），便于事后审计；未指定时为 null"
+    },
+    "scorers": { "type": "integer", "minimum": 1, "description": "评分 Agent 人数；<min_scorers 时判 insufficient_scorers" },
+    "scores": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "number", "minimum": 0, "maximum": 100 },
+      "description": "各评分 Agent 给出的总分（百分制）"
+    },
+    "min": { "type": "number", "minimum": 0, "maximum": 100 },
+    "max": { "type": "number", "minimum": 0, "maximum": 100 },
+    "spread": { "type": "number", "minimum": 0, "description": "max - min。判定用：严格大于 threshold 才须人工复核" },
+    "threshold": { "type": "number", "minimum": 0, "description": "分差阈值，默认 10（照抄上游口径）" },
+    "min_scorers": { "type": "integer", "minimum": 1, "description": "构成交叉复核所需的最少评分人数，默认 2" },
+    "verdict": {
+      "enum": ["pass", "needs_human_review", "insufficient_scorers"],
+      "description": "pass 才可作为「已交叉复核」的证据；其余两种都不得放行门禁"
+    },
+    "needs_human_review": {
+      "type": "boolean",
+      "description": "verdict != pass 时为 true，gate 见到它必须拒绝放行"
+    },
+    "threshold_fragile": {
+      "type": "boolean",
+      "description": "|spread - threshold| <= 1 时为 true，表示结论贴着阈值边界，单点数不许单独引用"
+    },
+    "reasons": { "type": "array", "items": { "type": "string" } },
+    "source": { "type": "string" }
+  }
+}

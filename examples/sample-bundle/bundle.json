@@ -1,0 +1,24 @@
+{
+  "schema": "rulai-skill/bundle/v1",
+  "version": "0.1.0",
+  "source": {
+    "material": "《孙子兵法·計篇》",
+    "material_type": "book",
+    "author": "孙武",
+    "coverage": 100,
+    "locale": "公有领域"
+  },
+  "skills": [
+    {
+      "slug": "five-affairs-seven-questions",
+      "role": "promoted",
+      "promotion": "promoted",
+      "src": "skills/five-affairs-seven-questions/SKILL.md",
+      "fidelity_score": 93,
+      "fidelity_grade": "A"
+    }
+  ],
+  "publish": {
+    "allow_grade_below": "B"
+  }
+}

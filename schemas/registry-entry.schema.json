@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rulai-skill.local/schemas/registry-entry.schema.json",
+  "title": "Registry Entry",
+  "description": "一个已发布蒸馏产物在 registry/<slug>/entry.yaml 的登记契约。",
+  "type": "object",
+  "required": ["slug", "title", "source", "version", "fidelity"],
+  "additionalProperties": false,
+  "properties": {
+    "slug": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "title": { "type": "string" },
+    "version": { "type": "string" },
+    "source": {
+      "type": "object",
+      "required": ["material", "material_type"],
+      "additionalProperties": false,
+      "properties": {
+        "material": { "type": "string" },
+        "material_type": { "enum": ["book", "video", "podcast", "interview", "essay", "person", "mixed"] },
+        "author": { "type": "string" },
+        "coverage": { "type": "number", "minimum": 0, "maximum": 100 }
+      }
+    },
+    "capabilities": { "type": "integer", "minimum": 0 },
+    "promoted": { "type": "integer", "minimum": 0 },
+    "fidelity": {
+      "type": "object",
+      "required": ["score", "grade"],
+      "additionalProperties": false,
+      "properties": {
+        "score": { "type": "number", "minimum": 0, "maximum": 100 },
+        "grade": { "enum": ["A", "B", "C", "D"] },
+        "eval_mode": { "enum": ["dual-agent", "fallback-self"] },
+        "weakest": { "type": "string" },
+        "report": { "type": "string" }
+      }
+    },
+    "trigger_tests": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "total": { "type": "integer" },
+        "passed": { "type": "integer" },
+        "suite": { "type": "string" }
+      }
+    },
+    "snapshot": { "type": "string" },
+    "published_at": { "type": "string" },
+    "notes": { "type": "string" }
+  }
+}

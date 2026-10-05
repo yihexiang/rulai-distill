@@ -1,0 +1,69 @@
+name: Docs freshness
+
+# 文档防腐烂。
+#
+# 2026-10-05 实测三处漂移，且**没有任何测试能抓到**：
+#   1. CONSTRAINTS.md 写「迄今 30 个缺陷」「11 个已知缺陷」，实际台账 42 条；
+#   2. CAPABILITIES.md 写「46 项回归」，实际 58 项；
+#   3. CONSTRAINTS.md 的「机制说明」整节重复了两遍。
+# 根因：文档里的数字是人手写的，代码变了文档不会跟着变。
+# 对策：把文档里的断言抽成测试（t_docs_no_drift / t_defect_ledger_stats），
+#       这里只负责在 .md 变更时快速触发——逻辑只在测试里写一份，不在这里重写。
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - '**/*.md'
+      - '.github/workflows/docs-check.yml'
+  pull_request:
+    paths:
+      - '**/*.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  freshness:
+    name: 文档数字与代码一致
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: 文档不漂移 / 台账数字不腐烂
+        run: python tests/e2e.py --only t_docs_no_drift,t_defect_ledger_stats
+
+      - name: 缺陷台账每条都有回归测试
+        run: python tests/e2e.py --only t_defect_regression_ledger
+
+      - name: 约束表无静默缺口
+        run: python tests/e2e.py --only t_contract_ledger_no_silent_gap
+
+      # Markdown 结构自检：死链与重复章节（纯文本层，无需构建）
+      - name: Markdown 结构自检
+        run: |
+          python - <<'PY'
+          import re, sys
+          from pathlib import Path
+          bad = []
+          for p in sorted(Path(".").glob("*.md")):
+              text = p.read_text(encoding="utf-8")
+              heads = re.findall(r"^## (.+)$", text, re.M)
+              dup = [h for h in set(heads) if heads.count(h) > 1]
+              if dup:
+                  bad.append(f"{p}: 重复章节 {dup}")
+              for m in re.finditer(r"\]\((?!https?://|#)([^)]+)\)", text):
+                  t = m.group(1).split("#")[0]
+                  if t and not (p.parent / t).exists():
+                      bad.append(f"{p}: 死链 {t}")
+          if bad:
+              print("::error::Markdown 结构问题")
+              for b in bad:
+                  print(b)
+              sys.exit(1)
+          print("Markdown 结构自检通过")
+          PY

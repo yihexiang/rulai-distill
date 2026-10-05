@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rulai-skill.local/schemas/fidelity.schema.json",
+  "title": "FIDELITY Report",
+  "description": "出厂质检报告的机器可读部分。Markdown 报告可当详细版，本 JSON 用于 td.py gate 判定。",
+  "type": "object",
+  "required": ["schema", "subject", "eval_mode", "dimensions", "total", "grade"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "rulai-skill/fidelity/v1" },
+    "subject": { "type": "string" },
+    "version": { "type": "string" },
+    "date": { "type": "string", "format": "date" },
+    "eval_mode": { "enum": ["dual-agent", "fallback-self"] },
+    "self_eval_acknowledged": {
+      "type": "boolean",
+      "description": "eval_mode=fallback-self 时必须为 true，表示已标注自测降级"
+    },
+    "answerer": { "type": "string" },
+    "graders": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "cross_grader_gap": { "type": "number", "minimum": 0, "maximum": 100 },
+    "dimensions": {
+      "type": "object",
+      "required": ["consistency", "style", "edge_honesty", "source_transparency", "structure"],
+      "additionalProperties": false,
+      "properties": {
+        "consistency": { "type": "number", "minimum": 0, "maximum": 30 },
+        "style": { "type": "number", "minimum": 0, "maximum": 20 },
+        "edge_honesty": { "type": "number", "minimum": 0, "maximum": 20 },
+        "source_transparency": { "type": "number", "minimum": 0, "maximum": 15 },
+        "structure": { "type": "number", "minimum": 0, "maximum": 15 }
+      }
+    },
+    "total": { "type": "number", "minimum": 0, "maximum": 100 },
+    "grade": { "enum": ["A", "B", "C", "D"] },
+    "weakest_dimension": { "type": "string" },
+    "blocking_issues": { "type": "array", "items": { "type": "string" } }
+  }
+}

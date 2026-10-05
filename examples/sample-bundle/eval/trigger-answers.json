@@ -1,0 +1,16 @@
+{
+  "_meta": {
+    "taker": "trigger-taker（独立 Agent，只读 blind-tasks.json，不知道 expect）",
+    "date": "2026-10-04",
+    "note": "第一次判分出现误报：Agent 返回字符串 \"none\" 而非 JSON null，判分器未归一化，把两条正确的不触发误判为误触发（FP=2、诱饵通过率显示 0%）。修复 evals.py 的 _norm_answer 后重判。这是真实盲测才暴露的缺陷。"
+  },
+  "answers": {
+    "t-01": "five-affairs-seven-questions",
+    "t-02": "five-affairs-seven-questions",
+    "t-03": "five-affairs-seven-questions",
+    "d-01": "none",
+    "d-02": "none",
+    "x-01": "none",
+    "x-02": "five-affairs-seven-questions"
+  }
+}

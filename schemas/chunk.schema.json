@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rulai-skill.local/schemas/chunk.schema.json",
+  "title": "rulai-skill Chunk（结构感知块）",
+  "description": "chunks.jsonl 的单行结构。由 td.py chunk 生成，chunk_id 在单个 sidecar 内唯一且稳定。",
+  "type": "object",
+  "required": ["chunk_id", "heading_path", "chars", "text"],
+  "additionalProperties": true,
+  "properties": {
+    "chunk_id": { "type": "string", "pattern": "^ck-[0-9]{4,}$" },
+    "heading_path": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "从根到当前位置的标题层级，用于 --grep 定位与引语回溯"
+    },
+    "heading_level": { "type": "integer", "minimum": 0, "maximum": 6 },
+    "elements": {
+      "type": "array",
+      "description": "构成该块的 element 列表（超长元素二次切分时带 #序号后缀）",
+      "items": {
+        "type": "object",
+        "required": ["element_id"],
+        "properties": {
+          "element_id": { "type": "string" },
+          "type": { "enum": ["heading", "paragraph", "list", "code"] }
+        }
+      }
+    },
+    "char_start": { "type": "integer", "minimum": 0 },
+    "char_end": { "type": "integer", "minimum": 0 },
+    "dominated_by_code": { "type": "boolean" },
+    "chars": { "type": "integer", "minimum": 1 },
+    "text": { "type": "string", "minLength": 1 }
+  }
+}

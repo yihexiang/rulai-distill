@@ -1,0 +1,73 @@
+# NOTICE
+
+本项目（rulai-skill）融合并内置了以下第三方开源项目的内容。
+
+**本项目自身的授权见根目录 [`LICENSE`](./LICENSE)（MIT）。**
+
+---
+
+## 内置代码（原样取回，未修改）
+
+### kangarooking/cangjie-skill
+
+- 来源：https://github.com/kangarooking/cangjie-skill
+- 授权：**MIT**（已通过 GitHub API 核实：`repos/kangarooking/cangjie-skill/license` → `MIT`）
+- 取回时间：2026-10-04
+- 取回方式：`raw.githubusercontent.com` 拉取 `scripts/*.py`（17 个）+ `schemas/**`（13 个）+ `LICENSE`
+- **完整授权文本： [`scripts/vendor/cangjie/LICENSE`](./scripts/vendor/cangjie/LICENSE)（原样保留，未改动）**
+- 逐文件用途登记： [`scripts/vendor/PROVENANCE.md`](./scripts/vendor/PROVENANCE.md)
+- 完整性基线：`scripts/vendor/VENDOR.sha256`（31 个文件的 sha256，CI 强制比对）
+
+本项目**未修改**上述任何文件。适配与增强全部写在 `scripts/tdlib/`。
+
+---
+
+## 仅借鉴方法论（代码未内置）
+
+### alchaincyf/nuwa-skill
+
+- 来源：https://github.com/alchaincyf/nuwa-skill
+- 授权：**MIT**（已通过 GitHub API 核实）
+- 使用范围：FIDELITY 五维质检结构、字幕管线、六路人物调研、调研合并去重与冲突标记
+- **代码未内置**：`srt_to_transcript.py` 与 `merge_research.py` 的能力由本包重新实现为
+  `scripts/tdlib/transcript.py` 与 `scripts/tdlib/research.py`
+- 实现边界：本包未逐行移植上游实现，重写原因是上游字幕脚本依赖固定 `/tmp` 路径
+  且存在 marker 从未写入的缺陷；合并器需与本包的一手占比统计、FIDELITY 维度 4 联动。
+
+### Yeadon8888/cangjie-skill
+
+- 来源：https://github.com/Yeadon8888/cangjie-skill
+- 授权：**MIT**（已通过 GitHub API 核实）
+- 使用范围：人物分支的认知植入结构（`我是谁` / `认知上下文` / `我看问题的方式`）、
+  以及**禁止显式步骤**的约束（`scripts/td.py validate` 对 `Step 1/2/3`、`第一步：`、`1.` 机械检测）
+- **代码未内置**
+
+> ⚠️ **注意区分**：`cangjie-skill` 在 GitHub 上有两个不同作者的不同项目
+> （`kangarooking` 与 `Yeadon8888`），二者定位不同，非同质化项目。
+> 本项目同时借鉴了二者，见上文分节。
+
+---
+
+## 方法论借鉴的边界说明
+
+`methodology/`、`extractors/`、`references/`、`templates/`、`schemas/` 下的文档为**本项目原创**，
+是本项目作者基于上述公开方法论自行撰写的表达，**不是对上游文档的翻译或复制**。
+逐文件归属与上游能力的对应关系见
+[`README.md` 第二节「与三个来源技能的能力对齐」](./README.md)。
+
+---
+
+## 第三方运行时依赖
+
+本项目运行时**零第三方依赖**（内置最小 YAML 解析器与字符级 token 估算）。
+以下为**可选**依赖，缺失时自动降级：
+
+| 依赖 | 授权 | 缺失时行为 |
+|---|---|---|
+| PyYAML | MIT | 降级为内置最小 YAML 解析器 |
+| tiktoken | MIT | 降级为字符级估算（数值偏低） |
+| jsonschema | MIT | 降级为内置子集校验器（覆盖 required/enum/const/pattern/type），并显式输出降级模式 |
+
+---
+
+_最后核对：2026-10-05。四个上游许可证均通过 GitHub API 逐一核实为 MIT。_

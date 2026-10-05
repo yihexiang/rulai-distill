@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rulai-skill.local/schemas/transcript.schema.json",
+  "title": "rulai-skill Transcript（带时间戳逐字稿）",
+  "description": "td.py transcript 的 JSON 产物。时间戳可直接作为能力卡 source_locator。",
+  "type": "object",
+  "required": ["schema", "source", "cue_count", "paragraph_count", "paragraphs"],
+  "additionalProperties": true,
+  "properties": {
+    "schema": { "const": "rulai-skill/transcript@1" },
+    "mode": { "enum": ["single", "merge"] },
+    "source": { "type": "string" },
+    "files": { "type": "array", "items": { "type": "string" } },
+    "generated_at": { "type": "string" },
+    "cue_count": { "type": "integer", "minimum": 0, "description": "去重后的字幕条数" },
+    "dedup_dropped": { "type": "integer", "minimum": 0, "description": "滚动重复被丢弃的条数" },
+    "paragraph_count": { "type": "integer", "minimum": 0 },
+    "duration_ms": { "type": "integer", "minimum": 0 },
+    "paragraphs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["start_ms", "end_ms", "text"],
+        "properties": {
+          "start_ms": { "type": "integer", "minimum": 0 },
+          "end_ms": { "type": "integer", "minimum": 0 },
+          "cue_count": { "type": "integer", "minimum": 1 },
+          "text": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

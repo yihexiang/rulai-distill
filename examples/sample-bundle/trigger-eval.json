@@ -1,0 +1,94 @@
+{
+  "schema": "rulai-skill/trigger-eval@1",
+  "generated_at": "2026-10-04T10:24:51",
+  "package": "sample-bundle",
+  "total": 7,
+  "passed": 6,
+  "pass_rate": 0.857,
+  "metrics": {
+    "tp": 4,
+    "fp": 0,
+    "fn": 1,
+    "precision": 1.0,
+    "recall": 0.8,
+    "f1": 0.889,
+    "decoy_total": 2,
+    "decoy_pass_rate": 1.0,
+    "sibling_confusion": 0,
+    "sibling_confusion_rate": 0.0
+  },
+  "by_kind": {
+    "trigger": {
+      "pass": 3,
+      "total": 4
+    },
+    "decoy": {
+      "pass": 2,
+      "total": 2
+    },
+    "sibling": {
+      "pass": 1,
+      "total": 1
+    }
+  },
+  "unanswered": [],
+  "verdict": "fail",
+  "results": [
+    {
+      "id": "t-01",
+      "status": "pass",
+      "expect": "five-affairs-seven-questions",
+      "actual": "five-affairs-seven-questions",
+      "kind": "trigger",
+      "why": "隐形触发：情境明确但没点名方法"
+    },
+    {
+      "id": "t-02",
+      "status": "pass",
+      "expect": "five-affairs-seven-questions",
+      "actual": "five-affairs-seven-questions",
+      "kind": "trigger",
+      "why": "考「信息不对称 + 靠人感觉」这个特征是否被识别"
+    },
+    {
+      "id": "t-03",
+      "status": "pass",
+      "expect": "five-affairs-seven-questions",
+      "actual": "five-affairs-seven-questions",
+      "kind": "trigger",
+      "why": "考决策前的信息不足焦虑"
+    },
+    {
+      "id": "d-01",
+      "status": "pass",
+      "expect": null,
+      "actual": null,
+      "kind": "decoy",
+      "why": "书摘需求 → 不该触发本包"
+    },
+    {
+      "id": "d-02",
+      "status": "pass",
+      "expect": null,
+      "actual": null,
+      "kind": "decoy",
+      "why": "紧急止损 → 卡片明确声明不适用"
+    },
+    {
+      "id": "x-01",
+      "status": "fail",
+      "expect": "cost-of-reversibility",
+      "actual": null,
+      "kind": "trigger",
+      "why": "方向已定，问的是投入规模/顺序 → 该由 cost-of-reversibility 回答"
+    },
+    {
+      "id": "x-02",
+      "status": "pass",
+      "expect": "five-affairs-seven-questions",
+      "actual": "five-affairs-seven-questions",
+      "kind": "sibling",
+      "why": "反向：听起来像排序，实则是「不确定该不该投」"
+    }
+  ]
+}

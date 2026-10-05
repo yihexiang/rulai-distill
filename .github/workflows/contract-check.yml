@@ -1,0 +1,85 @@
+name: Contract and vendor integrity
+
+# 契约层：产物必须能被上游 schema 校验，且 vendored 上游不得被改动。
+#
+# 对应仓颉 registry-check.yml 的「契约校验」职能。仓颉的 registry-check 校验
+# 它的 `registry/`，TD 没有该目录（本包的 registry 是编译产物 registry-entry-v2，
+# 不是仓库目录），因此校验对象换成本包真实存在的东西：13 份权威契约 + 上游完整性。
+#
+# 注意：仓颉另有 deploy-pages / update-star-history，二者依赖它自己的 `website/`
+# （Astro 站点）。TD 没有站点目录，**按文件名照抄等于造假**，故不补这两个。
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'scripts/vendor/**'
+      - 'schemas/**'
+      - 'scripts/tdlib/contracts.py'
+      - '.github/workflows/contract-check.yml'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: 契约与上游完整性
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      # C6「不修改上游文件」此前只是一条人工审查项——真改了没人会发现。
+      # 这里把它升级为 sha256 基线比对。
+      - name: vendored 上游完整性
+        run: |
+          python - <<'PY'
+          import hashlib, sys
+          from pathlib import Path
+          base = Path("scripts/vendor")
+          bad, n = [], 0
+          for line in (base / "VENDOR.sha256").read_text(encoding="utf-8").splitlines():
+              line = line.strip()
+              if not line:
+                  continue
+              n += 1
+              digest, rel = line.split(None, 1)
+              rel = rel.strip()
+              p = base / rel
+              if not p.exists():
+                  bad.append(f"缺失: {rel}")
+                  continue
+              if hashlib.sha256(p.read_bytes()).hexdigest() != digest:
+                  bad.append(f"改动: {rel}")
+          print(f"已校验 {n} 个 vendored 上游文件")
+          if n < 20:
+              print("::error::基线条目过少，疑似生成不全")
+              sys.exit(1)
+          if bad:
+              print("::error::vendored 上游与基线不一致；若确为版本升级请重新生成 VENDOR.sha256")
+              for b in bad:
+                  print(b)
+              sys.exit(1)
+          PY
+
+      - name: 契约清单可查
+        run: python scripts/td.py contract list
+
+      # 端到端：真实跑一次分块，产物必须过上游 source-document 契约
+      - name: 产物按契约落盘
+        run: |
+          python scripts/td.py chunk examples/sample-bundle/sources/sunzi-ji.txt
+          python scripts/td.py contract check source-document \
+            examples/sample-bundle/sources/sunzi-ji.txt.td/document.json
+
+      # 降级校验器与 jsonschema 可能给出不同结论（缺陷 14），两种模式都要过
+      - name: 严格模式（jsonschema）复验
+        run: |
+          python -m pip install --quiet --disable-pip-version-check jsonschema
+          python scripts/td.py contract list
+          python scripts/td.py contract check source-document \
+            examples/sample-bundle/sources/sunzi-ji.txt.td/document.json

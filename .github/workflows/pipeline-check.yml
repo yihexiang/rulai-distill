@@ -1,0 +1,76 @@
+name: pipeline-check
+
+# rulai-skill 回归网。vendored 上游代码随之同步，测试必须仍全绿。
+on:
+  push:
+    branches: [main, master]
+    paths-ignore:
+      - '**/*.md'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    name: e2e (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.10 是 SKILL.md 声明的最低版本；3.13 是本机开发版本
+        python-version: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # 契约产物本身要能被解析：校验 13 个上游 schema + 4 个本包 schema 是合法 JSON
+      - name: 校验内置 Schema
+        run: |
+          python - <<'PY'
+          import glob, json
+          files = sorted(glob.glob('schemas/*.json') + glob.glob('scripts/vendor/cangjie/schemas/**/*.json', recursive=True))
+          for f in files:
+              json.load(open(f, encoding='utf-8'))
+          print(f'{len(files)} 个 schema 合法')
+          PY
+
+      # 零依赖模式：不装 pyyaml / tiktoken，验证降级路径仍然可用
+      - name: 回归测试（零依赖模式）
+        run: python tests/e2e.py
+
+      # 完整依赖模式：验证 tiktoken 计量与 PyYAML 严格解析路径
+      - name: 安装可选依赖
+        run: python -m pip install --quiet --disable-pip-version-check pyyaml tiktoken
+      - name: 回归测试（含 pyyaml/tiktoken）
+        run: python tests/e2e.py --tiktoken
+
+      # 技能包自校验：0 error
+      - name: 技能包静态校验
+        run: python scripts/td.py validate .
+
+      # vendored 上游脚本必须仍然可运行（契约没有被改坏）
+      - name: vendored 上游体检
+        run: |
+          python scripts/td.py upstream list
+          python scripts/td.py upstream run --dry-run chunk --help
+
+  safety:
+    name: 红线扫描
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      # 本包承诺零网络、零动态执行；这里做机器校验，避免将来被无意破坏
+      - name: 禁止危险调用模式
+        run: |
+          ! grep -rnE "eval\(|exec\(|os\.system|shell=True|socket\.|requests\.|urllib\.request|httpx|aiohttp" \
+               scripts/td.py scripts/tdlib/ \
+               --include='*.py' | grep -v "不使用 eval"
+      - name: 禁止硬编码密钥
+        run: |
+          ! grep -rniE "api[_-]?key\s*=\s*['\"]|secret\s*=\s*['\"]|password\s*=\s*['\"]|Bearer [A-Za-z0-9]{20}" \
+               scripts/ --include='*.py' --include='*.sh'

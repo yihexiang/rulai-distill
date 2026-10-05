@@ -1,0 +1,82 @@
+name: Artifact checks
+
+# 随仓库分发的样本必须真的可用——不只是"工具能跑"。
+# pipeline-check 跑的是合成素材上的回归；这里跑的是 **examples/ 里的真实样本**，
+# 保证 clone 下来照着 walkthrough 走一遍不会撞墙。
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'examples/**'
+      - 'templates/**'
+      - 'scripts/tdlib/validate.py'
+      - 'scripts/tdlib/evals.py'
+      - 'scripts/tdlib/fidelity.py'
+      - '.github/workflows/artifact-check.yml'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  artifacts:
+    name: 随包样本可核验
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: 样本技能包静态校验 0 error
+        run: |
+          out=$(python scripts/td.py validate examples/sample-bundle)
+          echo "$out"
+          echo "$out" | grep -q "error 0" || { echo "::error::样本未通过静态校验"; exit 1; }
+
+      - name: FIDELITY 门禁（样本报告）
+        run: python scripts/td.py gate examples/sample-bundle/eval/fidelity-report.md
+
+      # 关键：verify-quotes 对**空集**也会输出「✅ 全部引语核到」（0 引用 → 0 核验 → pass）。
+      # 这种假绿比报错更危险，所以这里必须用 fixture 断言 verified > 0，而不是只看退出码。
+      - name: 引语核验非空集（防空集假绿）
+        run: |
+          mkdir -p /tmp/fx
+          cat > /tmp/fx/corpus.md <<'EOF'
+          【第1条 | 2026-01-01 | a1】製造難度是最難的問題，這一點遠超其他因素。
+          【第2条 | 2026-01-02 | a2】如果不确定，就明确说不确定。
+          EOF
+          cat > /tmp/fx/card.md <<'EOF'
+          ---
+          name: fx
+          description: |
+            测试用卡片，描述足够长以通过长度检查。
+          ---
+
+          # FX
+
+          【第1条】「製造難度是最難的問題」
+
+          【第2条】「如果不确定，就明确说不确定。」
+          EOF
+          python scripts/td.py verify-quotes /tmp/fx/card.md /tmp/fx/corpus.md --out /tmp/fx/q.json
+          python - <<'PY'
+          import json, sys
+          d = json.load(open("/tmp/fx/q.json"))
+          print(f"quotes_checked={d['quotes_checked']} verified={d['verified']} verdict={d['verdict']}")
+          if d["quotes_checked"] < 1:
+              print("::error::核验到 0 条引语——空集也会判 pass，这不是通过")
+              sys.exit(1)
+          if d["verified"] != d["quotes_checked"]:
+              print("::error::存在核不到的引语")
+              sys.exit(1)
+          PY
+
+      # 端到端：样本语料能真的蒸出东西（chunk → lexindex → 查询）
+      - name: 蒸馏链路冒烟
+        run: |
+          python scripts/td.py chunk examples/sample-bundle/sources/sunzi-ji.txt
+          python scripts/td.py lexindex examples/sample-bundle/sources/sunzi-ji.txt.td/chunks.jsonl
+          python scripts/td.py lexindex --db examples/sample-bundle/sources/sunzi-ji.txt.td/lexical.sqlite --query "道" --limit 3

@@ -1,0 +1,102 @@
+# Template · 触发压力测试套件
+
+> 用途：阶段 4a。**每个 package（多个能力的集合）一份**，用于验证技能之间不互相抢调用。
+> 通过线：`should_trigger` 100% 命中，`should_not_trigger` 命中率 100%（容错 0）。
+
+```yaml
+schema: rulai-skill/testsuite/v1
+package: <package-name>
+skills_in_scope:            # 被测时，整包列表要一次性给到被测 Agent
+  - name: <slug-1>
+    description: <其 description 全文>
+  - name: <slug-2>
+    description: <其 description 全文>
+
+cases:
+  # ---- 应触发：<被测 slug> ----
+  - id: t-01
+    target: <slug-1>
+    expect: <slug-1>
+    difficulty: easy
+    prompt: "<用户的自然口语，不要写成规范任务书>"
+    why: <一句话说明这条测的是哪个触发维度>
+
+  - id: t-02
+    target: <slug-1>
+    expect: <slug-1>
+    difficulty: medium
+    prompt: "<用户没点名方法，但情境明确>"
+    why: <隐形触发：靠情境而非关键词识别>
+
+  - id: t-03
+    target: <slug-1>
+    expect: <slug-1>
+    difficulty: medium
+    prompt: "<用户用了错误术语 / 描述含糊>"
+    why: <术语错配韧性>
+
+  # ---- 不应触发：诱饵 ----
+  - id: d-01
+    target: null
+    expect: null
+    difficulty: medium
+    prompt: "<只是想让人总结这本书讲了什么>"
+    why: <书摘需求 ≠ 蒸馏需求>
+
+  - id: d-02
+    target: null
+    expect: null
+    difficulty: medium
+    prompt: "<角色扮演需求：模仿 XX 说话>"
+    why: <应导向 nuwa-style 角色技能，不是本包>
+
+  # ---- 跨技能混淆（硬性：至少 1 条） ----
+  - id: x-01
+    target: <slug-2>
+    expect: <slug-2>
+    difficulty: hard
+    prompt: "<一个同样说得上 slug-1、但真正该由 slug-2 回答的问题>"
+    why: <slug-1 与 slug-2 的主要抢调用边界>
+    pairwise_with: [<slug-1>]
+
+  - id: x-02
+    target: <slug-1>
+    expect: <slug-1>
+    difficulty: hard
+    prompt: "<反向：同样能联想到 slug-2，但答案是 slug-1>"
+    why: <反向边界，确认不是单向通过>
+    pairwise_with: [<slug-2>]
+```
+
+---
+
+## 出题规则
+
+| 规则 | 说明 |
+|---|---|
+| prompt 用口语 | 真实用户不会说"请使用矛盾分析法分析"，而是"这两件事到底先解决哪个" |
+| 不要给答案选项 | 被测 Agent 要自己从整包列表里选，**不是判断题而是选择题** |
+| 诱饵必须真实 | 每条诱饵都是一个合理需求，只是不该由本包回答 |
+| 至少 1 条 cross-skill | 没有 pairwise 测试的套件视为未完成 |
+| 双向测 | A→B 和 B→A 各一条，单向通过可能是运气 |
+
+## 判定
+
+```
+通过线：
+  should_trigger        全部命中 target
+  should_not_trigger    全部返回 null
+  cross-skill           全部命中正确的一侧
+
+任一 should_not_trigger 被响应 → 套件不通过 → 回到 SKILL.md 改 description 的"不适用"段
+任一 cross-skill 判错 → 两张卡的 B 段「易混淆辨析」都要重写，只改一张无效
+```
+
+## 常见失败模式
+
+| 现象 | 根因 | 修法 |
+|---|---|---|
+| 诱饵全部被响应 | description 只写"能做什么"，没写边界 | 在 description 里补 「不做：…」并写具体场景 |
+| cross-skill 判错 | 两张卡的功能描述重叠 | 用分界线而不是补充说明：写明"<X 情况用我，<Y 情况用对方>" |
+| 口语 prompt 触发不了 | 触发词太书面 | 把用户的原话直接写进 description 的语言信号 |
+| description 过长导致 muted | 首屏信息密度不足 | 压缩到前 100 字含核心触发词 + 不适用提示，细节下沉正文 |

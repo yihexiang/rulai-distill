@@ -1,0 +1,17 @@
+{
+  "schema": "rulai-skill/trigger-split@1",
+  "split_seed": 42,
+  "train_ratio": 0.6,
+  "train": [
+    "t-02",
+    "d-01",
+    "d-02",
+    "t-03"
+  ],
+  "validation": [
+    "x-02",
+    "t-01",
+    "x-01"
+  ],
+  "note": "validation 在选版前保持隐藏；选版后只跑一次，否则结果没有意义"
+}

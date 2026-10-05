@@ -1,0 +1,45 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# ----本包运行产物（不应进版本库）----
+# 分块侧车缓存：可由 `td.py chunk <file>` 重新生成
+*.md.td/
+# 运行留痕（run 级留痕目录）
+runs/
+# 发布快照
+.snapshots/
+*.lock
+# 编译 staging
+.staging/
+
+# ---- 蒸馏产物（体积大且含受版权素材，默认不入库）----
+#逐字稿/字幕/分块：受源素材版权约束，且可重新抓取
+sources/raw/
+# 逐字稿与逐字稿派生物
+*-transcript.md
+*.srt
+*.vtt
+# registry 登记条目（含 fidelity 明细）
+registry/*/_td-meta.json
+
+> ⚠️ 若你要把某个蒸馏产物**随包发布**（例如作为示例），
+> 请在该目录下加一行 `!路径/` 显式放行，并自行确认素材授权。
+> `musk-run2/`与 `musk-run/` 当前均不在包内，无需放行。
+
+# ---- 系统 ----
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# ---- 编辑器 ----
+.idea/
+.vscode/
+*.sublime-workspace

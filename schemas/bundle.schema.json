@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rulai-skill.local/schemas/bundle.schema.json",
+  "title": "rulai-skill Bundle",
+  "description": "待编译发布的技能包描述。所有路径相对 bundle 根目录，禁止绝对路径与 .. 逃逸。",
+  "type": "object",
+  "required": ["schema", "version", "source", "skills"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "rulai-skill/bundle/v1" },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "source": {
+      "type": "object",
+      "required": ["material", "material_type"],
+      "additionalProperties": false,
+      "properties": {
+        "material": { "type": "string", "minLength": 1 },
+        "material_type": { "enum": ["book", "video", "podcast", "interview", "essay", "person", "mixed"] },
+        "author": { "type": "string" },
+        "locator_base": { "type": "string" },
+        "coverage": { "type": "number", "minimum": 0, "maximum": 100 }
+      }
+    },
+    "skills": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["slug", "role", "src"],
+        "additionalProperties": false,
+        "properties": {
+          "slug": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+            "description": "kebab-case，全局唯一"
+          },
+          "role": { "enum": ["router", "promoted"] },
+          "src": {
+            "type": "string",
+            "description": "相对 bundle 根目录的源文件路径，禁止 .. / 绝对路径 / 符号链接",
+            "pattern": "^(?!/)(?!.*\\.\\.).*$"
+          },
+          "fidelity_score": { "type": "number", "minimum": 0, "maximum": 100 },
+          "fidelity_grade": { "enum": ["A", "B", "C", "D"] },
+          "depends_on": { "type": "array", "items": { "type": "string" } },
+          "composes_with": { "type": "array", "items": { "type": "string" } },
+          "contrasts_with": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "publish": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "out_dir": { "type": "string" },
+        "allow_grade_below": { "enum": ["A", "B", "C", "D"], "default": "B" }
+      }
+    }
+  }
+}
