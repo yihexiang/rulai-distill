@@ -2,6 +2,12 @@
 
 把书籍 / 长视频 / 播客 / 访谈 / 人物素材，蒸馏成**可执行、可验证、可追溯**的 Agent Skills。
 
+> 📌 **2026-10-05 改名**：`rulai-skill` → **`rulai-distill`**（原仓库名已被同名佛学项目占用）。
+> 本次共改名 88 处：技能名、13 份 schema 的 id、LICENSE 版权行、NOTICE、
+> README / CONSTRAINTS / OPEN-SOURCE-ASSESSMENT 正文，以及三处目录。
+> **旧运行产物（`musk-run/`、`musk-run2/`、`video-run/`）里的 `"schema": "rulai-skill/…"`
+> 是当时的真实记录，故意保留不改**——它们烤出来时这个项目就叫那个名字。
+
 ---
 
 ## ⚠️ 项目状态：beta，请先读这一段
