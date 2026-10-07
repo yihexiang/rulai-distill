@@ -9,7 +9,7 @@ verifiable, traceable Agent Skill — not a summary, not a book report.
 "Distill this book into a skill"     → the agent runs the whole pipeline itself
 ```
 
-**Status: beta.** The *machinery* is tested (66 regression tests). The *cards it produces*
+**Status: beta.** The *machinery* is tested (68 regression tests). The *cards it produces*
 are not yet publishable quality. Those are two different claims with very different
 evidence, and we keep them apart on purpose. See [Honest limitations](#honest-limitations).
 
@@ -120,7 +120,7 @@ Full walkthrough with real captured output: **[GUIDE.md](./GUIDE.md)**.
 
 ## Honest limitations
 
-1. **Beta.** 66 regression tests prove the machinery. They do **not** prove the produced
+1. **Beta.** 68 regression tests prove the machinery. They do **not** prove the produced
    cards are good enough to publish.
 2. **The QA isolation is half-done.** Independent *grading* agents work and have caught
    real fabrications. An independent *answering* agent has not been run yet, so

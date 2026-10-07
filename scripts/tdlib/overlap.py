@@ -7,7 +7,10 @@
 
 用法:
   td.py overlap --new <新语料.md> --old <旧语料.md> [--n 8] [--json-out r.json]
-退出码 0 = 无实质重叠；2 = 检出重叠
+退出码 0 = 无实质重叠；1 = 检出重叠（走 die()，与本包其它命令的拒绝语义一致）
+
+> ⚠️ 文档曾写「2 = 检出重叠」——那是**把 argparse 的用法错误码误当成了业务退出码**
+> （当时误传了两个 `--new` 触发 usage error 才得到 2）。实际一律是 1（#53）。
 
 为什么要它：2026-10-04 用 17,144 条推文蒸馏过一次，2026-10-05 换访谈素材重蒸时，
 "素材不重复"这句话如果只靠记忆判断就无法证伪。这个脚本把它变成可复现的数字。
@@ -21,10 +24,53 @@ import sys
 from pathlib import Path
 
 WORD_RE = re.compile(r"[a-z0-9']+")
+CJK_RE = re.compile(r"[\u4e00-\u9fff]")
+# 中文句末标点也要断句，否则整篇中文被当成「一句话」
+SENT_SPLIT_RE = re.compile(r"(?<=[.!?。！？；])\s*|\n{2,}")
 
 
 def normalize(text: str) -> list[str]:
-    return WORD_RE.findall(text.lower())
+    """分词：ASCII 整词 + 中文按字符 bigram。
+
+    ⚠️ 2026-10-07（#52）：原实现是 `WORD_RE.findall(text.lower())`，只匹配
+    `[a-z0-9']+`——**纯中文语料切出 0 个词**，于是 shingle 集合为空、
+    包含率恒为 0.0000%，`overlap` 对任何中文素材**永远判 PASS**。
+    这是最危险的一类错误：假绿。工具看起来在工作，结论却是空的。
+
+    修法与 `chunking._cjk_bigrams` 一致（沿用上游 cangjie 的口径）：
+    中文展开为字符 bigram（中文没有空格，bigram 是可靠的粗粒度切分），
+    英文/数字整词保留（逐字母拆会造成大量假命中，见缺陷 #1）。
+    """
+    out: list[str] = []
+    run: list[str] = []       # 连续中文段
+    word: list[str] = []      # 当前 ASCII 词
+
+    def flush_word() -> None:
+        if word:
+            out.append("".join(word))
+            word.clear()
+
+    def flush_cjk() -> None:
+        if run:
+            if len(run) == 1:
+                out.append(run[0])          # 单字也要留，否则单字检索失效
+            else:
+                out.extend(run[i] + run[i + 1] for i in range(len(run) - 1))
+            run.clear()
+
+    for ch in text:
+        if CJK_RE.match(ch):
+            flush_word()
+            run.append(ch)
+        elif ch.isalnum() or ch == "'":
+            flush_cjk()
+            word.append(ch.lower())
+        else:
+            flush_word()
+            flush_cjk()
+    flush_word()
+    flush_cjk()
+    return out
 
 
 def shingles(words: list[str], n: int) -> set[tuple[str, ...]]:
@@ -34,7 +80,7 @@ def shingles(words: list[str], n: int) -> set[tuple[str, ...]]:
 
 
 def sentences(text: str) -> list[str]:
-    rough = re.split(r"(?<=[.!?])\s+|\n{2,}", text)
+    rough = SENT_SPLIT_RE.split(text)
     out = []
     for s in rough:
         w = normalize(s)

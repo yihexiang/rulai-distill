@@ -1980,6 +1980,105 @@ def t_schema_and_help():
         assert cmd in h, f"--help 缺 {cmd}"
 
 
+def t_guide_walkthrough():
+    """GUIDE.md 写的黄金路径必须**端到端真的能跑通**，且每步都有实质产出。
+
+    2026-10-07（#51）—— 这条是针对一整类缺陷的根治，不是又打一只地鼠：
+    #48（doctor 打印过期版本）、#49（index 只搜标题）、#50（count 单文件报 0）
+    **三条是同一个病**：我一直没按用户的实际路径把命令完整跑一遍。
+    写了实现、写了测试、写了文档，却从没走过一次「init → chunk → index →
+    count → validate → strategy → output-eval → prompt」这串用户真正会走的路。
+
+    这个测试把那条路钉死。它的断言不是「没崩」，而是**每步都要有实质产出**：
+    数字不能是 0、命中不能是空、产物必须非空。静默假绿在这里会变红。
+    """
+    with tempfile.TemporaryDirectory() as d:
+        wd = Path(d)
+
+        # ① doctor：打印的版本必须等于 SKILL.md 的版本（否则用户看到的是错的）
+        o = run(["doctor"], cwd=wd).stdout
+        sk = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        ver = re.search(r'^\s*version:\s*"?(\d+\.\d+\.\d+)"?', sk, re.M).group(1)
+        assert f"v{ver}" in o, f"doctor 没打印当前版本 v{ver}：{o[:200]}"
+
+        # ② init：骨架必须真的落盘
+        run(["init", "book"], cwd=wd)
+        assert (wd / "book/bundle.json").exists(), "init 没生成 bundle.json"
+        assert list((wd / "book/skills").glob("*.md")), "init 没生成能力卡骨架"
+
+        # ③ chunk：造一份**带标点的真实形态**语料，正文里放一个只出现在正文的词
+        src = wd / "src.md"
+        src.write_text(
+            "# 第一章 总纲\n\n"
+            "本段讨论的是判断如何依赖前提，前提一旦变化结论就随之变化，因此要先固定前提。\n\n"
+            "## 第一节 分述\n\n"
+            "另一段讲完全不同的内容，用来验证分块边界与索引检索都落在正确的位置上。\n",
+            encoding="utf-8")
+        o = run(["chunk", str(src)], cwd=wd).stdout
+        assert re.search(r"(\d+) 块", o) and int(re.search(r"(\d+) 块", o).group(1)) >= 2, \
+            f"分块数不合理：{o[:200]}"
+
+        # ④ index --grep：正文里的词必须能搜到（#49 回归；这个词不在任何标题里）
+        o = run(["index", str(src) + ".td", "--grep", "前提"], cwd=wd).stdout
+        assert "命中 0 块" not in o, f"正文关键词搜不到——又只搜了标题：{o[:200]}"
+        assert re.search(r"命中 [1-9]\d* 块", o), f"命中数为空或异常：{o[:200]}"
+
+        # ⑤ count：单个文件不能被算成 0（#50 回归）
+        o = run(["count", str(src)], cwd=wd).stdout
+        assert re.search(r"语料总量[^\d]*0\s*$", o, re.M) is None, \
+            f"单文件语料总量被算成 0（静默假绿）：{o[:300]}"
+
+        # ⑥ validate：骨架应零错误
+        o = run(["validate", "book"], cwd=wd).stdout
+        assert "error 0" in o, f"validate 报告了错误：{o[:300]}"
+
+        # ⑦ strategy：必须给出一个明确推荐，不能空转
+        o = run(["strategy", "book", "--purpose", "workflow"], cwd=wd).stdout
+        assert ("推荐形态" in o) and ("pack" in o or "single" in o), f"strategy 没给结论：{o[:200]}"
+
+        # ⑧ output-eval：对骨架卡做体检，必须真的报出规模与段数
+        o = run(["output-eval", "book/skills/example-capability.md"], cwd=wd).stdout
+        assert "六段" in o, f"output-eval 没报六段结构：{o[:200]}"
+
+        # ⑨ prompt 编译：产物必须非空
+        out = wd / "p.md"
+        run(["prompt", str(ROOT / "SKILL.md"), "--out", str(out), "--mode", "entry"], cwd=wd)
+        assert out.exists() and out.stat().st_size > 200, "prompt 产物为空"
+
+        # ⑩ overlap：自身对自身必须判 FAIL（只会说 PASS 的检测器比没有更危险）
+        run(["overlap", "--new", str(src), "--old", str(src)], expect=1, cwd=wd)
+
+
+def t_no_control_chars():
+    """仓库里的文本文件不得含控制字符（\\n \\t \\r 除外）。
+
+    2026-10-07（#54）：我用 `re.sub(pat, '66\\2', text)` 做批量替换改回归项数，
+    Python 把 `\\2` 当成**八进制转义**（chr(2)）而不是组引用——
+    于是 `SKILL.md` 里「 项，零依赖」整段被一个不可见字符吃掉，
+    而 `t_docs_no_drift` **只校验数字**，67 项全绿、没有任何人发现。
+    **文档守卫只钉住了它关心的那几个数字，周围文字它可以被悄悄毁掉。**
+
+    这类损坏肉眼极难发现（终端里它就是一段空白），只能靠字节级扫描。
+    """
+    import subprocess as _sp
+    tracked = _sp.run(["git", "-C", str(ROOT), "ls-files"],
+                      capture_output=True, text=True)
+    if tracked.returncode != 0:      # 非 git 环境（如解压后的副本）不误判
+        return
+    bad = []
+    for f in tracked.stdout.split():
+        p = ROOT / f
+        try:
+            text = p.read_bytes().decode("utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        for idx, ch in enumerate(text):
+            if ord(ch) < 32 and ch not in "\n\t\r":
+                bad.append(f"{f}:{text[:idx].count(chr(10)) + 1} {ch!r}")
+                break
+    assert not bad, f"以下文件含控制字符（多半是替换时转义写错）：{bad}"
+
+
 def t_errors_are_human():
     assert "路径不存在" in run(["validate", "/nonexistent-xyz"], expect=1).stdout
     assert "FIDELITY 报告不存在" in run(["gate", "/nonexistent-xyz.md"], expect=1).stdout
@@ -2085,6 +2184,8 @@ def main() -> int:
         ("引语段号锚定（#46）", t_anchor_verifier),
         ("素材零重叠检测（8-gram 包含率）", t_overlap_detector),
         ("测试不许漏注册（#45）", t_no_unregistered_tests),
+        ("GUIDE 黄金路径端到端（#51）", t_guide_walkthrough),
+        ("文本文件无控制字符（#54）", t_no_control_chars),
         ("缺陷台账正文数字不腐烂", t_defect_ledger_stats),
         ("文档数字与代码不漂移", t_docs_no_drift),
         ("schema 与 --help 完整", t_schema_and_help),

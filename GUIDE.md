@@ -260,8 +260,7 @@ compile
    → 或临时应急：python3 scripts/td.py compile ... --force
 ```
 
-`compile` 真实退出码 **1**（拒绝）。`gate` 报告不存在也是 **1**，
-`overlap` 检出重叠是 **2**。
+`compile` 真实退出码 **1**（拒绝）。`gate` 报告不存在也是 **1**，`overlap` 检出重叠也是 **1**。
 
 > `--force` 只在临时应急时用，它会留痕（写进 manifest）。
 
@@ -409,7 +408,7 @@ python3 scripts/td.py research merge my-person/references/research/*.md \
 python3 scripts/td.py overlap --new 新语料.md --old 旧语料.md
 ```
 
-- 8-gram 词级包含率 > 0.5% →判 FAIL，退出码 **2**
+- 8-gram 词级包含率 > 0.5% → 判 FAIL，退出码 **1**
 - 出现**整句重复** → 判 FAIL
 - 两层防护是独立的：无标点语料切不出句子，但包含率仍会兜住
 
@@ -472,7 +471,7 @@ python3 scripts/td.py overlap --new 新语料.md --old 旧语料.md
 
 ## 八、已知限制（诚实声明）
 
-1. **本项目处于 beta。** 机械可靠性已验证（66 项回归），
+1. **本项目处于 beta。** 机械可靠性已验证（68 项回归），
    但**它蒸馏产出的卡片尚未达到可发布质量**——这是两件不同的事，别混为一谈。
 2. **FIDELITY 的「答题」侧还没完全隔离。** 独立**评分** Agent 已验证有效，
    独立**答题** Agent 尚未跑通，因此「答题者≠作者」目前只在评分侧成立。
