@@ -93,8 +93,48 @@ def split_paragraphs(text: str) -> dict[int, str]:
     return out
 
 
+CJK_CHAR_RE = re.compile(r"[\u4e00-\u9fff]")
+
+
 def norm_words(text: str) -> list[str]:
-    return WORD_RE.findall(text.lower())
+    """分词：ASCII 整词 + 中文按字符 bigram（#56）。
+
+    ⚠️ 2026-10-07：原实现是 `WORD_RE.findall(text.lower())`，只认 `[a-z0-9']+`——
+    **纯中文引语切出 0 个词** → `k = None` → 判 `TOO_SHORT` → 被静默跳过，
+    最后 CLI 打印「引语 0 条」+「✅ 判定 PASS」。
+    也就是说：**专门为防「伪造引语」而建的这个命令，对中文卡片完全失明，
+    还给出绿色的假安心**。这是同一类（#52 overlap、#55 transcript）的第三例。
+    """
+    out: list[str] = []
+    run: list[str] = []
+    word: list[str] = []
+
+    def flush_word() -> None:
+        if word:
+            out.append("".join(word))
+            word.clear()
+
+    def flush_cjk() -> None:
+        if run:
+            if len(run) == 1:
+                out.append(run[0])
+            else:
+                out.extend(run[i] + run[i + 1] for i in range(len(run) - 1))
+            run.clear()
+
+    for ch in text:
+        if CJK_CHAR_RE.match(ch):
+            flush_word()
+            run.append(ch)
+        elif ch.isalnum() or ch == "'":
+            flush_cjk()
+            word.append(ch.lower())
+        else:
+            flush_word()
+            flush_cjk()
+    flush_word()
+    flush_cjk()
+    return out
 
 
 def shingles(words: list[str], n: int) -> set[tuple[str, ...]]:
@@ -185,6 +225,7 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
     results = []
     unresolved: list[dict] = []
     seen_quotes = 0
+    citations_seen = 0      # 卡片里出现的 §N / [时间戳] 标注数（#56 空集守卫用）
     noise = 0   # 被引语形状过滤掉的中文正文数
 
     default_src = next(iter(corpora)) if corpora else None
@@ -201,18 +242,29 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
             if jm:
                 group += [int(x) for x in JOIN_RE.findall(jm.group(1))]
             cits += [(stem, g) for g in group]
+        if cits:
+            citations_seen += 1
         # 引语必须"以英文词开头、以英文词收尾"才算引语。
         # 单纯 r'"([^"\n]{12,600})"' 会把两个引号之间的**中文正文**也当成引语
         # （如 `"Give me some evidence for that" ——**同一句式对敌我双方各用一次**。`）。
         # 这类不是引语却进了核验器，产出假阳性——**核验器自己的噪声**。
-        quotes = [q for q in re.findall(r'"([^"\n]{12,600})"', line)
-                  if re.match(r"[A-Za-z0-9]", q.strip())
-                  and re.search(r"[A-Za-z]{2}", q)]
-        raw_quotes = re.findall(r'"([^"\n]{12,600})"', line)
-        noise += len(raw_quotes) - len(quotes)
+        def _is_quote(q: str) -> bool:
+            q = q.strip()
+            if len(q) < 12:
+                return False
+            if re.match(r"[A-Za-z0-9]", q) and re.search(r"[A-Za-z]{2}", q):
+                return True
+            # 2026-10-07（#56）：中文引语也必须被认出来。
+            # 原实现只走过上面那条英文分支，于是**所有中文引语被当成噪声丢弃**，
+            # 核验器报「0 条引语」还判 PASS——比不检查更危险。
+            cjk = len(CJK_CHAR_RE.findall(q))
+            return cjk >= 8 and cjk >= len(q) * 0.4
+
+        quotes = [q for q in re.findall(r'"([^"\n]{12,600})"', line) if _is_quote(q)]
+        # 中文卡片用「」或 “”，必须一并识别（#56）
+        quotes += [q for q in re.findall(r"[「“]([^」”\n]{12,600})[」”]", line) if _is_quote(q)]
+        noise += len(re.findall(r'"([^"\n]{12,600})"', line)) - len(quotes)
         for q in quotes:
-            if not re.search(r"[a-zA-Z]{3}", q):
-                continue
             seen_quotes += 1
             # 该行所有段号里，任一命中即算锚定成功（并列锚点是合法用法）
             best_local = None
@@ -258,6 +310,13 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
     return {
         "file": str(claim_file),
         "quotes_seen": seen_quotes,
+        "citations_seen": citations_seen,
+        # 2026-10-07（#56）：**空集不得判 PASS**。
+        # 卡片里明明有 §N/[时间戳] 标注，却一条引语都没抽出来 —— 这不是"没问题"，
+        # 是**核验器没干活**。旧版在这种情况下打印「引语 0 条」+「✅ 判定 PASS」，
+        # 给了完全虚假的安心（中文卡片 100% 命中这个假绿）。
+        # 与 v1.3 的「空集假绿」是同一个纪律：空集不能算通过。
+        "vacuous": seen_quotes == 0 and citations_seen > 0,
         "anchored_checked": anchored,
         "tally": tally,
         "unanchored": unanchored,

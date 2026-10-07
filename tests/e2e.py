@@ -2079,6 +2079,184 @@ def t_no_control_chars():
     assert not bad, f"以下文件含控制字符（多半是替换时转义写错）：{bad}"
 
 
+def t_transcript_lossless():
+    """逐字稿正文必须**严格等于字幕原文**——它是引语核验的真值来源，不许被改写。
+
+    2026-10-07（#55）：`SPEAKER_RE` 把「X：」里的 X 一律当说话人，
+    而中文「我想通一件事：听众其实…」这种句式极常见 → 逐字稿被写成
+    `**那半分钟里我想通一件事**： 听众其实…`（插入了原文没有的 `**` 与空格）。
+    后果链：卡片**逐字引用原话** → `verify-quotes` 判「❌ 未在语料中找到，
+    这类来源不实必须修掉」→ 用户为"修好"只能把 `**` 抄进卡片，
+    **等于教用户伪造引语**。实测真实英文 TED 字幕 315 条 cue 零误判，
+    纯中文必中——又是一次「英文成立、中文崩」（同类见 #52）。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import transcript as T
+
+    with tempfile.TemporaryDirectory() as d:
+        wd = Path(d)
+        srt = wd / "zh.srt"
+        # ① 中文从句冒号（会被旧实现误判）② 重复出现的真说话人标签
+        srt.write_text(
+            "1\n00:00:01,000 --> 00:00:04,000\n那半分钟里我想通一件事：听众不介意你停顿。\n\n"
+            "2\n00:00:05,000 --> 00:00:08,000\n主持人：欢迎来到今天的分享。\n\n"
+            "3\n00:00:09,000 --> 00:00:12,000\n主持人：我们先从第一个问题开始。\n\n"
+            "4\n00:00:13,000 --> 00:00:16,000\n我的答案是：先从最小的一步做起。\n",
+            encoding="utf-8")
+        run(["transcript", str(srt), "--gap", "0"], cwd=wd)
+        md = wd / "zh.transcript.md"
+        t = md.read_text(encoding="utf-8")
+
+        # ① 不许出现任何被工具加进去的 markdown 强调标记
+        body_lines = [l for l in t.splitlines() if l.strip().startswith("[")]
+        assert body_lines, "逐字稿没有生成任何段落"
+        for l in body_lines:
+            assert "**" not in l, f"逐字稿里出现了原文没有的 ** 强调标记：{l[:80]}"
+
+        # ② 正文必须与字幕原文逐字一致（无损）
+        bodies = [l.split("] ", 1)[1] for l in body_lines]
+        src_texts = ["那半分钟里我想通一件事：听众不介意你停顿。",
+                     "主持人：欢迎来到今天的分享。",
+                     "主持人：我们先从第一个问题开始。",
+                     "我的答案是：先从最小的一步做起。"]
+        for b in bodies:
+            assert b in src_texts, f"逐字稿正文被改写了：{b!r}"
+
+        # ③ 单次出现的中文短语**永远不算说话人**（哪怕它长得像候选）。
+        #    「那半分钟里我想通一件事」11 字 → 连候选都不是；
+        #    「我的答案是」5 字 → 是候选，但只出现一次，不得被确认。
+        who, _ = T.speaker_of("那半分钟里我想通一件事：听众不介意你停顿。")
+        assert who == "", f"中文从句被当成说话人候选：{who!r}"
+        assert "我的答案是" not in T.collect_speakers(
+            [{"text": "我的答案是：先从最小的一步做起。"}]), \
+            "只出现一次的短语被确认为说话人"
+        meta = json.loads((wd / "zh.transcript.json").read_text(encoding="utf-8"))
+        assert meta.get("speakers") == ["主持人"], \
+            f"说话人元数据应只认重复出现的标签：{meta.get('speakers')}"
+
+        # ④ 端到端：卡片逐字引用中文原话必须核得到（旧实现下会被判"来源不实"）
+        rdoc = ROOT / "scripts"
+        card = wd / "c.md"
+        card.write_text(
+            "---\nname: demo-card\ndescription: |\n  用于验证中文引语核验，"
+            "描述写够长度以通过检查。\n---\n\n# C\n\n> 「那半分钟里我想通一件事："
+            "听众不介意你停顿。」\n> —— [00:00:01.00]\n", encoding="utf-8")
+        sys.path.insert(0, str(rdoc))
+        from tdlib import evals
+        r = evals.verify_quotes(card, md)
+        assert r["verified"] >= 1, f"中文原话引用应核到，实际：{r}"
+
+
+def t_anchor_chinese_not_vacuous():
+    """`anchor` 必须能核中文引语，且**空集不得判 PASS**。
+
+    2026-10-07（#56）：`anchor` 有三处英文假设——分词只认 `[a-z0-9']+`、
+    引语抽取要求 `[A-Za-z]{2}`、只认 `"…"` 不认 `「…」`。
+    结果：**专门为防「伪造引语」而建的命令，对中文卡片一条引语都抽不出来**，
+    然后打印「引语 0 条」+「✅ 判定 PASS」——绿色的假安心。
+    这是同一类假设的第三例（#52 overlap、#55 transcript）。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import anchor
+
+    with tempfile.TemporaryDirectory() as d:
+        wd = Path(d)
+        src = wd / "zh.srt"
+        src.write_text(
+            "1\n00:00:01,000 --> 00:00:04,000\n我小时候特别怕在课上被点名。\n\n"
+            "2\n00:00:05,000 --> 00:00:08,000\n后来我发现把想说的话先写下来就会好很多。\n",
+            encoding="utf-8")
+        run(["transcript", str(src), "--gap", "0"], cwd=wd)
+        md = wd / "zh.transcript.md"
+
+        # ① 中文分词必须切得出东西（旧实现返回空表 → 全篇 TOO_SHORT）
+        paras = anchor.split_paragraphs(md.read_text(encoding="utf-8"))
+        assert anchor.norm_words(list(paras.values())[0]), "中文段落切不出任何词"
+        assert anchor.norm_words("我小时候特别怕在课上被点名") , "中文引语切不出词"
+
+        # ② 段号约定是 0 起（§0 = 第一段），挂对必须 ANCHOR_HIT
+        good = wd / "good.md"
+        good.write_text(
+            "---\nname: g\ndescription: |\n  测试卡片，描述写够长度以通过检查。\n---\n\n"
+            "> 「我小时候特别怕在课上被点名。」——§0\n", encoding="utf-8")
+        run(["anchor", str(good), "--corpus", str(md)])
+        rep = anchor.verify_file(good, anchor.load_corpora([md]))
+        assert rep["anchored_checked"] == 1, f"挂对段号的引语应命中：{rep['tally']}"
+        assert not rep["vacuous"], "有引语时不应判为空集"
+
+        # ③ 挂错段号必须被抓到（真话但段号写成 §1，实际在 §0）
+        bad = wd / "bad.md"
+        bad.write_text(
+            "---\nname: b\ndescription: |\n  测试卡片，描述写够长度以通过检查。\n---\n\n"
+            "> 「后来我发现把想说的话先写下来就会好很多。」——§0\n", encoding="utf-8")
+        p = run(["anchor", str(bad), "--corpus", str(md)], expect=None)
+        assert p.returncode != 0, f"挂错段号必须判失败，实际退出码 {p.returncode}"
+        rep2 = anchor.verify_file(bad, anchor.load_corpora([md]))
+        assert rep2["tally"].get("SPAN_HIT") == 1, f"应判 SPAN_HIT：{rep2['tally']}"
+
+        # ④ 空集假绿：有 §N 标注却一条引语都抽不出来 → 不许判 PASS
+        empty = wd / "empty.md"
+        empty.write_text(
+            "---\nname: e\ndescription: |\n  测试卡片，描述写够长度以通过检查。\n---\n\n"
+            "这里引用了 §0 的观点，但没有用引号把原文括起来，所以抽不出引语。\n",
+            encoding="utf-8")
+        rep3 = anchor.verify_file(empty, anchor.load_corpora([md]))
+        assert rep3["vacuous"], f"有标注但 0 条引语，必须自报空集：{rep3}"
+        p3 = run(["anchor", str(empty), "--corpus", str(md)], expect=None)
+        assert p3.returncode != 0, "空集假绿必须判失败，不能打印 PASS"
+
+
+def t_verify_quotes_misplaced_vs_fabricated():
+    """「引语挂错位置」与「引语是编造的」必须分开报，且都判失败。
+
+    2026-10-07（#57）：旧实现把两者一律报成「未在语料中找到」。
+    而引语明明在语料里、只是位置标错时，用户看到那句话会去**删掉一条真引语**——
+    核验器反而在破坏卡片。这两件事对用户的意义完全相反：
+    一个要「改引用位置」，一个要「删掉并追查怎么编出来的」。
+
+    ⚠️ 拆分时最容易犯的错：把 misplaced 排除出 unverified 却忘了改 verdict，
+    整批挂错位置的引语会变成 PASS。**本条测试就是这个假绿的守卫。**
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import evals
+
+    with tempfile.TemporaryDirectory() as d:
+        wd = Path(d)
+        srt = wd / "zh.srt"
+        srt.write_text(
+            "1\n00:00:01,000 --> 00:00:04,000\n第一句讲的是完全独立的一个话题内容。\n\n"
+            "2\n00:00:05,000 --> 00:00:08,000\n第二句换成了另一个毫不相干的说法。\n",
+            encoding="utf-8")
+        run(["transcript", str(srt), "--gap", "0"], cwd=wd)
+        md = wd / "zh.transcript.md"
+        txt = md.read_text(encoding="utf-8")
+        # 取第二段的正文，把它标到第一段的时间戳上（= 位置不符）
+        second = [l.split("] ", 1)[1] for l in txt.splitlines()
+                  if l.strip().startswith("[")][1]
+        first_ts = [l.split("] ", 1)[0].strip("[") for l in txt.splitlines()
+                    if l.strip().startswith("[")][0]
+
+        card = wd / "c.md"
+        card.write_text(
+            "---\nname: c\ndescription: |\n  测试卡片，描述写够长度以通过检查。\n---\n\n"
+            f"> 「{second}」—— [{first_ts}]\n\n"
+            "> 「这句在语料里完全不存在，用来模拟凭空编造的引语内容。」\n"
+            f"> —— [{'00:00:05.00'}]\n", encoding="utf-8")
+        r = evals.verify_quotes(card, md)
+
+        assert len(r["misplaced"]) == 1, \
+            f"挂错位置的引语应归入 misplaced：{r.get('misplaced')} / {r['unverified']}"
+        assert len(r["unverified"]) == 1, \
+            f"编造的引语应归入 unverified：{r['unverified']}"
+        assert r["verdict"] == "fail", \
+            "misplaced 与 unverified 都必须判失败——分开只是提示更准，不是放宽判定"
+
+        p = run(["verify-quotes", str(card), str(md)], expect=None)
+        assert p.returncode != 0, "存在两类问题时必须非零退出"
+        assert "位置不符" in p.stdout, f"输出必须区分「位置不符」：{p.stdout[-600:]}"
+        assert "疑似编造" in p.stdout, f"输出必须标出「疑似编造」：{p.stdout[-600:]}"
+
+
 def t_errors_are_human():
     assert "路径不存在" in run(["validate", "/nonexistent-xyz"], expect=1).stdout
     assert "FIDELITY 报告不存在" in run(["gate", "/nonexistent-xyz.md"], expect=1).stdout
@@ -2186,6 +2364,9 @@ def main() -> int:
         ("测试不许漏注册（#45）", t_no_unregistered_tests),
         ("GUIDE 黄金路径端到端（#51）", t_guide_walkthrough),
         ("文本文件无控制字符（#54）", t_no_control_chars),
+        ("逐字稿无损且中文可核（#55）", t_transcript_lossless),
+        ("anchor 中文可核且不空集假绿（#56）", t_anchor_chinese_not_vacuous),
+        ("引语「错位」与「编造」分开报（#57）", t_verify_quotes_misplaced_vs_fabricated),
         ("缺陷台账正文数字不腐烂", t_defect_ledger_stats),
         ("文档数字与代码不漂移", t_docs_no_drift),
         ("schema 与 --help 完整", t_schema_and_help),

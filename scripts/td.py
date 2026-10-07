@@ -392,6 +392,14 @@ def cmd_anchor(args) -> int:
     if rep["unanchored"]:
         warn(f"{rep['unanchored']} 条引语没有 §N 标注，属不可定位——"
              "本命令无法核验它们，需人工确认")
+    # #56：卡片有标注却一条引语都没抽出来 = 核验器没干活，不是"没问题"。
+    # 空集不得判 PASS（与 v1.3 的「空集假绿」同一纪律）。
+    if rep.get("vacuous"):
+        die(f"⚠️ 空集假绿：卡片有 {rep['citations_seen']} 处 §N/[时间戳] 标注，"
+            f"却一条引语都没抽出来 —— 本命令**没有核验任何东西**",
+            "这不是通过，是核验器没干活。请确认引语写在引号里"
+            "（支持 \"…\"、「…」、“…”），且长度 ≥12 字符；"
+            "或先用 verify-quotes 确认引语能被识别")
     ok(f"判定 PASS：{rep['anchored_checked']} 条引语全部锚定在声明的段号内")
     return EXIT_OK
 
@@ -593,8 +601,18 @@ def cmd_verify_quotes(args) -> int:
     rec = res.get("reconciliation", {})
     if rec and not all(rec.values()):
         warn("引用计数无法加总还原 —— 统计口径有漏，请修 verify_quotes")
+    # 2026-10-07（#57）：**把「挂错位置」与「真的不存在」分开报**。
+    # 旧实现一律说「未在语料中找到」，而引语明明在语料里、只是位置标错——
+    # 用户看到那句话会去删一条真引语。这两件事对用户的意义完全相反：
+    # 一个要「改引用位置」，一个要「删掉并追查怎么编出来的」。
+    for m_ in res.get("misplaced", []):
+        print(f"   ⚠️  【第{m_['ref']}条】引语存在但**位置不符**："
+              f"实际在 {', '.join('@' + w for w in m_['actually_at'])}"
+              f"（你标注的是 {m_['ref']}）")
+        print(f"        「{m_['quote'][:60]}」→ 改引用位置即可，**引语本身是真的**")
     for u in res["unverified"]:
-        print(f"   ❌ 【第{u['ref']}条】未在语料中找到：{u['quote'][:60]}")
+        print(f"   ❌ 【第{u['ref']}条】全篇语料中均未找到（疑似编造或转述改写）："
+              f"{u['quote'][:60]}")
     for o in res["orphaned_refs"]:
         print(f"   ❌ 语料中不存在编号：{o}")
     if args.out:
@@ -603,6 +621,8 @@ def cmd_verify_quotes(args) -> int:
         ok("全部引语在语料中核到")
         return EXIT_OK
     die("存在核不到或编号不存在的引语 —— 这类来源不实必须修掉，不允许发布",
+        "⚠️ 先看上面的分类：标「位置不符」的是引用位置写错（引语是真的，改位置即可）；"
+        "标「全篇语料中均未找到」的才疑似编造，必须删掉并追查来源。",
         "常见原因：转述时改写了原话、编号写错、或引用了他篇/他源内容",
         f"修正后重跑：python3 scripts/td.py verify-quotes {args.card} {args.corpus}")
 

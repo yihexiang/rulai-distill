@@ -531,6 +531,7 @@ def verify_quotes(card: Path, corpus: Path) -> dict:
     refs = re.findall(r"【第(\d+)条", text)
     ts_refs = re.findall(r"[\[【](\d{2}:\d{2}:\d{2}(?:[.,]\d+)?)", text)
     checked, verified, unverified, unquoted, orphaned = 0, [], [], [], []
+    misplaced: list[dict] = []   # 引语真实存在、但不在标注位置（#57）
     all_ref_pos = [m.start() for m in re.finditer(r"【第\d+条", text)]
     for rid in dict.fromkeys(refs):
         for m in re.finditer(rf"【第{rid}条", text):
@@ -797,7 +798,18 @@ def verify_quotes(card: Path, corpus: Path) -> dict:
             else:
                 ts_unverified.append({"ref": key, "quote": cands[0]})
         for u in ts_unverified:
-            unverified.append({"ref": f"@{u['ref']}", "quote": u["quote"]})
+            # 2026-10-07（#57）：核不到时**先在全文再搜一遍**，把两件性质完全不同的事分开：
+            #   · 引语在语料里、只是不在你标注的位置 → **挂错位置**（改引用即可，引语是真的）
+            #   · 全文都没有 → **疑似编造**（必须删掉）
+            # 旧实现一律报「未在语料中找到」，把「挂错位置」说成了「引语不存在」——
+            # 用户看到那句话会**删掉一条真引语**，等于核验器自己在破坏卡片。
+            where = [k for k, v in ts_index.items()
+                     if _loose_match(u["quote"], v)]
+            if where:
+                misplaced.append({"ref": f"@{u['ref']}", "quote": u["quote"],
+                                  "actually_at": where[:3]})
+            else:
+                unverified.append({"ref": f"@{u['ref']}", "quote": u["quote"]})
         verified.extend({"ref": f"@{v['ref']}", "quote": v["quote"]} for v in ts_verified)
 
     return {
@@ -821,10 +833,14 @@ def verify_quotes(card: Path, corpus: Path) -> dict:
         "quotes_checked": checked + ts_checked,
         "verified": len(verified),
         "unverified": unverified,
+        "misplaced": misplaced,
         "unquoted_refs": unquoted,
         "locator_only_refs": sorted(set(locator_only)),
         "orphaned_refs": sorted(set(orphaned)),
-        "verdict": "pass" if not unverified and not orphaned else "fail",
+        # #57：misplaced 必须一起算失败——它们分开只是为了让**提示**更准确，
+        # 不是为了让判定变松。把「挂错位置」排除出 unverified 却不改这里，
+        # 就会让挂错位置的引语整批变成 PASS（我刚引入又立刻堵上的假绿）。
+        "verdict": "pass" if not unverified and not orphaned and not misplaced else "fail",
         "reconciliation": {
             "entry_refs_accounted": len(set(refs)) == checked + len(
                 [u for u in unquoted if not u["ref"].startswith("@")]),

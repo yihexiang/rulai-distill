@@ -134,10 +134,55 @@ def hhmmss(ms: int) -> str:
 
 
 def speaker_of(text: str) -> tuple[str, str]:
+    """从「标签：正文」里切出说话人。**只判断、不提供改写后的字符串。**
+
+    ⚠️ 2026-10-07（#55）：原实现只做 `SPEAKER_RE.match` 就认定是说话人，
+    而 `SPEAKER_RE = ^\\s*([^\\s:：]{1,12})\\s*[:：]\\s*` **对中文完全失效**——
+    中文「我想通一件事：听众其实不介意你停顿」这种句式极常见，
+    冒号前的整句被当成说话人名，然后 `build_transcript` 把正文改写成
+    `**那半分钟里我想通一件事**： 听众其实…`：
+      1. 往逐字稿里插入了原文没有的 `**` 与空格；
+      2. 而逐字稿是**所有引语核验的真值来源** → 卡片逐字引用原话反而被判
+         「❌ 未在语料中找到，这类来源不实必须修掉」；
+      3. 用户为了"修好"，只能把工具加进去的 `**` 抄进卡片 → **等于教用户伪造引语**。
+    实测：真实英文 TED 字幕 315 条 cue 零误判，**纯中文句式必中**——
+    又是一次"英文成立、中文崩"（同类见 #52）。
+
+    现在的判据：**重复出现才算说话人标签**（真实访谈里同一标签会反复出现，
+    而中文的从句只会出现一次），长度上限也收紧。判定结果只用于统计，
+    **不再参与正文拼接**。
+    """
     m = SPEAKER_RE.match(text)
-    if m and len(m.group(1)) <= 12:
-        return m.group(1).strip(), text[m.end():].strip()
-    return "", text
+    if not m:
+        return "", text
+    label = m.group(1).strip()
+    if len(label) > 24 or label.endswith(("。", "！", "？", ".", "!", "?", "，", ",")):
+        return "", text
+    if _has_cjk(label):
+        # 中文：只可能是 2–6 字的姓名/称谓（张三／主持人／罗永浩）。
+        # 更长的基本都是从句（「那半分钟里我想通一件事」）——
+        # 而这正是旧实现误判并改写正文的来源。
+        if not (2 <= len(label) <= 6):
+            return "", text
+    else:
+        # 英文：必须以字母开头，且不能含句末标点
+        if not label[:1].isalpha():
+            return "", text
+    return label, text[m.end():].strip()
+
+
+def collect_speakers(paras: list[dict], min_hits: int = 2) -> list[str]:
+    """只在**重复出现**时确认说话人标签（#55）。
+
+    单次出现的「X：」在中文里绝大多数是普通从句，不是说话人。
+    返回按出现次数降序的标签列表，仅写进 JSON 元数据，**不改正文**。
+    """
+    counts: dict[str, int] = {}
+    for p in paras:
+        label, _ = speaker_of(p["text"])
+        if label:
+            counts[label] = counts.get(label, 0) + 1
+    return [k for k, v in sorted(counts.items(), key=lambda kv: -kv[1]) if v >= min_hits]
 
 
 def build_transcript(src: Path, out_base: Path | None = None, gap_ms: int = 2500,
@@ -183,10 +228,12 @@ def build_transcript(src: Path, out_base: Path | None = None, gap_ms: int = 2500
         "> 字幕为听写产物，数字与人名可能出错；关键引语需回听原视频核对。",
         "",
     ]
+    # 2026-10-07（#55）：正文**原样输出**，绝不加 `**`、绝不重排冒号空格。
+    # 逐字稿是引语核验的真值来源，任何改写都会让"真引语"被判成"来源不实"。
+    # 说话人只作为元数据记录（且必须重复出现才确认）。
+    speakers = collect_speakers(paras)
     for p in paras:
-        who, body = speaker_of(p["text"]) if keep_speaker else ("", p["text"])
-        prefix = f"**{who}**： " if who else ""
-        lines.append(f"[{hhmmss(p['start_ms'])}] {prefix}{body}")
+        lines.append(f"[{hhmmss(p['start_ms'])}] {p['text']}")
         lines.append("")
     md_path.write_text("\n".join(lines), encoding="utf-8")
 
@@ -198,6 +245,8 @@ def build_transcript(src: Path, out_base: Path | None = None, gap_ms: int = 2500
         "cue_count": len(cues),
         "paragraph_count": len(paras),
         "dedup_dropped": dropped,
+        "speakers": speakers,
+        "lossless_note": "逐字稿正文严格等于字幕原文（只按段落合并，不做任何改写）",
         "duration_ms": paras[-1]["end_ms"] if paras else 0,
         "paragraphs": paras,
         # cue 级明细：能力卡的引语定位需要精确到"第几句"，

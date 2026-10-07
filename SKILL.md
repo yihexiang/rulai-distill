@@ -284,7 +284,7 @@ td.py count <dir>                                  # token 计量
 - 可选：`PyYAML`（严格 frontmatter）、`tiktoken`（精确 token 计量）、`jsonschema`
 - **无网络调用**：所有脚本纯本地，不访问任何外部 API
 - 自检：`python3 scripts/td.py doctor`
-- 回归：`python3 tests/e2e.py`（68 项，零依赖与完整依赖两种解释器各跑一遍）
+- 回归：`python3 tests/e2e.py`（71 项，零依赖与完整依赖两种解释器各跑一遍）
 - CI：`.github/workflows/pipeline-check.yml`（双版本矩阵 + 红线扫描 + Schema 校验）
 
 ## 许可
