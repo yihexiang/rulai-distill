@@ -111,6 +111,9 @@ FIDELITY 门槛、字幕管线、六路调研、冲突标记、prompt 编译。
 
 ## 三、安装
 
+> 📖 **第一次用请看 [`GUIDE.md`](./GUIDE.md)** —— 里面有完整流程、真实输出、命令速查与故障排查表。
+> 本文只讲原理，GUIDE 讲怎么动手。
+
 ### 用作 WorkBuddy / Claude Code 技能
 
 ```bash

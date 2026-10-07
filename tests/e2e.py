@@ -260,6 +260,11 @@ def t_chunk():
         # 索引检索
         o3 = run(["index", str(sidecar), "--grep", "主要矛盾"]).stdout
         assert "命中" in o3
+        # 2026-10-07（#49）：`index --grep` 原来只按**标题**检索，正文里的词搜不到，
+        # 而 `chunk` 的输出恰恰提示「下一步：index --grep <关键词>」——**承诺了做不到**。
+        # 「前提」只出现在正文、任何标题里都没有，必须能命中。
+        o4 = run(["index", str(sidecar), "--grep", "前提"]).stdout
+        assert "命中 0 块" not in o4, f"正文关键词检索不到（只搜了标题）：{o4.strip()}"
         assert (sidecar / "index.json").exists() and (sidecar / "document.json").exists()
 
 
@@ -492,6 +497,16 @@ def t_count():
         assert m["discovery_payload"] > 0
         assert m["corpus_total"] > m["discovery_payload"]
         assert len(m["top10"]) == 10
+        # 2026-10-07（#50）：传**单个文件**时不能静默报 0——旧实现对文件做 rglob
+        # 返回空，于是 `count 某.md` 显示「语料总量 0」，看起来像"这文件不耗 token"。
+        one = Path(d) / "one.md"
+        one.write_text("语料总量的计量必须对单文件也成立，否则会静默报零。\n" * 20,
+                       encoding="utf-8")
+        out2 = f"{d}/m2.json"
+        run(["count", str(one), "--out", out2])
+        m2 = json.loads(Path(out2).read_text(encoding="utf-8"))
+        assert m2["file_count"] == 1, f"单文件应被计量 1 次，实际 {m2['file_count']}"
+        assert m2["corpus_total"] > 0, "单文件计量返回 0——静默假绿"
 
 
 def t_prompt():
@@ -1922,6 +1937,16 @@ def t_docs_no_drift():
     assert mh, "README.md 标题未标注版本号"
     assert mh.group(1) == ver, (
         f"版本号漂移：SKILL.md 是 {ver}，README.md 标题是 {mh.group(1)}")
+
+    # 2026-10-07（#48）：**代码里的版本号**也必须跟着走。
+    # 上面两条只管文档，但 `tdlib/util.py` 曾硬编码 `VERSION = "1.1.0"`——
+    # 于是 `td.py doctor` 在 1.6.0 的包上打印「v1.1.0」。
+    # **用户看到的就是错的那个**，所以版本号必须只有一个真源（SKILL.md）。
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib.util import VERSION as RUNTIME_VERSION
+    assert RUNTIME_VERSION == ver, (
+        f"运行时版本号 {RUNTIME_VERSION} 与 SKILL.md 的 {ver} 不一致"
+        "——`td.py doctor` 会打印错的版本")
 
     # 2026-10-05 第二轮实测：上面那条只查了 CAPABILITIES.md / CONSTRAINTS.md / 两处版本号，
     # 结果 SKILL.md 自己写着「回归 29 项」、README 写着「25 项」（实际 63）都没被抓到，

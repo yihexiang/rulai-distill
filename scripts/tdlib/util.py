@@ -17,8 +17,27 @@ from pathlib import Path
 
 MANIFEST_NAME = "BUILD_MANIFEST.json"
 GRADE_ORDER = ["A", "B", "C", "D"]
-VERSION = "1.1.0"
 PKG_ROOT = Path(__file__).resolve().parent.parent.parent   # rulai-distill/
+
+
+def _read_version() -> str:
+    """版本号的**唯一真源**是 SKILL.md 的 metadata.version（#48）。
+
+    原先这里硬编码 `VERSION = "1.1.0"`，而包已经是 1.6.0——
+    `td.py doctor` 会在 1.6.0 的包上打印「v1.1.0」，用户看到的版本是错的。
+    版本号只能有一个地方定义，否则改了 SKILL.md 忘了改这里就会漂移。
+    """
+    try:
+        text = (PKG_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        m = re.search(r'^\s*version:\s*"?(\d+\.\d+\.\d+)"?', text, re.M)
+        if m:
+            return m.group(1)
+    except Exception:
+        pass
+    return "0.0.0"   # 读不到就明说，不猜
+
+
+VERSION = _read_version()
 METHOD_DIR = PKG_ROOT / "methodology"
 TEMPLATE_DIR = PKG_ROOT / "templates"
 SCHEMA_DIR = PKG_ROOT / "schemas"

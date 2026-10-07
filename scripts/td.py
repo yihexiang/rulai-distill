@@ -213,8 +213,14 @@ def cmd_index(args) -> int:
                 walk(v, path + [k])
 
     walk(data.get("headings", {}), [])
-    uniq = sorted(set(hits))
+    # 2026-10-07（#49）：原来只按**标题**检索，正文里的词一个都搜不到——
+    # 而 `chunk` 的输出恰恰提示「下一步：td.py index <sidecar> --grep <关键词>」，
+    # **承诺了做不到**。这里补上正文匹配（大小写不敏感的子串）。
     chunks = {c["chunk_id"]: c for c in chunking.load_chunks(sidecar)}
+    needle = args.grep.lower()
+    hits.extend(cid for cid, c in chunks.items()
+                if needle in c.get("text", "").lower())
+    uniq = sorted(set(hits))
     ok(f"命中 {len(uniq)} 块（关键词：{args.grep}）")
     for cid in uniq[:args.limit]:
         c = chunks[cid]
