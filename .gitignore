@@ -43,3 +43,10 @@ Thumbs.db
 .idea/
 .vscode/
 *.sublime-workspace
+
+# ---- 本机项目级技能安装痕迹（install.sh --project 建的软链） ----
+# 仓库自身**不能**包含指向自己的 .claude/skills/rulai-distill 软链：
+# 它是自引用，会让 rglob 无限递归，也会污染开源包。
+.claude/
+.agents/
+.cursor/

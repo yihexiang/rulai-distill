@@ -6,6 +6,12 @@ description: |
   触发词：「蒸馏」「拆书」「拆解这本书」「做成 skill」「提取方法论」「提取思维方式」「人物思维 Skill」「book to skill」「distill」「extract methodology」。
   English triggers: "distill this book", "turn this into skills", "extract methodology", "persona skill", "cognitive implant".
   不做：书摘、读后感、单纯摘要、作者语气模仿。
+license: MIT
+compatibility: >-
+  Needs Python >= 3.10 and git. Optional extras (auto-degrades when absent):
+  PyYAML, tiktoken, jsonschema, yt-dlp (only fetch-subtitle touches the network).
+  Runs fully offline otherwise. Follows the open Agent Skills spec, so it loads in
+  Claude Code, Codex CLI, Cursor, Gemini CLI, GitHub Copilot, OpenCode, Hermes, WorkBuddy.
 metadata:
   version: "1.6.0"
   lineage: "cangjie-skill(2.5.0) 全套工程能力 + nuwa-skill FIDELITY/字幕/六路调研 + yeadon 认知植入/prompt 编译"

@@ -114,21 +114,34 @@ FIDELITY 门槛、字幕管线、六路调研、冲突标记、prompt 编译。
 > 📖 **第一次用请看 [`GUIDE.md`](./GUIDE.md)** —— 里面有完整流程、真实输出、命令速查与故障排查表。
 > 本文只讲原理，GUIDE 讲怎么动手。
 
-### 用作 WorkBuddy / Claude Code 技能
+### 跨 Agent 一条命令（Claude Code / Codex / Cursor / Gemini CLI / Copilot / OpenCode / Hermes / WorkBuddy）
 
 ```bash
-git clone https://github.com/yihexiang/rulai-distill.git \
-  ~/.workbuddy/skills/rulai-distill      # Claude Code 换成 ~/.claude/skills/
+git clone https://github.com/yihexiang/rulai-distill.git && cd rulai-distill
+./install.sh          # 装进所有检测到的 Agent 目录；--copy / --list / --uninstall
 ```
 
-装完即生效：说「把这本书蒸馏成技能」就会触发。**零依赖，Python ≥ 3.10 即可**，
-不装 PyYAML / tiktoken / jsonschema 也能跑（自动降级）。
-
-想要改动后还能一条命令同步：
+`SKILL.md` 遵循 [Agent Skills 开放标准](https://agentskills.io/specification)，
+所以**同一个目录**能被所有主流 Agent 直接读取，差别只在路径。
+不想跑脚本就手动 clone 到对应目录：
 
 ```bash
-rsync -a --delete rulai-distill/ ~/.workbuddy/skills/rulai-distill/
+git clone https://github.com/yihexiang/rulai-distill.git ~/.codex/skills/rulai-distill
 ```
+
+| Agent | 目录 |
+|---|---|
+| Claude Code | `~/.claude/skills/` |
+| Codex CLI | `~/.codex/skills/`、**`~/.agents/skills/`**（通用总线） |
+| Cursor ≥ 2.4 | `~/.cursor/skills/` |
+| Gemini CLI | `~/.gemini/skills/` |
+| GitHub Copilot | `.github/skills/` |
+| OpenCode | `~/.config/opencode/skills/` |
+| Hermes | `~/.hermes/skills/` |
+| WorkBuddy | `~/.workbuddy/skills/` |
+
+**零依赖，Python ≥ 3.10 即可**，不装 PyYAML / tiktoken / jsonschema 也能跑（自动降级）。
+装完说「把这本书蒸馏成技能」就会触发。
 
 > ⚠️ **不要**把技能目录建在工作区里再`git init`——`musk-run/`、`musk-run2/`、`video-run/`
 > 三个素材目录里是**受著作权约束的访谈逐字稿与字幕**，会被一起传上去。

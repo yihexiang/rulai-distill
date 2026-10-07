@@ -20,17 +20,72 @@
 
 ## 二、安装
 
-### 方式A：作为技能装进 WorkBuddy / Claude Code（推荐）
+### 方式 A：一条命令装进所有主流 Agent（推荐）
+
+```bash
+git clone https://github.com/yihexiang/rulai-distill.git
+cd rulai-distill
+./install.sh
+```
+
+它会把技能**符号链接**进下面这些目录（已存在的跳过，不覆盖别人的东西，重复跑幂等）：
+
+| Agent | 读取路径 |
+|---|---|
+| Claude Code | `~/.claude/skills/` |
+| **Codex CLI** | `~/.codex/skills/` |
+| **通用总线**（Codex 主路径，其余 Agent 兜底） | `~/.agents/skills/` |
+| Gemini CLI | `~/.gemini/skills/` |
+| Cursor（≥ 2.4） | `~/.cursor/skills/` |
+| OpenCode | `~/.config/opencode/skills/` |
+| OpenClaw | `~/.openclaw/skills/` |
+| Hermes | `~/.hermes/skills/` |
+| WorkBuddy | `~/.workbuddy/skills/` |
+
+常用参数：
+
+```bash
+./install.sh --list        # 只看会装哪些目录，不做改动
+./install.sh --copy        # 实体复制（Windows / 不支持符号链接的环境）
+./install.sh --project /path/to/your/repo   # 额外装成某个项目的项目级技能
+./install.sh --uninstall   # 卸载全部
+```
+
+> ⚠️ `--project` **不能指向本仓库自己**——那会建出自引用符号链接，
+> 让 `rglob` 无限递归。脚本会直接拒绝并说明。
+
+### 手动安装（不想跑脚本的话）
+
+本质就是**把目录放进对应路径**，Agent 会自己发现：
 
 ```bash
 git clone https://github.com/yihexiang/rulai-distill.git \
-  ~/.workbuddy/skills/rulai-distill          # Claude Code 换成 ~/.claude/skills/
+  ~/.codex/skills/rulai-distill        # 换个目录名就是换个 Agent
 ```
 
-装完即生效，重启一次客户端，说一句「蒸馏」就会触发。
+### 为什么能跨 Agent：格式是开放标准
 
-**要求：Python ≥ 3.10，零第三方依赖。** 不装 PyYAML / tiktoken 也能跑（自动降级，
-只是 token 计量偏保守）。
+`SKILL.md` 不是某家的私有格式——Anthropic 2025-10 发布后已捐给 Linux Foundation，
+是**公开规范**（<https://agentskills.io/specification>）。各家Agent 只是**读取路径不同**，
+文件本身不用改。本包frontmatter 已按规范校验：
+
+| 规范要求 | 本包 | 
+|---|---|
+| `name` ≤ 64 字符、小写字母/数字/连字符、**与目录同名** | `rulai-distill`✅ |
+| `description` ≤ 1024 字符 | 378 字符 ✅ |
+| 不得含 XML 尖括号（会被注入 system prompt） | 无 ✅ |
+| 正文 < 500 行 | 274 行 ✅ |
+| 可选 `license` / `compatibility` | 已填 ✅ |
+
+### 关于 DeepSeek：它是模型，不是 Agent
+
+DeepSeek 是**模型 API**，本身没有「技能目录」这种概念。
+真正能装技能的是**跑模型的 Agent 程序**——比如 Hermes（你本机就装了）、
+Codex CLI、Claude Code、OpenCode。
+
+所以正确说法是：**任何以 DeepSeek 为后端的 Agent，都能用这个技能**，
+只要它读 `SKILL.md`。你本机的 `~/.hermes/skills/` 已经有 27 个技能了，
+`./install.sh` 会直接把它装进去。
 
 ### 方式 B：只当命令行工具用
 
