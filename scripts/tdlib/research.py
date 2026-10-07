@@ -104,6 +104,8 @@ def _ngrams(s: str, n: int = 3) -> set:
     return {t[i:i + n] for i in range(len(t) - n + 1)}
 
 
+
+
 def _jaccard(a: set, b: set) -> float:
     if not a or not b:
         return 0.0
@@ -230,6 +232,18 @@ def merge_research(files: list[Path], out_md: Path, threshold: float = 0.62,
             conflicts.append({"a": k["text"], "b": it["text"], "similarity": round(j, 3),
                               "file_a": k["file"], "file_b": it["file"]})
 
+    # ── 对立主张：**确定性脚本做不到，因此本工具不假装能做**（#59）──────────
+    # 实测数据（2026-10-07）：真矛盾句对的 3-gram 相似度是 0.000~0.077
+    # （「决策必须先把前提固定下来」vs「决策不需要先固定前提」），
+    # 而**非矛盾**只是换了宾语的一对反而高达 0.400（「喜欢喝茶」vs「喜欢喝咖啡」）。
+    # 也就是说：矛盾天然不相似，而"话题相关的不同内容"相似度更高——
+    # 用相似度阈值区分二者在**原理上**不成立，调低只会制造噪声。
+    #
+    # 曾短暂加过一个「话题相关 + 否定极性相反」的启发式，实测在它本该抓住的用例上
+    # 返回 0 处，而输出里的「对立候选 0 处」读起来像"没发现矛盾"——
+    # **一个失效的启发式比没有更坏**，所以撤掉，改为在输出里明说这个能力不存在。
+    contradiction_detection = "unsupported"
+
     one_hand = sum(1 for k in kept if k["weight"] == "一手")
     ratio = one_hand / len(kept) if kept else 0.0
 
@@ -263,7 +277,12 @@ def merge_research(files: list[Path], out_md: Path, threshold: float = 0.62,
         "",
         f"# 调研合并 · {' + '.join(f.name for f in files)}",
         "",
-        f"> 保留 {len(kept)} 条（去重 {dropped}），幸存条目一手占比 {ratio:.0%}，冲突 {len(conflicts)} 处。",
+        f"> 保留 {len(kept)} 条（去重 {dropped}），幸存条目一手占比 {ratio:.0%}，**措辞重叠型冲突** {len(conflicts)} 处。",
+        ">",
+        "> ⚠️ **本工具查不到对立主张**（这是已知能力缺口，不是「没矛盾」）：",
+        "> `conflicts` 只标记**措辞高度重叠**的条目对。真正的对立主张（如「必须先固定前提」vs「不需要先固定前提」）相似度实测 0.000~0.077，**永远进不了重叠分支**；而相似度高的反而是「话题相关但各说各的」。",
+        "> 确定性脚本无法判定语义矛盾，因此这里**不给计数字段**——给了会让人以为「0 处 = 没问题」。",
+        "> **必须由 Agent/人工逐条对照一手条目**：这一步不能省，FIDELITY 维度 3（可信度）的评分依据就是它。",
         "> 一手占比低于 70% 时，FIDELITY 维度 4 会扣分，且不得对外宣称「基于原始素材」。",
         "",
         "## 车道覆盖审计",
@@ -314,6 +333,8 @@ def merge_research(files: list[Path], out_md: Path, threshold: float = 0.62,
               "manifest_errors": [] if mres["ok"] else mres["errors"],
               "inputs": [str(f) for f in files], "out": str(out_md), "items_in": len(items),
               "kept": len(kept), "dropped": dropped, "one_hand_ratio": round(ratio, 3),
-              "conflicts": conflicts, "lanes": lanes, "coverage": coverage}
+              "conflicts": conflicts,
+               "contradiction_detection": contradiction_detection,
+               "lanes": lanes, "coverage": coverage}
     write_json(Path(report_path) if report_path else out_md.with_suffix(".merge.json"), result)
     return result

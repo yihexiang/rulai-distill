@@ -2257,6 +2257,81 @@ def t_verify_quotes_misplaced_vs_fabricated():
         assert "疑似编造" in p.stdout, f"输出必须标出「疑似编造」：{p.stdout[-600:]}"
 
 
+def t_chinese_unit_count_and_honest_capability():
+    """中文必须按「字」计数；算不出结论时不许给结论；查不到的能力必须明说。
+
+    2026-10-07 两条同类缺陷一起守：
+    · #58 `audit-coverage` 用 `len(norm.split())` 判「是否实质段落」——中文整段只算
+      1 个词 → **每个中文段落都被当衔接语跳过**，报告写「语料段落 3（实质 0）」。
+      老实读的人以为卡片很差；**扫一眼的人把「未覆盖 0」读成"全都覆盖了"**。
+    · #59 `research merge` 的 `conflicts` 只看得见「措辞高度重叠」的条目对，
+      而真正的对立主张相似度实测 0.000~0.077，永远进不了那个分支，
+      摘要却打印「冲突 0 处」——**在那件工具自称要干的事上假绿**。
+      确定性脚本无法判定语义矛盾 → 改为在输出里明说这个能力不存在。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import evals, research as R
+
+    # ① 中文词数：按字计，不再靠空白切词（「决策要先把前提固定下来」= 11 个字）
+    assert evals._unit_count("决策要先把前提固定下来") == 11, \
+        f"中文应按字计数：{evals._unit_count('决策要先把前提固定下来')}"
+    assert evals._unit_count("alpha beta gamma") == 3
+
+    with tempfile.TemporaryDirectory() as d:
+        wd = Path(d)
+        srt = wd / "zh.srt"
+        srt.write_text(
+            "1\n00:00:01,000 --> 00:00:06,000\n"
+            "第一条讲的是决策要先把前提固定下来，前提一变结论就跟着变，所以要反复确认前提。\n\n"
+            "2\n00:00:07,000 --> 00:00:12,000\n"
+            "第二条讲的是遇到分歧时先找共同点，共同点找不到就缩小范围继续找，直到能对上。\n\n"
+            "3\n00:00:13,000 --> 00:00:18,000\n"
+            "第三条讲的是记录的重要性，把每次判断的依据写下来，事后才能复盘对错在哪里。\n",
+            encoding="utf-8")
+        run(["transcript", str(srt), "--gap", "0"], cwd=wd)
+        md = wd / "zh.transcript.md"
+        card = wd / "c.md"
+        card.write_text(
+            "---\nname: c\ndescription: |\n  覆盖率探针卡片，只覆盖前两条。描述长度写够。\n---\n\n"
+            "决策要先把前提固定下来，前提一变结论就跟着变，所以要反复确认前提。\n\n"
+            "遇到分歧时先找共同点，共同点找不到就缩小范围继续找，直到能对上。\n",
+            encoding="utf-8")
+        res = evals.audit_coverage(card, md)
+        assert res["substantive"] == 3, \
+            f"中文段落不该被当成衔接语跳过，实质应为 3：{res['substantive']}"
+        assert not res["vacuous"], "有实质段落时不应判空集"
+        assert res["uncovered"] == 1, \
+            f"第 3 段没被覆盖，应报 1 段未覆盖，实际 {res['uncovered']}"
+        assert res["uncovered_paragraphs"][0]["ts"].startswith("00:00:13"), \
+            f"未覆盖的应是第 3 段：{res['uncovered_paragraphs'][0]['ts']}"
+
+        # ② 空集守卫：一个段落都算不出来时，不许给覆盖结论
+        tiny = wd / "tiny.srt"
+        tiny.write_text("1\n00:00:01,000 --> 00:00:02,000\n嗯。\n", encoding="utf-8")
+        run(["transcript", str(tiny), "--gap", "0"], cwd=wd)
+        res2 = evals.audit_coverage(card, wd / "tiny.transcript.md")
+        assert res2["vacuous"], f"全被跳过时必须自报空集：{res2['paragraphs_total']}/{res2['substantive']}"
+
+    # ③ 对立主张：必须显式声明「查不到」，且不提供会误导的计数字段
+    with tempfile.TemporaryDirectory() as d:
+        wd = Path(d)
+        (wd / "a.md").write_text(
+            "---\nlane: 01\nstatus: ok\none_hand_weight: 0.9\n---\n\n"
+            "- 决策必须先把前提固定下来，前提一变结论就跟着变。出处：自传第 3 章 [一手]\n",
+            encoding="utf-8")
+        (wd / "b.md").write_text(
+            "---\nlane: 02\nstatus: ok\none_hand_weight: 0.9\n---\n\n"
+            "- 决策不需要先固定前提，先做起来再随时调整。出处：2024 访谈 [一手]\n",
+            encoding="utf-8")
+        out = wd / "merged.md"
+        run(["research", "merge", str(wd / "a.md"), str(wd / "b.md"), "--out", str(out)])
+        txt = out.read_text(encoding="utf-8")
+        assert "本工具查不到对立主张" in txt, \
+            "必须显式声明「对立主张查不到」，否则「冲突 0 处」会被读成「没矛盾」"
+        assert "必须由 Agent/人工逐条对照" in txt, "必须给出必须人工做的下一步"
+        assert "对立候选" not in txt, "失效的启发式不该留在输出里（它会读成「0 处=没问题」）"
+
+
 def t_errors_are_human():
     assert "路径不存在" in run(["validate", "/nonexistent-xyz"], expect=1).stdout
     assert "FIDELITY 报告不存在" in run(["gate", "/nonexistent-xyz.md"], expect=1).stdout
@@ -2367,6 +2442,7 @@ def main() -> int:
         ("逐字稿无损且中文可核（#55）", t_transcript_lossless),
         ("anchor 中文可核且不空集假绿（#56）", t_anchor_chinese_not_vacuous),
         ("引语「错位」与「编造」分开报（#57）", t_verify_quotes_misplaced_vs_fabricated),
+        ("中文按字计数·查不到要明说（#58/#59）", t_chinese_unit_count_and_honest_capability),
         ("缺陷台账正文数字不腐烂", t_defect_ledger_stats),
         ("文档数字与代码不漂移", t_docs_no_drift),
         ("schema 与 --help 完整", t_schema_and_help),

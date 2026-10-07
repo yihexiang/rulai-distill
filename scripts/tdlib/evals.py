@@ -860,6 +860,20 @@ _FILLER_RE = re.compile(
     r"^you know\b|^okay\b|^so\b\s*$|^and\b\s*$", re.I)
 
 
+def _unit_count(text: str) -> int:
+    """语言无关的「词数」：ASCII 整词各算 1，**中文按字各算 1**。
+
+    ⚠️ 2026-10-07（#58）：原判据是 `len(norm.split()) < min_words`，而 `split()`
+    按空格切——**中文整段只算 1 个词**，永远 < 8 → 每个中文段落都被当成
+    「衔接语/笑声」跳过。实测一段 40 字的中文正文，报告写「语料段落 3（实质 0）」。
+    后果是双向的坏：老实读的人看到「覆盖率 0%」以为卡片很差；
+    **扫一眼的人看到「未覆盖 0」会以为全都覆盖了**（与缺陷 #38 的虚假满覆盖同形）。
+    """
+    cjk = len(re.findall(r"[\u4e00-\u9fff]", text))
+    ascii_words = len(re.findall(r"[A-Za-z0-9']+", text))
+    return cjk + ascii_words
+
+
 def audit_coverage(card: Path, corpus: Path, threshold: float = 0.60,
                    min_words: int = 8) -> dict:
     """**穷举语料，列出卡片没有覆盖的段落**（把"人工穷举"变成一条命令）。
@@ -879,7 +893,7 @@ def audit_coverage(card: Path, corpus: Path, threshold: float = 0.60,
     covered, uncovered, skipped = [], [], 0
     for ts, raw in paras:
         norm = _norm_frag(raw)
-        if _FILLER_RE.match(norm.strip()) or len(norm.split()) < min_words:
+        if _FILLER_RE.match(norm.strip()) or _unit_count(norm) < min_words:
             skipped += 1
             continue
         g = ngrams(norm)
@@ -934,6 +948,9 @@ def audit_coverage(card: Path, corpus: Path, threshold: float = 0.60,
         "threshold": threshold,
         "paragraphs_total": len(paras),
         "substantive": len(paras) - skipped,
+        # #58：段落全被跳过 = **审计没干活**，不是"都覆盖了"。
+        # 与 anchor 的 vacuous 守卫同一纪律：空集不得给出通过性结论。
+        "vacuous": len(paras) > 0 and (len(paras) - skipped) == 0,
         "covered": len(covered),
         "uncovered": len(uncovered),
         "coverage_rate": round(len(covered) / max(1, len(paras) - skipped), 3),

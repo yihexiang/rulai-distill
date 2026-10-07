@@ -633,6 +633,14 @@ def cmd_audit_coverage(args) -> int:
                                threshold=args.threshold, min_words=args.min_words)
     head(f"覆盖审计 · {Path(args.card).name}")
     info(f"语料段落 {res['paragraphs_total']}（实质 {res['substantive']}）")
+    # #58：实质 0 段 = 审计没干活。旧版在这种情况下照样打印「未覆盖 0 · 覆盖率 0%」，
+    # 扫一眼的人会把「未覆盖 0」读成"全都覆盖了"——与 #38 的虚假满覆盖同形。
+    if res.get("vacuous"):
+        die(f"⚠️ 空集假绿：{res['paragraphs_total']} 个段落**全部被跳过**，"
+            f"没有任何段落参与审计 —— 本命令没有给出任何覆盖结论",
+            "每个段落的实质词数都低于 --min-words。中文按**字**计数，"
+            "长段落仍被跳过说明 --min-words 设得过大；"
+            "也可能是语料格式不对（需要 td.py transcript 产出的 [时间戳] 逐字稿）")
     info(f"已覆盖 {res['covered']} · 未覆盖 **{res['uncovered']}** · 覆盖率 {res['coverage_rate']:.0%}")
     d = res["coverage_distribution"]
     info(f"覆盖率分布 min={d['min']:.2f} p25={d['p25']:.2f} 中位={d['median']:.2f} "
