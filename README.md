@@ -1,5 +1,7 @@
 # rulai-distill · 蒸馏工厂 v1.6.0
 
+[English](./README.en.md) · [安装与使用指南](./GUIDE.md)
+
 把书籍 / 长视频 / 播客 / 访谈 / 人物素材，蒸馏成**可执行、可验证、可追溯**的 Agent Skills。
 
 > 📌 **2026-10-05 改名**：`rulai-skill` → **`rulai-distill`**（原仓库名已被同名佛学项目占用）。
