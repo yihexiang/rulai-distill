@@ -940,7 +940,14 @@ def token_metrics(root: Path, enc: str = "cl100k_base") -> dict:
     root = Path(root)
     if not root.exists():
         raise ToolError(f"路径不存在：{root}")
-    files = [p for p in root.rglob("*") if p.is_file() and p.suffix in (".md", ".template", ".json")]
+    # 2026-10-07（#50）：`root.rglob("*")` 对**单个文件**返回空，
+    # 于是 `td.py count 某.md` 静默报 0/0——看起来像"这个文件不耗 token"。
+    # 现在单文件直接计量自己。
+    if root.is_file():
+        base, files = root.parent, [root]
+    else:
+        base = root
+        files = [p for p in root.rglob("*") if p.is_file() and p.suffix in (".md", ".template", ".json")]
     entries, discovery = [], 0
     for p in files:
         try:
@@ -948,7 +955,7 @@ def token_metrics(root: Path, enc: str = "cl100k_base") -> dict:
         except ToolError:
             continue
         n = count_tokens(t, enc)
-        entries.append({"file": str(p.relative_to(root)), "tokens": n, "chars": len(t)})
+        entries.append({"file": str(p.relative_to(base)), "tokens": n, "chars": len(t)})
         if p.name == "SKILL.md" and t.startswith("---"):
             end = t.find("\n---", 3)
             discovery += count_tokens(t[3:end], enc)
