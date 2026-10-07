@@ -17,7 +17,7 @@
 
 | 维度 | 状态 | 证据 |
 |---|---|---|
-| **机械可靠性** | ✅ 可信 | 65 项回归全绿；`gate` 因评测模式拒绝放行（实测生效）；`overlap` 能抓到 100% 重叠；`anchor` 能抓到挂错段号的引语 |
+| **机械可靠性** | ✅ 可信 | 66 项回归全绿；`gate` 因评测模式拒绝放行（实测生效）；`overlap` 能抓到 100% 重叠；`anchor` 能抓到挂错段号的引语 |
 | **产出正确性** | ❌ **尚不可信** | 最近一次独立评分 **60/100（C 级）**，其中含一处**编造引语**；且因答题者与卡片作者未隔离，该分数本身也有折扣 |
 
 具体地说，这个项目目前**做不到**的事：
@@ -109,7 +109,40 @@ FIDELITY 门槛、字幕管线、六路调研、冲突标记、prompt 编译。
 
 ---
 
-## 三、快速开始
+## 三、安装
+
+### 用作 WorkBuddy / Claude Code 技能
+
+```bash
+git clone https://github.com/yihexiang/rulai-distill.git \
+  ~/.workbuddy/skills/rulai-distill      # Claude Code 换成 ~/.claude/skills/
+```
+
+装完即生效：说「把这本书蒸馏成技能」就会触发。**零依赖，Python ≥ 3.10 即可**，
+不装 PyYAML / tiktoken / jsonschema 也能跑（自动降级）。
+
+想要改动后还能一条命令同步：
+
+```bash
+rsync -a --delete rulai-distill/ ~/.workbuddy/skills/rulai-distill/
+```
+
+> ⚠️ **不要**把技能目录建在工作区里再`git init`——`musk-run/`、`musk-run2/`、`video-run/`
+> 三个素材目录里是**受著作权约束的访谈逐字稿与字幕**，会被一起传上去。
+
+### 只当命令行工具用
+
+```bash
+git clone https://github.com/yihexiang/rulai-distill.git && cd rulai-distill
+python3 scripts/td.py doctor        # 自检：打印能力矩阵与缺失的可选依赖
+python3 tests/e2e.py                # 跑 66 项回归
+```
+
+`scripts/td.py` 是纯本地、零网络、零依赖可跑的薄CLI，任何 Python ≥ 3.10 都能直接用。
+
+---
+
+## 四、快速开始
 
 ```bash
 # 0. 自检（零依赖也能跑）
@@ -148,11 +181,11 @@ python3 scripts/td.py trigger record suite.json --out sheet.md
 python3 scripts/td.py trigger score suite.json answers.json
 ```
 
-**回归测试**：`python3 tests/e2e.py`（65 项，覆盖全部命令与 vendored 上游实跑）
+**回归测试**：`python3 tests/e2e.py`（66 项，覆盖全部命令与 vendored 上游实跑）
 
 ---
 
-## 四、七阶段管线
+## 五、七阶段管线
 
 | 阶段 | 做什么 | 产物 |
 |---|---|---|
@@ -168,7 +201,7 @@ python3 scripts/td.py trigger score suite.json answers.json
 
 ---
 
-## 五、目录结构
+## 六、目录结构
 
 ```
 rulai-distill/
@@ -185,12 +218,12 @@ rulai-distill/
 │   ├── tdlib/                ← util / chunking / transcript / fetch / research / validate
 │   │                            / fidelity / strategy / publish / evals / evolve / promptc / upstream
 │   └── vendor/cangjie/       ← 上游 MIT 原件 + PROVENANCE.md（不改）
-└── tests/e2e.py              ← 端到端回归（65 项，双解释器各跑一遍）
+└── tests/e2e.py              ← 端到端回归（66 项，双解释器各跑一遍）
 ```
 
 ---
 
-## 六、诚实声明
+## 七、诚实声明
 
 1. **语义提取由 Agent 完成，不由脚本完成**。`td.py` 只做确定性文件操作。
 2. **FIDELITY 分数不是自证**。无独立 sub-agent 能力时标 `fallback-self`，

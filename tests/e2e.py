@@ -1779,24 +1779,35 @@ def t_overlap_detector():
     用户明确要求"资料来源和内容不要跟昨天重复"。若只凭"我换了三个来源"这句话，
     这条要求无法证伪。这个测试把 overlap 检测器钉住，且**必须能抓到 FAIL**——
     一个只会说 PASS 的检测器比没有更危险。
+
+    2026-10-07（#47）：这条测试此前**从未被运行过**（漏登记，见 #45），
+    一登记就红——原因不在检测器，而在夹具：`sentences()` 按 `[.!?]` 或空行切句，
+    而我造的无标点单段文本被当成**一整句**，所以"整句复制"根本没形成两句。
+    真实逐字稿是有标点的。这里改用真实语料形态，并补一条**无标点场景**的断言：
+    即使切不出句子，8-gram 包含率也必须把重复抓出来（两层防护不能只测一层）。
     """
     sys.path.insert(0, str(ROOT / "scripts"))
     from tdlib import overlap
 
     d = Path(tempfile.mkdtemp())
-    # 两批刻意不重叠的语料
-    a = d / "a.md"
-    a.write_text("alpha beta gamma delta epsilon zeta eta theta iota kappa\n"
-                 "the quick brown fox jumps over the lazy dog repeatedly today\n",
-                 encoding="utf-8")
-    b = d / "b.md"
-    b.write_text("quantum photon lattice nucleus isotope meson baryon fermion\n"
-                 "completely unrelated content about superconducting magnets here\n",
-                 encoding="utf-8")
+    A1 = "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi"
+    A2 = "the quick brown fox jumps over the lazy dog repeatedly every single day"
+    B1 = "quantum photon lattice nucleus isotope meson baryon fermion gluon neutrino quark"
+    B2 = "completely unrelated content about superconducting magnets and cryogenic plants"
+
+    def w(name: str, *paras: str) -> Path:
+        p = d / name
+        p.write_text("\n\n".join(paras) + "\n", encoding="utf-8")
+        return p
+
+    a = w("a.md", A1 + ".", A2 + ".")
+    b = w("b.md", B1 + ".", B2 + ".")
+
     r = overlap.compute(a, b)
     assert r["overlap_verdict"] == "PASS", f"不重叠语料被判FAIL：{r}"
     assert r["containment"] == 0.0
     assert r["exact_duplicate_sentences"] == 0
+    assert r["new_sentences"] == 2, f"夹具本身就该切成 2 句：{r}"
 
     # 自身对自身：必须 FAIL，否则检测器是假的
     same = overlap.compute(a, a)
@@ -1804,14 +1815,19 @@ def t_overlap_detector():
     assert same["containment"] > 0.99
     assert same["exact_duplicate_sentences"] >= 1
 
-    # 部分重叠：复制一段进去必须被抓到
-    c = d / "c.md"
-    c.write_text("alpha beta gamma delta epsilon zeta eta theta iota kappa\n"
-                 "brand new sentence that never appeared in the old corpus at all\n",
-                 encoding="utf-8")
+    # 整句复制（真实形态：有标点、能切成句子）必须被逐句检查抓到
+    c = w("c.md", A1 + ".", "brand new sentence that never appeared in the old corpus at all")
     rc = overlap.compute(c, a)
     assert rc["overlap_verdict"] == "FAIL", f"整句复制未被检出：{rc}"
-    assert rc["exact_duplicate_sentences"] >= 1
+    assert rc["exact_duplicate_sentences"] >= 1, f"逐句重复未被抓到：{rc}"
+
+    # 无标点场景：切不出句子，但 8-gram 包含率仍必须判FAIL（第二层防护）
+    np_a = w("na.md", A1 + "\n" + A2)
+    np_c = w("nc.md", A1 + "\n" + "entirely different tail words that were never in the source")
+    rn = overlap.compute(np_c, np_a)
+    assert rn["overlap_verdict"] == "FAIL", f"无标点的整段复制未被检出：{rn}"
+    assert rn["containment"] > 0.005
+
     # 空集不得判 PASS（呼应「空集假绿」的老教训）
     empty = d / "e.md"
     empty.write_text("", encoding="utf-8")
@@ -1947,6 +1963,24 @@ def t_errors_are_human():
     assert "未找到 index" in run(["index", "/tmp/definitely-not-here"], expect=1).stdout
 
 
+def t_no_unregistered_tests():
+    """任何 `def t_*` 都必须出现在 main() 的运行清单里。
+
+    2026-10-07 实测（#45）：`t_overlap_detector` 定义了却忘了登记进清单，
+    于是「素材零重叠」这条要求**从来没被执行过**——
+    **写了不跑，比不写更坏**：它给读README 的人虚假的安全感。
+    文档守卫 `t_docs_no_drift` 数的是「定义数」，运行器数的是「清单数」，
+    两者不等时文档数字会漂移，但没人知道少跑了一项。
+    """
+    src = (ROOT / "tests" / "e2e.py").read_text(encoding="utf-8")
+    defined = set(re.findall(r"^def (t_[a-z0-9_]+)\(", src, re.M))
+    main_src = src[src.index("def main() -> int:"):]
+    used = set(re.findall(r'\("[^"]+",\s*(t_[a-z0-9_]+)\)', main_src))
+    assert defined == used, (
+        f"定义了但没进运行清单：{sorted(defined - used)}；"
+        f"清单里有但没定义：{sorted(used - defined)}")
+
+
 # --------------------------------------------------------------------------
 def main() -> int:
     ap = argparse.ArgumentParser()
@@ -2024,6 +2058,8 @@ def main() -> int:
         ("C6 vendored 上游完整性（sha256 基线）", t_vendor_integrity),
         ("C11 已安装副本与项目一致（#44）", t_installed_copy_in_sync),
         ("引语段号锚定（#46）", t_anchor_verifier),
+        ("素材零重叠检测（8-gram 包含率）", t_overlap_detector),
+        ("测试不许漏注册（#45）", t_no_unregistered_tests),
         ("缺陷台账正文数字不腐烂", t_defect_ledger_stats),
         ("文档数字与代码不漂移", t_docs_no_drift),
         ("schema 与 --help 完整", t_schema_and_help),
