@@ -615,10 +615,23 @@ def cmd_verify_quotes(args) -> int:
               f"{u['quote'][:60]}")
     for o in res["orphaned_refs"]:
         print(f"   ❌ 语料中不存在编号：{o}")
+    # 2026-10-07（#60）：被语言过滤丢掉的候选**必须显式打出来**。
+    # 旧实现把它们静默混进「表格定位锚点（不承载引语，不计入分母）」，
+    # 于是引语数、分母、覆盖率三项一起低估，最后还打印一句干净的 ✅。
+    for s in res.get("lang_skipped", []):
+        print(f"   ⚠️  【第{s['ref']}条】**未核验**：行内中文候选因「语料判为英文」被过滤")
+        print(f"        「{s['quote'][:60]}」")
+        print(f"        → 本工具**没有核验它**（区分不了「作者行文」与「真引语」），"
+              f"需人工确认它不是来源引语")
     if args.out:
         write_json(Path(args.out), res)
     if res["verdict"] == "pass":
-        ok("全部引语在语料中核到")
+        n_skip = len(res.get("lang_skipped", []))
+        if n_skip:
+            ok(f"已核引语全部在语料中核到 —— 但另有 {n_skip} 条中文候选**未核验**"
+               f"（见上），**不等于它们没问题**")
+        else:
+            ok("全部引语在语料中核到")
         return EXIT_OK
     die("存在核不到或编号不存在的引语 —— 这类来源不实必须修掉，不允许发布",
         "⚠️ 先看上面的分类：标「位置不符」的是引用位置写错（引语是真的，改位置即可）；"

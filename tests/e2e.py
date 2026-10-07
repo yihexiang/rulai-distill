@@ -2332,6 +2332,69 @@ def t_chinese_unit_count_and_honest_capability():
         assert "对立候选" not in txt, "失效的启发式不该留在输出里（它会读成「0 处=没问题」）"
 
 
+def t_verify_quotes_lang_filter_not_silent():
+    """语言过滤可以「不核验」，但**绝不能静默**。
+
+    2026-10-07（#60）：`_keep()` 对「语料判为英文 + 作者行文行」的中文候选直接
+    `continue` 扔掉 → `cands` 变空 → 被下面误归类成「表格行=纯定位锚点，不承载引语」。
+    实测同一位置放一条编造的**英文**引语会判 FAIL，放**中文**则打印
+    「✅ 全部引语在语料中核到」通过——**在「防伪造引语」这件事上假绿**，
+    而这正是本命令存在的理由。
+
+    修法不是硬把它判失败（中文作者行文在英文语料里是常态，#35 已证明硬判会让
+    工具不可用），而是**记账 + 显式打出来 + 不再给一句干净的 ✅**。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import evals
+
+    with tempfile.TemporaryDirectory() as d:
+        wd = Path(d)
+        # 英文为主（CJK < 20%）的语料 → 触发语言过滤
+        srt = wd / "mix.srt"
+        srt.write_text(
+            "1\n00:00:01,000 --> 00:00:06,000\n"
+            "The first principle is that you must fix your premises before you reason.\n\n"
+            "2\n00:00:07,000 --> 00:00:12,000\n"
+            "When you argue, find the common ground first, then narrow the scope step by step.\n\n"
+            "3\n00:00:13,000 --> 00:00:18,000\n"
+            "Keeping a written record of every judgement lets you review where you went wrong.\n",
+            encoding="utf-8")
+        run(["transcript", str(srt), "--gap", "0"], cwd=wd)
+        md = wd / "mix.transcript.md"
+        txt = md.read_text(encoding="utf-8")
+        cjk = len(re.findall(r"[\u4e00-\u9fff]", txt))
+        assert cjk / len(txt) < 0.20, "夹具应是英文为主的语料"
+
+        # 表格行里放一条语料中不存在的**中文**引语
+        card = wd / "zh-row.md"
+        card.write_text(
+            "---\nname: c\ndescription: |\n  探针卡片，描述写够长度以通过检查。\n---\n\n"
+            "| 主张 | 逐字引语 | 出处 |\n|---|---|---|\n"
+            "| 讲者主张先固定前提 | 「我在早上总是先跑步五公里再开始工作」 | [00:00:01.00] |\n",
+            encoding="utf-8")
+        r = evals.verify_quotes(card, md)
+        assert len(r["lang_skipped"]) == 1, \
+            f"被语言过滤的候选必须单独记账，不能混进 locator_only：{r.get('lang_skipped')}"
+        p = run(["verify-quotes", str(card), str(md)])
+        assert "未核验" in p.stdout, f"必须显式打出「未核验」：{p.stdout[-500:]}"
+        assert "✅ 全部引语在语料中核到" not in p.stdout, \
+            "有未核验候选时不许打印一句干净的 ✅（那正是假绿）"
+        assert "引用计数无法加总还原" not in p.stdout, \
+            "lang_skipped 必须进对账表，否则计数守卫会红"
+
+        # 对照：同位置放**英文**编造引语，必须照旧判失败（行为不能被放松）
+        card_en = wd / "en-row.md"
+        card_en.write_text(
+            "---\nname: e\ndescription: |\n  对照卡片，描述写够长度以通过检查。\n---\n\n"
+            "| 主张 | 逐字引语 | 出处 |\n|---|---|---|\n"
+            "| 讲者主张先固定前提 | \"I run five kilometres every single morning\" "
+            "| [00:00:01.00] |\n", encoding="utf-8")
+        pe = run(["verify-quotes", str(card_en), str(md)], expect=None)
+        assert pe.returncode != 0, "英文编造引语必须仍然判失败"
+        assert not evals.verify_quotes(card_en, md)["lang_skipped"], \
+            "英文候选不该走语言过滤"
+
+
 def t_errors_are_human():
     assert "路径不存在" in run(["validate", "/nonexistent-xyz"], expect=1).stdout
     assert "FIDELITY 报告不存在" in run(["gate", "/nonexistent-xyz.md"], expect=1).stdout
@@ -2443,6 +2506,7 @@ def main() -> int:
         ("anchor 中文可核且不空集假绿（#56）", t_anchor_chinese_not_vacuous),
         ("引语「错位」与「编造」分开报（#57）", t_verify_quotes_misplaced_vs_fabricated),
         ("中文按字计数·查不到要明说（#58/#59）", t_chinese_unit_count_and_honest_capability),
+        ("语言过滤不静默（#60）", t_verify_quotes_lang_filter_not_silent),
         ("缺陷台账正文数字不腐烂", t_defect_ledger_stats),
         ("文档数字与代码不漂移", t_docs_no_drift),
         ("schema 与 --help 完整", t_schema_and_help),

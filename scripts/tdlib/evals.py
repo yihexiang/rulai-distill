@@ -532,6 +532,7 @@ def verify_quotes(card: Path, corpus: Path) -> dict:
     ts_refs = re.findall(r"[\[【](\d{2}:\d{2}:\d{2}(?:[.,]\d+)?)", text)
     checked, verified, unverified, unquoted, orphaned = 0, [], [], [], []
     misplaced: list[dict] = []   # 引语真实存在、但不在标注位置（#57）
+    lang_skipped: list[dict] = []  # 有候选但被语言过滤丢掉，**未核验**（#60）
     all_ref_pos = [m.start() for m in re.finditer(r"【第\d+条", text)]
     for rid in dict.fromkeys(refs):
         for m in re.finditer(rf"【第{rid}条", text):
@@ -740,6 +741,13 @@ def verify_quotes(card: Path, corpus: Path) -> dict:
                                    ("归属拆分", "**归属**", "归属：", "归属标注",
                                     "措辞修正", "口径统一", "更正记录"))
 
+            # 2026-10-07（#60）：被**语言过滤**丢掉的候选必须单独记账。
+            # 旧实现是 `continue` 直接扔，于是 cands 变空 → 下面按"表格行=纯定位锚点"
+            # 归类 → **一条中文引语完全不计数**。实测：同一位置放一条编造的**英文**引语
+            # 会被判 FAIL，放中文则打个「✅ 全部引语在语料中核到」通过——
+            # **在"防伪造引语"这件事上假绿，而这正是本命令存在的理由**。
+            _lang_dropped: list[str] = []
+
             def _keep(qs: list[str]) -> list[str]:
                 out = []
                 for q in qs:
@@ -752,7 +760,11 @@ def verify_quotes(card: Path, corpus: Path) -> dict:
                     if _corpus_is_en and _in_author_voice:
                         q_cjk = len(re.findall(r"[\u4e00-\u9fff]", q))
                         if q_cjk / max(len(q), 1) > 0.30:
-                            continue  # 英文语料里的中文「」= 作者行文，不是引语
+                            # 英文语料里的中文「」多半是作者行文——但**不能静默丢**：
+                            # 它也可能是"中文卡片引了中文译文"这种真引语。
+                            # 工具区分不了，所以记下来交给人，而不是假装核过了。
+                            _lang_dropped.append(q)
+                            continue
                     out.append(q)
                 return out
 
@@ -769,7 +781,15 @@ def verify_quotes(card: Path, corpus: Path) -> dict:
                 _cls = text.rfind("\n", 0, m.start()) + 1
                 _cln = text.find("\n", m.end())
                 _cur = text[_cls: len(text) if _cln == -1 else _cln]
-                if _cur.lstrip().startswith("|") or _cur.lstrip().startswith("-") \
+                if _lang_dropped:
+                    # #60：有候选**但被语言过滤丢掉** ≠ 这行没有引语。
+                    # 旧实现把它归进 locator_only（"不承载引语，不计入分母"），
+                    # 于是引语数、分母、覆盖率三项一起静默低估。
+                    lang_skipped.append({"ref": f"@{key}",
+                                         "quote": _lang_dropped[0],
+                                         "note": "语料被判为英文，行内中文候选按作者行文"
+                                                 "过滤——**本工具未核验它**"})
+                elif _cur.lstrip().startswith("|") or _cur.lstrip().startswith("-") \
                         or "出处" in _cur:
                     locator_only.append(key)
                 else:
@@ -834,6 +854,7 @@ def verify_quotes(card: Path, corpus: Path) -> dict:
         "verified": len(verified),
         "unverified": unverified,
         "misplaced": misplaced,
+        "lang_skipped": lang_skipped,
         "unquoted_refs": unquoted,
         "locator_only_refs": sorted(set(locator_only)),
         "orphaned_refs": sorted(set(orphaned)),
@@ -844,7 +865,10 @@ def verify_quotes(card: Path, corpus: Path) -> dict:
         "reconciliation": {
             "entry_refs_accounted": len(set(refs)) == checked + len(
                 [u for u in unquoted if not u["ref"].startswith("@")]),
+            # #60：lang_skipped 也是"这一条引用被处理过"的一种结局（未被核验），
+            # 必须计入对账。**漏加它时那条计数守卫立刻报红**——这正是 #37 建它的用途。
             "timestamp_refs_accounted": len(ts_refs) == ts_checked + len(locator_only) + len(
+                lang_skipped) + len(
                 [u for u in unquoted if u["ref"].startswith("@")]),
         },
         "note": ("locator_only_refs 是表格/披露表里的纯时间戳锚点，不承载引语，"
