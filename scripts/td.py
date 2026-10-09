@@ -37,7 +37,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from tdlib import (anchor, chunking, contracts, evolve, evals, fidelity as fid, fetch,
+from tdlib import (anchor, chunking, contracts, evalkit, evolve, evals, fidelity as fid, fetch,
                    overlap, promptc, publish, research, strategy, transcript,
                    upstream, validate as vd)
 from tdlib.util import (METHOD_DIR, SCHEMA_DIR, TEMPLATE_DIR, ToolError, VERSION,
@@ -339,14 +339,29 @@ def cmd_gate(args) -> int:
         warn(n)
     if rep.get("eval_mode") != "dual-agent":
         warn("非双 Agent 评测 —— 不得作为对外宣称的质量证据")
+    # 复审 P0：gate **默认要求交叉复核记录**（≥2 个独立评分者），单评分 Agent 不构成质检
+    # 结论。三种来源优先级：①CLI --scores ②报告内嵌（eval-kit check 产出的 graders +
+    # cross_grader_gap）③都没有 → 默认拒绝，除非显式 --allow-single-scorer。
     cross = None
+    _emb = _embedded_cross_review(rep)
     if getattr(args, "scores", ""):
         cross = _cross_review_from_arg(args.scores, args.cross_threshold, args.report)
         print(f"   交叉复核 {cross['scorers']} 个评分：{cross['scores']} → 分差 {cross['spread']:g}"
               f"（阈值 {cross['threshold']:g}）  判定 {cross['verdict']}")
-        if cross["threshold_fragile"]:
-            warn(f"分差 {cross['spread']:g} 贴着阈值 ±1 —— 结论脆弱，换个评分员可能翻转，不许单独引用单点")
-        for r in cross["reasons"]:
+    elif _emb:
+        cross = _emb
+        print(f"   交叉复核（报告内嵌）{cross['scorers']} 个评分 → 分差 {cross['spread']:g}"
+              f"（阈值 {cross['threshold']:g}）  判定 {cross['verdict']}")
+    elif getattr(args, "allow_single_scorer", False):
+        warn("已按 --allow-single-scorer 放行：单评分 Agent 不构成独立质检，"
+             "此结论不得作为对外质量证据")
+    else:
+        cross = _missing_cross_review()   # 具体理由在下面统一打印，避免重复
+    if cross:
+        if cross.get("threshold_fragile"):
+            warn(f"分差 {cross.get('spread', 0):g} 贴着阈值 ±1 —— 结论脆弱，"
+                 "换个评分员可能翻转，不许单独引用单点")
+        for r in cross.get("reasons") or []:
             warn(r)
     passed, reasons = fid.gate(rep, args.min, allow_fallback=args.allow_fallback, cross=cross)
     if passed:
@@ -373,6 +388,88 @@ def _cross_review_from_arg(raw: str, threshold: float, subject: str | None = Non
         except ValueError:
             die(f"评分不是数字：{p!r}", "用法：td.py cross-review 95,88（逗号分隔的百分制总分）")
     return fid.cross_review(scores, threshold=threshold, subject=subject)
+
+
+def _embedded_cross_review(rep: dict) -> dict | None:
+    """从报告里读**内嵌**的交叉复核信息。
+
+    eval-kit check 产出的 FIDELITY JSON 带 `graders`（≥2）与 `cross_grader_gap`，
+    于是 gate 无需再手填 `--scores` 就能识别"已交叉复核"。只给单个评分者或没有分差
+    字段时返回 None（交给 CLI 默认策略处理，不假装已复核）。
+    """
+    graders = rep.get("graders") or []
+    gap = rep.get("cross_grader_gap")
+    if len(graders) < fid.CROSS_REVIEW_MIN_SCORERS or gap is None:
+        return None
+    spread = float(gap)
+    verdict = "pass" if spread <= fid.CROSS_REVIEW_THRESHOLD else "needs_human_review"
+    return {
+        "schema": "rulai-distill/cross-review@1", "subject": rep.get("subject"),
+        "scorers": len(graders), "spread": spread,
+        "threshold": fid.CROSS_REVIEW_THRESHOLD, "min_scorers": fid.CROSS_REVIEW_MIN_SCORERS,
+        "verdict": verdict, "needs_human_review": verdict != "pass",
+        "threshold_fragile": abs(spread - fid.CROSS_REVIEW_THRESHOLD) <= 1,
+        "reasons": ([f"报告内嵌分差 {spread:g} > 阈值 {fid.CROSS_REVIEW_THRESHOLD:g}："
+                     "评分分歧过大，须人工复核"] if verdict != "pass" else []),
+        "source": "报告内嵌 graders/cross_grader_gap（eval-kit check 产出）",
+    }
+
+
+def _missing_cross_review() -> dict:
+    """gate 默认策略：没有交叉复核记录时构造一个"人数不足"判定 → 让 gate 拒绝放行。
+
+    复审 P0：单评分 Agent 不构成质检结论。要放行须显式 --allow-single-scorer。
+    语义与 fid.cross_review([]) 一致，但后者会抛错，所以这里手构造。
+    """
+    return {
+        "schema": "rulai-distill/cross-review@1", "scorers": 0, "spread": 0.0,
+        "threshold": fid.CROSS_REVIEW_THRESHOLD, "min_scorers": fid.CROSS_REVIEW_MIN_SCORERS,
+        "verdict": "insufficient_scorers", "needs_human_review": True,
+        "threshold_fragile": False,
+        "reasons": ["缺交叉复核记录：gate 默认要求 ≥2 个独立评分者交叉复核"
+                    "（用 --scores 提供，或让报告内嵌 graders）；"
+                    "确要单评分放行请显式 --allow-single-scorer"],
+    }
+
+
+def cmd_eval_kit(args) -> int:
+    if args.eval_cmd == "init":
+        rep = evalkit.build_kit(Path(args.card).expanduser(), Path(args.out).expanduser())
+        head("eval-kit · 生成独立评测套件")
+        ok(f"{rep['files']} → {rep['out']}（{rep['questions']} 道种子题）")
+        warn("题库是**种子**：source=human 的题（尤其 edge_honesty）必须人工补——"
+             "那是唯一能抓出「拿素材权威包装编造内容」的一维")
+        info(f"下一步：读 {rep['out']}/README.md，让独立答题 Agent 填 answers.json")
+        return EXIT_OK
+    # check
+    res = evalkit.check(Path(args.answers).expanduser(),
+                        [Path(p).expanduser() for p in args.scores],
+                        subject=args.subject)
+    head("eval-kit · 汇总独立评分并过交叉复核门禁")
+    print(f"   答题者 {res['answerer']!r}   评分者 {res['graders']}（{len(res['graders'])} 个）")
+    cr = res["cross"]
+    print(f"   分差门禁 判定 {cr['verdict']}（分差 {cr.get('spread', 0):g}／阈值 "
+          f"{cr.get('threshold', fid.CROSS_REVIEW_THRESHOLD):g}）")
+    print(f"   合并维度：{'  '.join(f'{k}={v}' for k, v in res['report']['dimensions'].items())}")
+    print(f"   总分 {res['report']['total']}/100   等级 {res['report']['grade']}")
+    for e in res["errors"]:
+        warn(e)
+    for b in res["report"].get("blocking_issues") or []:
+        warn(b)
+    out = Path(args.out).expanduser() if args.out else Path(args.answers).with_name("FIDELITY.json")
+    vres = contracts.validate_local("fidelity", res["report"])
+    if not vres["ok"]:
+        die("产出的 FIDELITY JSON 不符合本包 fidelity 契约（这是工具自己的错）",
+            *vres["errors"][:6])
+    write_json(out, res["report"])
+    ok(f"已写出 FIDELITY 报告：{out}")
+    if res["verdict"] != "pass":
+        die("eval-kit 判定不通过：不得据此宣称质量",
+            "看上面的 errors / blocking_issues：答题或评分未填全、评分人数 <2、"
+            "或分差 >10（评分分歧过大须人工复核）",
+            "修好回传文件后重跑 eval-kit check")
+    info(f"下一步：td.py gate {out}")
+    return EXIT_OK
 
 
 def cmd_anchor(args) -> int:
@@ -987,16 +1084,32 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("path")
     q.set_defaults(func=cmd_validate)
 
-    q = sub.add_parser("gate", help="FIDELITY 门槛判定")
+    q = sub.add_parser("gate", help="FIDELITY 门槛判定（默认要求交叉复核记录）")
     q.add_argument("report")
     q.add_argument("--min", default="B", choices=["A", "B", "C", "D"])
     q.add_argument("--allow-fallback", action="store_true",
                    help="允许 fallback 自测通过（不得对外宣称质量）")
     q.add_argument("--scores", default="",
                    help="多个独立评分 Agent 的总分（逗号分隔，如 95,88）；给了就强制走交叉复核门禁")
+    q.add_argument("--allow-single-scorer", action="store_true",
+                   help="显式豁免交叉复核（单评分 Agent 放行；不得作为对外质量证据）")
     q.add_argument("--cross-threshold", type=float, default=fid.CROSS_REVIEW_THRESHOLD,
                    help="分差阈值（默认 10，照抄 nuwa 第三条铁律口径）")
     q.set_defaults(func=cmd_gate)
+
+    q = sub.add_parser("eval-kit", help="独立评测套件：题库/评分模板/JSON 回传/分差门禁")
+    eq = q.add_subparsers(dest="eval_cmd", required=True)
+    a = eq.add_parser("init", help="生成题库 / 答题模板 / 评分模板 / 工作流说明")
+    a.add_argument("card", help="被评测的卡片（SKILL.md）")
+    a.add_argument("--out", required=True, help="套件输出目录")
+    a.set_defaults(func=cmd_eval_kit)
+    c = eq.add_parser("check", help="汇总答题+评分 → 交叉复核 → 产出 FIDELITY JSON")
+    c.add_argument("--answers", required=True, help="独立答题 Agent 回传的 answers.json")
+    c.add_argument("--scores", nargs="+", required=True,
+                   help="≥2 个独立评分 Agent 回传的 scores-*.json")
+    c.add_argument("--subject", help="被评测对象标识，写进报告便于审计")
+    c.add_argument("--out", help="FIDELITY JSON 输出路径（默认与 answers 同目录 FIDELITY.json）")
+    c.set_defaults(func=cmd_eval_kit)
 
     q = sub.add_parser("cross-review", help="多评分 Agent 交叉复核（分差 > 阈值须人工复核）")
     q.add_argument("scores", help="各评分 Agent 的总分，逗号分隔，如 95,88")

@@ -369,10 +369,14 @@ def t_gate():
     with tempfile.TemporaryDirectory() as d:
         b = setup(Path(d))
         rep = b / "skills/major-contradiction/FIDELITY.md"
-        out = run(["gate", str(rep), "--min", "B"]).stdout
+        # grade 解析路径：用 --allow-single-scorer 关掉交叉复核默认要求，专测 grade 判定
+        out = run(["gate", str(rep), "--min", "B", "--allow-single-scorer"]).stdout
         assert "总分 80" in out and "通过门槛" in out, out
         assert "consistency=26" in out, "分项解析失败"
-        run(["gate", str(rep), "--min", "A"], expect=1)
+        run(["gate", str(rep), "--min", "A", "--allow-single-scorer"], expect=1)
+        # 新默认（复审 P0）：不给交叉复核记录就拒绝——单评分不构成质检结论
+        o_no = run(["gate", str(rep), "--min", "B"], expect=1).stdout
+        assert "交叉复核" in o_no, o_no
         # fallback 自测降级
         fb = Path(d) / "fb.md"
         fb.write_text("# 报告\n\neval_mode: fallback-self\n\n"
@@ -382,12 +386,115 @@ def t_gate():
                       "## 维度 4 · 来源透明度（15 分）\n得分：15/15\n"
                       "## 维度 5 · 结构完整度（15 分）\n得分：15/15\n"
                       "**总分** 100\n", encoding="utf-8")
-        o = run(["gate", str(fb)], expect=1).stdout
+        o = run(["gate", str(fb), "--allow-single-scorer"], expect=1).stdout
         assert "风格辨识度" in o and ("作废" in o or "style=0" in o), o
         # 非双 Agent 默认不得通过
-        assert "非双 Agent" in run(["gate", str(fb)], expect=1).stdout
+        assert "非双 Agent" in run(["gate", str(fb), "--allow-single-scorer"], expect=1).stdout
         # 显式 allow-fallback 才放行
-        assert "通过门槛" in run(["gate", str(fb), "--allow-fallback"]).stdout
+        assert "通过门槛" in run(["gate", str(fb), "--allow-fallback", "--allow-single-scorer"]).stdout
+
+
+def t_gate_requires_cross_review():
+    """复审 P0：gate **默认要求交叉复核记录**（≥2 个独立评分者）。
+
+    此前 --scores 是 opt-in：不给就静默按单评分放行——等于"质检靠人记得加参数"。
+    现在默认拒绝，除非显式 --allow-single-scorer，或报告内嵌 graders（eval-kit 产出）。
+    """
+    with tempfile.TemporaryDirectory() as d:
+        bare = Path(d) / "bare.json"
+        bare.write_text(json.dumps({
+            "schema": "rulai-distill/fidelity/v1", "subject": "bare", "eval_mode": "dual-agent",
+            "dimensions": {"consistency": 26, "style": 17, "edge_honesty": 18,
+                           "source_transparency": 13, "structure": 14},
+            "total": 88, "grade": "A"}, ensure_ascii=False), encoding="utf-8")
+        # 1) 默认拒绝（缺交叉复核）
+        o = run(["gate", str(bare), "--min", "A"], expect=1).stdout
+        assert "交叉复核" in o, o
+        # 2) 显式 --scores 提供交叉复核 → 放行
+        assert "通过门槛" in run(["gate", str(bare), "--min", "A", "--scores", "90,88"]).stdout
+        # 3) 分差 >10 → 拒绝（哪怕总分够）
+        o3 = run(["gate", str(bare), "--min", "A", "--scores", "95,70"], expect=1).stdout
+        assert "交叉复核" in o3, o3
+        # 4) 显式豁免单评分 → 放行
+        assert "通过门槛" in run(["gate", str(bare), "--min", "A", "--allow-single-scorer"]).stdout
+
+
+def t_eval_kit():
+    """复审 P0：eval-kit 把 FIDELITY 独立质检闭环产品化。
+
+    init 出题库/模板；check 汇总 ≥2 评分 → 交叉复核 → 产出**可被 fidelity 契约校验**的
+    FIDELITY JSON；gate 能直接吃它（内嵌 graders）。空集/单评分/分差过大一律不判通过。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import contracts, evalkit
+    card = ROOT / "examples/sample-bundle/skills/five-affairs-seven-questions/SKILL.md"
+    with tempfile.TemporaryDirectory() as d:
+        base = Path(d)
+        kit = base / "kit"
+        evalkit.build_kit(card, kit)
+        for f in ("questions.json", "answers.template.json", "scores.template.json", "README.md"):
+            assert (kit / f).exists(), f"eval-kit 未生成 {f}"
+        q = json.loads((kit / "questions.json").read_text(encoding="utf-8"))
+        assert q["needs_human_augmentation"] is True, "题库必须显式标注需人工补题（不假装自动够用）"
+        assert any(x["kind"] == "edge_honesty" for x in q["questions"]), \
+            "题库必须含 edge_honesty 维度——那是唯一能抓出『编造』的一维"
+
+        def write_scores(name, grader, dims):
+            p = base / name
+            p.write_text(json.dumps({"schema": "rulai-distill/eval-kit-scores@1", "grader": grader,
+                                     "dimensions": {k: {"score": v, "max": m}
+                                                    for (k, v), m in zip(dims.items(), [30, 20, 20, 15, 15])}},
+                                    ensure_ascii=False), encoding="utf-8")
+            return p
+
+        ans = base / "answers.json"
+        ans.write_text(json.dumps({"schema": "rulai-distill/eval-kit-answers@1",
+                                   "answerer": "answerer-A",
+                                   "answers": [{"id": x["id"], "answer": "回答"} for x in q["questions"]]},
+                                  ensure_ascii=False), encoding="utf-8")
+        dims1 = {"consistency": 24, "style": 15, "edge_honesty": 17,
+                 "source_transparency": 12, "structure": 12}
+        dims2 = {"consistency": 22, "style": 14, "edge_honesty": 16,
+                 "source_transparency": 11, "structure": 13}
+        dims3 = {"consistency": 30, "style": 20, "edge_honesty": 20,
+                 "source_transparency": 15, "structure": 15}
+        s1 = write_scores("s1.json", "grader-1", dims1)
+        s2 = write_scores("s2.json", "grader-2", dims2)
+        s3 = write_scores("s3.json", "grader-3", dims3)
+
+        # 正常：2 评分分差 4 → pass，产物合 fidelity 契约
+        r = evalkit.check(ans, [s1, s2], subject="demo")
+        assert r["verdict"] == "pass", (r["verdict"], r["errors"], r["cross"])
+        assert r["report"]["eval_mode"] == "dual-agent"
+        assert r["report"]["graders"] == ["grader-1", "grader-2"]
+        vres = contracts.validate_local("fidelity", r["report"])
+        assert vres["ok"], f"eval-kit 产物不合 fidelity 契约：{vres['errors']}"
+
+        # 单评分 → 不构成交叉复核 → fail
+        r1 = evalkit.check(ans, [s1], subject="demo")
+        assert r1["verdict"] == "fail" and r1["cross"]["verdict"] == "insufficient_scorers", r1["cross"]
+
+        # 分差 >10 → fail（评分分歧过大）
+        r2 = evalkit.check(ans, [s1, s3], subject="demo")
+        assert r2["verdict"] == "fail" and r2["cross"]["spread"] == 20, r2["cross"]
+
+        # 答题者/评分者未填（仍是模板占位） → 报错，不得据此下结论
+        bad = base / "bad.json"
+        bad.write_text(json.dumps({"schema": "x", "answerer": "【必填】",
+                                   "answers": [{"id": "q", "answer": "【填】"}]},
+                                  ensure_ascii=False), encoding="utf-8")
+        r3 = evalkit.check(bad, [s1, s2])
+        assert r3["errors"] and r3["verdict"] == "fail", r3
+
+        # CLI 端到端：init → check → gate 放行（gate 走报告内嵌的交叉复核）
+        kit2 = base / "kit2"
+        run(["eval-kit", "init", str(card), "--out", str(kit2)])
+        out = base / "FIDELITY.json"
+        run(["eval-kit", "check", "--answers", str(ans), "--scores", str(s1), str(s2),
+             "--subject", "demo", "--out", str(out)])
+        assert out.exists(), "eval-kit check 未产出 FIDELITY JSON"
+        assert "通过门槛" in run(["gate", str(out), "--min", "B"]).stdout, \
+            "gate 应能直接消费 eval-kit 产出的报告（内嵌交叉复核）"
 
 def t_strategy():
     with tempfile.TemporaryDirectory() as d:
@@ -468,8 +575,9 @@ def t_fidelity_parse_strictness():
         assert rep["total_mismatch"] is True, (
             f"声明总分(80)≠维度之和(67)应标记不一致：{rep}")
         assert rep["declared_total"] == 80 and rep["dimension_sum"] == 67, rep
-        # gate 命令行应打印两条警示（漏维度 + 总分不一致）
-        o = run(["gate", str(p), "--allow-fallback"]).stdout
+        # gate 命令行应打印两条警示（漏维度 + 总分不一致）。
+        # 用 --allow-single-scorer 关掉新默认的交叉复核要求，专测解析警示。
+        o = run(["gate", str(p), "--allow-fallback", "--allow-single-scorer"]).stdout
         assert "未解析" in o, f"gate 应提示漏维度：{o}"
         assert "不一致" in o, f"gate 应提示总分不一致：{o}"
 
@@ -483,7 +591,7 @@ def t_fidelity_parse_strictness():
         assert not rep2["unparsed_dims"], f"维度齐全不应有未解析：{rep2}"
         assert rep2["total_mismatch"] is True, (
             f"声明 90 ≠ 维度之和 80 应标记不一致：{rep2}")
-        o2 = run(["gate", str(p2), "--allow-fallback"]).stdout
+        o2 = run(["gate", str(p2), "--allow-fallback", "--allow-single-scorer"]).stdout
         assert "不一致" in o2, f"gate 应提示总分不一致：{o2}"
 
 
@@ -2761,6 +2869,8 @@ def main() -> int:
         ("validate 拦截步骤禁令/完成标准/失败模式", t_validate_catches),
         ("output-eval 产物体检", t_output_eval),
         ("gate 门槛与自测降级", t_gate),
+        ("gate 默认要求交叉复核记录（复审 P0）", t_gate_requires_cross_review),
+        ("eval-kit 独立质检闭环（复审 P0）", t_eval_kit),
         ("strategy single/pack 决策", t_strategy),
         ("compile 原子发布 + 手改检测 + 回滚", t_compile_and_publish),
         ("compile single 模式", t_compile_single_mode),

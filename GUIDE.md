@@ -392,6 +392,7 @@ python3 scripts/td.py research merge my-person/references/research/*.md \
 | `overlap --new A --old B` | 证明两批素材**零重叠** | 换素材重蒸馏前 |
 | `output-eval <卡片>` | 六段结构 / 引语数 / 规模体检 | 发布前 |
 | `cross-review <scores>` | 多个独立评分 Agent 的**分差**门禁 | 评分环节 |
+| `eval-kit init` / `check` | 把独立质检闭环产品化：题库 / 答题+评分模板 / JSON 回传 / 分差门禁 → 产出 FIDELITY JSON | 每张卡做出厂质检时（`gate` 默认要求 ≥2 评分者的交叉复核记录） |
 
 ### 为什么 `anchor` 是必需的
 
@@ -472,7 +473,7 @@ python3 scripts/td.py overlap --new 新语料.md --old 旧语料.md
 
 ## 八、已知限制（诚实声明）
 
-1. **本项目处于 beta。** 机械可靠性已验证（82 项回归），
+1. **本项目处于 beta。** 机械可靠性已验证（84 项回归），
    但**它蒸馏产出的卡片尚未达到可发布质量**——这是两件不同的事，别混为一谈。
 2. **FIDELITY 的「答题」侧还没完全隔离。** 独立**评分** Agent 已验证有效，
    独立**答题** Agent 尚未跑通，因此「答题者≠作者」目前只在评分侧成立。
