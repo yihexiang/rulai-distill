@@ -554,6 +554,52 @@ def t_lint_quotes():
         run(["lint-quotes", str(bad), "--corpus", str(src)], expect=1)
 
 
+def t_lint_quotes_technical_and_sectional():
+    """#62：①引号里的**文件名/通配**不是引语（工具自己的假阳性）；
+    ②卡片已**显式标注为节引**时，省略号提示必须停（工具给的两种处置之一，照做就该过）。
+
+    实测：zhouyi-yili 卡写 `任一返回"未找到 references/…md"时…`，
+    被体检器当成"含省略号的引语"报了出来；另 geju-yunshi 的合法节引在标注后仍被反复提示。
+    **工具给的建议，工具自己必须认。**
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import lintquotes as L
+
+    # ① 技术 token 必须被跳过，且单独计数（不静默）
+    assert L._looks_like_path("未找到 references/…md"), "文件名形态应判为技术 token"
+    assert L._looks_like_path("见 scripts/td.py"), "路径形态应判为技术 token"
+    assert L._looks_like_path("https://example.com/x"), "URL 应判为技术 token"
+    assert not L._looks_like_path("孩子/新事物如何启蒙"), \
+        "中文夹斜杠的正文不得被误杀（假阳性比漏报更坏）"
+
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / "card.md"
+        p.write_text(
+            "任一返回\"未找到 references/…md\"时，如实说本技能包不完整。\n"
+            "再看「孩子/新事物如何启蒙」这个中文短语（含斜杠，但仍是正文）。\n",
+            encoding="utf-8")
+        rep = L.lint(p, {"c": "与上面无关的语料内容，用于让体检器有语料可查。"})
+        kinds = {f["kind"] for f in rep["findings"]}
+        assert "ellipsis" not in kinds, f"技术 token 不该报省略号：{rep['findings']}"
+        assert rep["technical_tokens_skipped"] >= 1, rep
+        assert rep["quotes_checked"] >= 1, f"中文正文里的引语仍须被检查：{rep}"
+
+    # ② 已标注「节引」的引语不再提示省略号；未标注的仍提示
+    with tempfile.TemporaryDirectory() as d:
+        marked = Path(d) / "marked.md"
+        marked.write_text(
+            "> src-01 §1 「开头逐字……结尾逐字。」（**节引**：省略号处为原文省略）\n",
+            encoding="utf-8")
+        r1 = L.lint(marked, {})
+        assert not [f for f in r1["findings"] if f["kind"] == "ellipsis"], \
+            f"已标注节引不该再提示：{r1['findings']}"
+        unmarked = Path(d) / "unmarked.md"
+        unmarked.write_text("> src-01 §1 「开头逐字……结尾逐字。」\n", encoding="utf-8")
+        r2 = L.lint(unmarked, {})
+        assert [f for f in r2["findings"] if f["kind"] == "ellipsis"], \
+            "未标注的省略号仍须提示"
+
+
 def t_g1_evalkit_hardening():
     """复审 G1：①失败产物不得过 gate；②同名评分者不算独立复核。
 
@@ -2924,6 +2970,61 @@ def t_anchor_unanchored_not_fail():
     run(["anchor", str(card), "--corpus", str(src)], expect=0)
 
 
+def t_anchor_cjk_short_quotes():
+    """#61：`anchor` 的引语长度门槛必须**语言自适应**——中文按汉字数，不套 ASCII 的 12 字符。
+
+    旧实现两道闸门都卡在英文尺度上：抽取正则 `{12,600}` 的下限、`_is_quote` 的 `len(q) < 12`。
+    于是「天行健，君子以自強不息」(11 字)、「不可為典要，唯變所適」(10 字)、
+    「窮理盡性以至於命」(8 字) 这些最经典的引语**从未进入核验**，还被计入 noise 静默消失。
+    实测 zhouyi-yili 卡 25 条候选引语只认出 9 条（16 条被丢，其中 8 条为 8~11 字）。
+
+    本条同时守住三件不许放宽的事：挂错段号仍判 FAIL、短术语不得被当引语、抽取层对账必须平。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import anchor as A
+    with tempfile.TemporaryDirectory() as d:
+        base = Path(d)
+        corpus = base / "c.md"
+        corpus.write_text(
+            "[00:00:00.000]\n天行健，君子以自強不息。\n\n"
+            "[00:00:10.000]\n地勢坤，君子以厚德載物。\n", encoding="utf-8")
+        corpora = A.load_corpora([corpus])
+
+        # ① 11 字中文引语必须被认出来并锚定命中（旧实现在这里报 0 条）
+        short = base / "short.md"
+        short.write_text("> 「天行健，君子以自強不息」——§0\n", encoding="utf-8")
+        rep = A.verify_file(short, corpora)
+        assert rep["quotes_seen"] == 1, f"11 字中文引语被丢掉：{rep['quotes_seen']}"
+        assert rep["anchored_checked"] == 1, f"应锚定命中：{rep['tally']}"
+        assert rep["verdict"] == "PASS", rep["failures"]
+
+        # ② 挂错段号仍必须判 FAIL（放宽长度门槛不得连带放宽段号门槛）
+        bad = base / "bad.md"
+        bad.write_text("> 「天行健，君子以自強不息」——§1\n", encoding="utf-8")
+        assert A.verify_file(bad, corpora)["verdict"] == "FAIL", "挂错段号被放过了"
+
+        # ③ 抽取层对账必须平：候选 = 认出 + 噪声 + 中文太短跳过
+        er = rep["extraction_reconciliation"]
+        assert er["balanced"], f"抽取层对账不平：{er}"
+        assert er["candidates"] == er["quotes_seen"] + er["noise_filtered"] \
+            + er["skipped_cjk_short"], er
+
+        # ④ 短术语（汉字数 <8）不得被当成引语
+        term = base / "term.md"
+        term.write_text("> 这里说的是「用神」这个术语，不是引语。\n", encoding="utf-8")
+        assert A.verify_file(term, corpora)["quotes_seen"] == 0, "术语被误当引语"
+
+        # ⑤ CLI 端到端：真实中文卡（zhouyi-yili）不得再报「引语 0 条」
+        zy = ROOT.parent / "guoxue-skills/skills/zhouyi-yili/SKILL.md"
+        if zy.exists():
+            corpora2 = A.load_corpora(sorted(
+                (ROOT.parent / "yijing-run/corpus/anchored").glob("src-*.md")))
+            rep2 = A.verify_file(zy, corpora2)
+            assert rep2["quotes_seen"] >= 16, \
+                f"zhouyi-yili 应认出 ≥16 条引语（旧实现 9 条）：{rep2['quotes_seen']}"
+            assert rep2["verdict"] == "PASS", f"应仍判 PASS：{rep2['failures']}"
+
+
 def t_verify_quotes_misplaced_vs_fabricated():
     """「引语挂错位置」与「引语是编造的」必须分开报，且都判失败。
 
@@ -3169,6 +3270,7 @@ def main() -> int:
         ("gate 默认要求交叉复核记录（复审 P0）", t_gate_requires_cross_review),
         ("eval-kit 独立质检闭环（复审 P0）", t_eval_kit),
         ("lint-quotes 引语体检（复审 P1）", t_lint_quotes),
+        ("lint-quotes 技术 token 与节引标注（#62）", t_lint_quotes_technical_and_sectional),
         ("eval-kit 加固·失败产物/同名评分者（复审 G1）", t_g1_evalkit_hardening),
         ("validate 豁免根级辅助文档（复审）", t_validate_exempts_aux_docs),
         ("CI 样例 gate 步骤（复审 G2）", t_ci_artifact_gate),
@@ -3234,6 +3336,7 @@ def main() -> int:
         ("C11 跳过生成物/侧车目录（复审#2）", t_c11_skips_generated_artifacts),
         ("引语段号锚定（#46）", t_anchor_verifier),
         ("anchor 无 §N 引语不计失败（复审 #1）", t_anchor_unanchored_not_fail),
+        ("anchor 中文短引语不被丢（#61）", t_anchor_cjk_short_quotes),
         ("anchor 支持书类【第N段】语料（复审#1）", t_anchor_book_corpus),
         ("corpus-anchor 书类语料规整（复审#1）", t_corpus_anchor_command),
         ("素材零重叠检测（8-gram 包含率）", t_overlap_detector),

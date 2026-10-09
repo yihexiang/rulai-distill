@@ -115,6 +115,25 @@ def _diff_pairs(a: str, b: str, limit: int = 8) -> list[tuple[str, str]]:
     return out[:limit]
 
 
+_CJK_CHAR_RE = re.compile(r"[\u4e00-\u9fff]")
+
+
+def _looks_like_path(q: str) -> bool:
+    """引号里括着的其实是**文件名 / 通配符 / URL**（技术 token），不是引语。
+
+    实测假阳性（#62）：卡片写 `任一返回"未找到 references/…md"时…`，
+    体检器把它当成"含省略号的引语"报了出来——**工具自己的噪声**（假阳性比漏报更坏）。
+    判据用"斜杠后是否为非中文内容"，所以中文夹斜杠的「孩子/新事物如何启蒙」不会被误杀。
+    """
+    if "://" in q or "*" in q or "?" in q:
+        return True
+    for m in re.finditer(r"[/\\]([^/\\\s]{0,40})", q):
+        tail = m.group(1)
+        if tail and not _CJK_CHAR_RE.search(tail):
+            return True
+    return False
+
+
 def extract_quotes(text: str) -> list[dict]:
     """抽取引号文本（「」/""），带行号与"是否在元描述框内"。"""
     out: list[dict] = []
@@ -123,7 +142,7 @@ def extract_quotes(text: str) -> list[dict]:
         for pat in QUOTE_PATTERNS:
             for m in pat.finditer(line):
                 q = m.group(1).strip()
-                if len(q) < 8:
+                if len(q) < 8 or _looks_like_path(q):
                     continue
                 ctx = "\n".join(lines[max(0, i - 2):min(len(lines), i + 1)])
                 # 作者举例框的标记通常在小节标题上，离引语可能隔几行 → 用更宽的窗口
@@ -134,6 +153,16 @@ def extract_quotes(text: str) -> list[dict]:
                              or any(t in ctx_wide for t in AUTHOR_FRAME)),
                 })
     return out
+
+
+def count_technical_tokens(text: str) -> int:
+    """被 `_looks_like_path` 判掉的技术 token 数——单独计数，不静默丢弃。"""
+    n = 0
+    for pat in QUOTE_PATTERNS:
+        for m in pat.finditer(text):
+            if _looks_like_path(m.group(1).strip()):
+                n += 1
+    return n
 
 
 def lint_corpus(quote: str, corpus_clean: str, corpus_sentences: list[str]) -> dict | None:
@@ -182,10 +211,16 @@ def lint(card: Path, corpus_texts: dict[str, str] | None = None) -> dict:
                              if len(s) >= 8]
 
     quotes = [q for q in extract_quotes(text) if not q["meta"]]
+    lines = text.splitlines()
     findings: list[dict] = []
     for q in quotes:
         f = lint_corpus(q["quote"], corpus_clean, corpus_sentences)
         if f:
+            # 工具自己给的处置是二选一：「补全为原文，**或明确标注为节引**」。
+            # 那就必须认这个标注——否则照做的人反而永远被提示，等于工具在说"我怎么都不满意"。
+            ctx = "\n".join(lines[max(0, q["line"] - 3):min(len(lines), q["line"] + 1)])
+            if f["kind"] == "ellipsis" and ("节引" in ctx or "節引" in ctx):
+                continue
             f["line"] = q["line"]
             findings.append(f)
     by_kind: dict[str, int] = {}
@@ -194,13 +229,17 @@ def lint(card: Path, corpus_texts: dict[str, str] | None = None) -> dict:
     has_corpus = bool(corpus_clean)
     # 空集守卫：卡片含引语候选，却一条都没抽出来 → 体检器没干活，不是"没问题"
     raw_candidates = sum(len(p.findall(text)) for p in QUOTE_PATTERNS)
-    vacuous = (not quotes) and raw_candidates > 0
+    # #62：引号里的技术 token（文件名/通配/URL）不是引语——单独计数，不静默丢弃，
+    # 也不让它们参与 vacuous 判定（否则"只有技术 token"会被误报成空集）。
+    technical = count_technical_tokens(text)
+    vacuous = (not quotes) and (raw_candidates - technical) > 0
     glyph = [f for f in findings if f["kind"] == "glyph"]
     return {
         "schema": "rulai-distill/lint-quotes@1",
         "card": str(card),
         "corpus_provided": has_corpus,
         "quotes_checked": len(quotes),
+        "technical_tokens_skipped": technical,
         "findings": findings,
         "by_kind": by_kind,
         "vacuous": vacuous,

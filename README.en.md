@@ -1,162 +1,232 @@
-# rulai-distill · The Distillation Factory
+# rulai-distill · The Distillation Factory v1.6.0
 
-[中文版](./README.md) · [Install & Usage Guide](./GUIDE.md)
+[中文版](./README.md) · [Install & Usage Guide](./GUIDE.md) · [Capability inventory](./CAPABILITIES.md)
 
 Turn **a book, a long video, a podcast, an interview, or a person** into an executable,
 verifiable, traceable Agent Skill — not a summary, not a book report.
 
-```
-"Distill this book into a skill"     → the agent runs the whole pipeline itself
-```
+[![pipeline-check](https://github.com/yihexiang/rulai-distill/actions/workflows/pipeline-check.yml/badge.svg)](https://github.com/yihexiang/rulai-distill/actions/workflows/pipeline-check.yml)
+[![Artifact checks](https://github.com/yihexiang/rulai-distill/actions/workflows/artifact-check.yml/badge.svg)](https://github.com/yihexiang/rulai-distill/actions/workflows/artifact-check.yml)
+[![Docs freshness](https://github.com/yihexiang/rulai-distill/actions/workflows/docs-check.yml/badge.svg)](https://github.com/yihexiang/rulai-distill/actions/workflows/docs-check.yml)
+[![Contract & vendor](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml/badge.svg)](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml)
+![license](https://img.shields.io/badge/license-MIT-blue)
+![python](https://img.shields.io/badge/python-%E2%89%A53.10-blue)
+![regression](https://img.shields.io/badge/regression-95%20passing-brightgreen)
 
-**Status: beta.** The *machinery* is tested (73 regression tests). The *cards it produces*
-are not yet publishable quality. Those are two different claims with very different
-evidence, and we keep them apart on purpose. See [Honest limitations](#honest-limitations).
+> ### Most distillation tools solve *generation*. This one builds **proof**.
+> **No release without a passing gate — and an agent never grades itself.**
 
 ---
 
-## Install (works with every major agent)
-
-`SKILL.md` follows the [Agent Skills open standard](https://agentskills.io/specification)
-(Anthropic, Oct 2025 — now under the Linux Foundation). Every agent reads the **same file**;
-they only differ in *where* they look for it.
+## ⚡ 30-second start
 
 ```bash
 git clone https://github.com/yihexiang/rulai-distill.git && cd rulai-distill
-./install.sh              # symlink into every agent directory it finds
-./install.sh --copy       # real copies (Windows / no symlink support)
-./install.sh --list       # show targets, change nothing
-./install.sh --uninstall  # remove them
+./install.sh                  # symlink into every agent directory it finds
+python3 scripts/td.py doctor  # zero-dependency self-check + capability matrix
 ```
 
-| Agent | Directory |
-|---|---|
-| Claude Code | `~/.claude/skills/` |
-| **Codex CLI** | `~/.codex/skills/`, **`~/.agents/skills/`** (the universal bus) |
-| Cursor ≥ 2.4 | `~/.cursor/skills/` |
-| Gemini CLI | `~/.gemini/skills/` |
-| GitHub Copilot | `.github/skills/` |
-| OpenCode | `~/.config/opencode/skills/` |
-| OpenClaw | `~/.openclaw/skills/` |
-| Hermes | `~/.hermes/skills/` |
-| WorkBuddy | `~/.workbuddy/skills/` |
+Zero third-party dependencies. **Python ≥ 3.10** is all you need (PyYAML / tiktoken /
+jsonschema are optional — the toolchain degrades gracefully without them).
 
-Prefer no script? It is one directory placement:
+`SKILL.md` follows the [Agent Skills open standard](https://agentskills.io/specification),
+so the **same directory** works for Claude Code, Codex CLI, Cursor, Gemini CLI, GitHub
+Copilot, OpenCode, Hermes and WorkBuddy. Then just say: *"distill this book into a skill."*
+
+---
+
+## Why it is worth trying: three things most skills don't do
+
+### 1️⃣ The gate is **enforced by code**, not by a paragraph of documentation
+
+```
+validate       →  structure / dead links / success criteria / failure modes   (0 errors to continue)
+verify-quotes  →  every quote traced back to the corpus, word for word        (does it EXIST?)
+anchor         →  is the quote inside the paragraph it claims?                (does it BELONG there?)
+lint-quotes    →  mixed scripts / ellipsis / suspicious attribution           (WHY can't it be verified?)
+gate           →  requires ≥2 independent graders by default; otherwise REFUSES
+```
+
+`compile` refuses to ship a card below the FIDELITY threshold. Self-graded runs
+(`fallback-self`) are **not** accepted by default. Failed evaluations carry
+`verdict: "fail"` — renaming the file does **not** get it past `gate`.
+
+### 2️⃣ Independence is **structural**: answerer ≠ grader ≠ author
+
+`td.py eval-kit` turns independent QA into a set of JSON files plus one command:
+
+| Role | Who | Constraint |
+|---|---|---|
+| Question author | human + seed template | `edge_honesty` (the only dimension that catches fabrication) **cannot** be machine-generated — a human must write those |
+| Answerer | a separate agent | gets the card only, no author memory; identity must differ from the author's |
+| Graders | **≥2** separate agents | cannot see each other; two identical grader IDs do not count as two people |
+| Aggregator | `eval-kit check` | score spread >10 → human review; empty set / single grader → **never** a pass |
+
+### 3️⃣ Defects live in a **ledger**, and the ledger is enforced by tests
+
+All **62** self-found defects are published in `CONSTRAINTS.md` and mirrored as
+machine-checkable failure cases (`td.py failure list`) — each with *what went wrong /
+what it should have been / severity / the regression test that pins it*.
+**Ledger rows, category counts and the regression count are asserted equal by tests —
+a wrong number turns CI red.**
+
+48 of the 62 are defects **in our own verification and measurement tools** (77%).
+That ratio is itself the finding: **what is most often wrong is not the thing — it's the ruler.**
+
+---
+
+## 🧪 Real results (every number is reproducible)
+
+| Artifact | Material | Score | How it was produced |
+|---|---|---|---|
+| `five-affairs-seven-questions` | Book (*The Art of War*, 計篇) | **93 / A** | independent answerer agent + 2 independent grader agents (90 / 98, spread 8); the report ships with the sample: `examples/sample-bundle/skills/five-affairs-seven-questions/FIDELITY.json` |
+| `musk-decisions` | Person (three long interviews, 44,630 words) | **90 / A** | same protocol (92 / 89, spread 3); **replaces the old 60/C single-grader result** |
+| 12 real cards (bazi / name-study / I-Ching / video / persona …) | mixed | — | `validate` + `output-eval` + `lint-quotes` actually run: **0 errors, no crashes, no false reds** |
+
+**The boundaries of those numbers, stated up front**: independence is **structural**
+(separate sub-agents), *not* organizational (no second human reviewer); `musk-decisions`
+was probed with only 3 human-written questions; the sample card is a polished showcase and
+**does not represent open-ended material in general**.
+
+---
+
+## 🚦 Status: beta — read this first
+
+**The machinery is verified; the cards it produces are not yet publishable quality.**
+These are two claims with very different evidence, and we keep them apart on purpose.
+
+| Dimension | Status | Evidence |
+|---|---|---|
+| **Mechanical reliability** | ✅ trustworthy | 95 regression tests green; `gate` requires a cross-review record (verified live); `verify-quotes` / `anchor` / `lint-quotes` have each caught real problems on real material; the toolchain runs on **12 real cards** with zero crashes and zero false reds |
+| **Output correctness** | ⚠️ **closed loop proven, still material-dependent** | `eval-kit` has run a **real cross-review** on two cards (independent answerer + 2 independent graders): sample card **93/A**, `musk-decisions` **90/A**. ⚠️ Both are **structurally** independent, not organizationally; the sample card is a showcase, **not** the average of open-ended material |
+
+Concretely, what this project currently **cannot** do:
+
+1. **It cannot guarantee a quote is filed under the right paragraph.** In a 2026-10-05 run an
+   independent grader caught a fabricated citation (a *Diablo* boss name presented as evidence
+   for a methodology claim) that had passed all three mechanical checks available at the time.
+   `anchor` and `lint-quotes` now exist — but **the boundary of what verification can catch
+   has to be redrawn by experiment, not by hope**.
+2. **Independence holds structurally, not organizationally.** The loop has genuinely run
+   (`eval-kit`: separate answerer sub-agent + 2 separate grader sub-agents), but they are still
+   sub-agents on the same machine — **no second human has reviewed them**, and sub-agent
+   file-writes remain unreliable on long tasks (historically, 1 of 4 dispatches landed reliably).
+3. **The open-ended sample is still small.** Only **2 cards** have been through cross-review
+   (`musk-decisions` with just 3 questions). The 12-card run proves *the tools run* — **not**
+   that the cards are good.
+
+**Good for**: the pipeline skeleton and the gate design — validation, gating, snapshots,
+rollback, contract-checked artifacts are solid and reusable as-is.
+**Not for**: "feed it raw material, get a high-quality card" automation.
+
+This section sits at the top on purpose. It is what the project's own methodology demands:
+`gate` once rejected a 60-point report whose author (me) wanted to make it look nicer.
+**An honest score matters more than a pretty one.**
+
+---
+
+## 🗺️ The seven-stage pipeline
+
+| Stage | What happens | Artifact |
+|---|---|---|
+| 0 | Holistic understanding (Adler) + chunking | `BOOK_OVERVIEW.md` + `*.td/` |
+| 1 | Five parallel extraction lanes | candidate unit pool |
+| 1.5 | Triple verification (source / executable / useful) | surviving units |
+| 1.6 | Promotion gate (five independence checks) | `promoted` / `router` |
+| 2 | RIA++ capability construction / persona implants | capability card / persona card |
+| 3 | Zettelkasten linking (with confusable-pair analysis) | relation graph |
+| 4 | Trigger stress tests + FIDELITY QA | test suite / `FIDELITY.md` |
+| 5 | Output-mode decision → compile → atomic publish | `out/` + `BUILD_MANIFEST.json` |
+| 6 | Registry, diff / impact / patch, continuous evolution | `registry/<slug>.json` |
+
+---
+
+## 📦 Full workflow (copy-paste)
 
 ```bash
-git clone https://github.com/yihexiang/rulai-distill.git ~/.codex/skills/rulai-distill
-```
+# 0. self-check (works with zero dependencies)
+python3 scripts/td.py doctor
 
-**Requirements: Python ≥ 3.10, zero third-party dependencies.** PyYAML / tiktoken /
-jsonschema are all optional — the toolchain degrades gracefully without them.
+# 1. scaffold a bundle, then write cards from templates/CAPABILITY.md.template
+python3 scripts/td.py init books/my-book
+vim books/my-book/skills/*.md
 
-> DeepSeek is a *model*, not an agent — it has no skills directory. Any agent that uses
-> DeepSeek as its backend can load this skill, as long as it reads `SKILL.md`. Your local
-> `~/.hermes/skills/` already qualifies.
-
----
-
-## What makes this different from a summarizer
-
-Most distillation tools solve *generation*. This one builds **proof** into the pipeline:
-
-**No release without a passing dual-agent QA gate, and an agent never grades itself.**
-
-```
-init → chunk / transcript / research → write skill cards → validate
-      → gate (FIDELITY, two independent graders)
-      → strategy → compile (atomic) → trigger tests
-```
-
-| Stage | What it does |
-|---|---|
-| `chunk` / `index` | structure-aware chunking; search covers headings **and** body text |
-| `transcript` | SRT/VTT → timestamped transcript, fully offline |
-| `research` | six-lane persona research skeleton; conflicts are flagged, never silently resolved |
-| `validate` | static checks: banned explicit steps, missing failure modes, missing success criteria |
-| `gate` | five-dimension scoring; **refuses to publish** on self-graded runs |
-| `cross-review` | grading-score spread across independent graders, >10 points → human review |
-| `anchor` | verifies a quote is in the **exact paragraph** it claims (not just somewhere) |
-| `verify-quotes` | verifies every quote really exists in the corpus |
-| `audit-coverage` | exhaustively lists paragraphs the card never covers |
-| `overlap` | proves two corpora are non-overlapping (8-gram containment + duplicate sentences) |
-| `trigger` | builds trigger-pressure tests; an agent answers, a script grades P/R/F1 |
-| `compile` | atomic publish with snapshot + rollback |
-
-Only `fetch-subtitle` touches the network, and it is **dry-run by default**.
-
----
-
-## Why the paragraph-level anchor exists
-
-Mechanical verification can prove a quote **exists**. It cannot prove the quote
-**belongs to the paragraph it is filed under**.
-
-Real case from this repo: a card claimed *"§232 mentions `except with Uber`"*.
-The string does exist in the corpus — so `verify-quotes` passed it. What actually
-sat at §233 was `except with Uber Lilith`, a boss from *Diablo*, continuing a joke
-about a video game. **A fabricated citation had cleared every mechanical check we had.**
-
-That is why `anchor` exists, and why it is a required step for any card that files
-quotes by paragraph number.
-
----
-
-## Quick start
-
-```bash
-python3 scripts/td.py doctor                      # environment + capability matrix
-python3 scripts/td.py init my-book                # scaffold a bundle
+# 2. long material: chunk (>50k chars is mandatory) and search headings + body
 python3 scripts/td.py chunk book.md --max-chars 4000
 python3 scripts/td.py index book.md.td --grep "keyword"
-python3 scripts/td.py validate my-book
-python3 scripts/td.py gate <fidelity-report.md>   # refuses to pass self-graded runs
-python3 scripts/td.py compile my-book --out ~/skills/my-bundle
+
+# 3. video / podcast: subtitles (dry-run by default) → transcript → chunks
+python3 scripts/td.py fetch-subtitle "<URL>" --out subs/ --execute
+python3 scripts/td.py transcript subs/<id>.srt
+
+# 4. person: six-lane research (skeleton + conflict flags + first-hand ratio)
+python3 scripts/td.py research init books/my-person --person "Someone"
+python3 scripts/td.py research merge books/my-person/references/research/*.md \
+        --out books/my-person/references/research-merged.md
+
+# 5. the three gates
+python3 scripts/td.py validate books/my-book
+python3 scripts/td.py lint-quotes books/my-book/skills/x/SKILL.md --corpus corpus/src-01.md
+python3 scripts/td.py eval-kit init books/my-book/skills/x/SKILL.md --out kit/
+#    → an independent answerer fills answers.json; 2 independent graders fill scores-*.json
+python3 scripts/td.py eval-kit check --answers kit/answers.json \
+        --scores kit/scores-1.json kit/scores-2.json --out FIDELITY.json
+python3 scripts/td.py gate FIDELITY.json --min B
+
+# 6. publish and roll back (atomic + snapshot + manual-edit detection)
+python3 scripts/td.py compile books/my-book --out ~/.workbuddy/skills/my-book --with-reports
+python3 scripts/td.py rollback ~/.workbuddy/skills/my-book --to latest
 ```
 
-Full walkthrough with real captured output: **[GUIDE.md](./GUIDE.md)**.
+**Regression suite**: `python3 tests/e2e.py` (95 tests, covering every command and the
+vendored upstreams).
 
 ---
 
-## Honest limitations
+## 🔗 Lineage: what came from where
 
-1. **Beta.** 73 regression tests prove the machinery. They do **not** prove the produced
-   cards are good enough to publish.
-2. **The QA isolation is half-done.** Independent *grading* agents work and have caught
-   real fabrications. An independent *answering* agent has not been run yet, so
-   "the answerer is not the author" currently holds only on the grading side.
-3. **Three corpora only** (a book, a person, one video). Everything is verified against
-   those, not against a population.
-4. **Docs are the weak point in this repo, not the code** — see the roadmap below.
+Fuses three MIT projects and promotes their **contracts** to authoritative standards.
 
----
+| Upstream | What it contributes | Where it lives here |
+|---|---|---|
+| [`kangarooking/cangjie-skill`](https://github.com/kangarooking/cangjie-skill) | chunking + FTS5 lexical index + run provenance + write locks + atomic publish + evolution scripts (17 scripts, **vendored verbatim**) | `scripts/vendor/cangjie/` → `td.py upstream run …`; thin wrappers in `td.py` |
+| [`alchaincyf/nuwa-skill`](https://github.com/alchaincyf/nuwa-skill) | FIDELITY scorecard + cross-review ("third iron law") + subtitle pipeline + six-lane research (methodology only, no code) | `tdlib/fidelity.py`, `tdlib/evalkit.py`, `td.py fetch-subtitle` / `transcript` / `research` |
+| [`Yeadon8888/cangjie-skill`](https://github.com/Yeadon8888/cangjie-skill) | cognitive-implant persona structure + explicit-step ban + single-file prompt compile | `extractors/persona-extractor.md`, `validate` checks, `td.py prompt` |
 
-## Documentation
-
-| File | What it is |
-|---|---|
-| [GUIDE.md](./GUIDE.md) | Install + usage, with real command output, command tables, troubleshooting |
-| [CAPABILITIES.md](./CAPABILITIES.md) | Which capability came from which upstream project |
-| [CONSTRAINTS.md](./CONSTRAINTS.md) | The hard rules, and a ledger of **50 known self-defects** |
-| [OPEN-SOURCE-ASSESSMENT.md](./OPEN-SOURCE-ASSESSMENT.md) | Licensing/inheritance assessment |
-| [NOTICE](./NOTICE) | Per-upstream attribution |
-
-`CONSTRAINTS.md` publishes our own defects on purpose. A defect that isn't in the
-ledger with a regression test attached is not allowed to merge.
+**Upstream code is never modified**: `scripts/vendor/cangjie/` is the MIT original
+(licence retained, per-file provenance in `scripts/vendor/PROVENANCE.md`,
+sha256 baseline in `scripts/vendor/VENDOR.sha256`, enforced by CI).
+Our own layer (`scripts/tdlib/`) is "a zero-dependency unified entry point + the parts
+upstreams don't have": FIDELITY gating, the eval-kit loop, three-layer quote verification,
+the subtitle pipeline, six-lane research, conflict flagging, prompt compilation.
 
 ---
 
-## Lineage and license
+## 📜 Honest disclaimers
 
-MIT.
+1. **Semantic extraction is done by an agent, not by a script.** `td.py` only performs
+   deterministic file operations.
+2. **A FIDELITY score is not self-evidence.** Without an independent sub-agent the run is
+   labelled `fallback-self`; `gate` **refuses it by default** (`--allow-fallback` required),
+   and it is discounted to 80% with the style dimension voided.
+3. **Only `fetch-subtitle` touches the network**, and it is dry-run by default. The other
+   36 subcommands are fully local. If you already have subtitle files, no network is needed.
+4. **`--force` publishing is technical debt.** The manifest records `forced: true`; auditable.
+5. **Trigger evaluation makes no LLM calls** (zero network): an agent answers, a script grades.
+6. **Scale measured, savings not.** Long-material runs measured **corpus size** (up to a
+   1.13M-character tweet collection) and chunking behaviour — but **"chunked retrieval vs
+   stuffing the whole book" token savings have not been quantified yet**.
+7. **"Verified" is not "correct."** The tools prove only the faces they check:
+   `verify-quotes` proves existence, `anchor` proves paragraph attribution, `lint-quotes`
+   proves character-level consistency. Passing all three means *those three classes of
+   error were not detected* — nothing more.
 
-- Vendored from [`kangarooking/cangjie-skill`](https://github.com/kangarooking/cangjie-skill) (MIT) —
-  19 files copied verbatim, licence retained at `scripts/vendor/cangjie/LICENSE`,
-  per-file provenance in `scripts/vendor/PROVENANCE.md`, sha256 baseline in
-  `scripts/vendor/VENDOR.sha256` enforced by CI.
-- Methodology only (no code vendored) from
-  [`alchaincyf/nuwa-skill`](https://github.com/alchaincyf/nuwa-skill) (MIT) and
-  [`Yeadon8888/cangjie-skill`](https://github.com/Yeadon8888/cangjie-skill) (MIT).
+---
 
-MIT covers code, not ideas. FIDELITY's five dimensions and the seven-stage pipeline are
-this project's own expression.
+## ⚖️ License
+
+MIT. Vendored upstream code keeps its original licence and copyright
+(see `scripts/vendor/PROVENANCE.md` and `NOTICE`).
+
+> ⚠️ **Do not `git init` inside a working directory that holds raw material** — real
+> interview transcripts and subtitles are copyrighted and would be published with it.

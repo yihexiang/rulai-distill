@@ -300,6 +300,30 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
     seen_quotes = 0
     citations_seen = 0      # 卡片里出现的 §N / [时间戳] 标注数（#56 空集守卫用）
     noise = 0   # 被引语形状过滤掉的中文正文数
+    # #61：抽取层对账（C10）。旧实现把"太短的中文候选"直接混进 noise，
+    # 于是**看不出自己漏了多少**——现在单列计数 + 留样本。
+    quote_candidates = 0
+    skipped_cjk_short = 0
+    short_samples: list[dict] = []
+    # 短候选的"疑似真引语"判据：**逐字见于语料**。
+    # 4~7 字这个区间，"经典引语"（「柔乘剛也」）与"卡片自造短语"（「缺啥补啥」）
+    # 用长度**在原理上分不开**——但用"是否存在于语料"能干净分开。
+    # 注意：判为"疑似真引语"只**单列提示**，绝不计入失败，也不参与判定——
+    # 短词恰好出现在语料里（术语）是常态，据此判失败会制造假阳性。
+    corpus_blob = {stem: re.sub(r"\s+", "", "\n".join(p.values()))
+                   for stem, p in corpora.items()}
+
+    def _find_in_corpus(q: str) -> dict | None:
+        needle = re.sub(r"\s+", "", q.strip().strip("。，；：、！？"))
+        if len(needle) < 4:
+            return None
+        for stem, blob in corpus_blob.items():
+            if needle in blob:
+                for num, ptext in corpora[stem].items():
+                    if needle in re.sub(r"\s+", "", ptext):
+                        return {"src": stem, "para": num}
+                return {"src": stem, "para": None}
+        return None
 
     default_src = next(iter(corpora)) if corpora else None
     last_book_target: int | None = None  # 上一个显式「第N段」，供「同上」沿用（复审 #1）
@@ -348,20 +372,48 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
         # 这类不是引语却进了核验器，产出假阳性——**核验器自己的噪声**。
         def _is_quote(q: str) -> bool:
             q = q.strip()
-            if len(q) < 12:
+            if not q:
                 return False
-            if re.match(r"[A-Za-z0-9]", q) and re.search(r"[A-Za-z]{2}", q):
-                return True
-            # 2026-10-07（#56）：中文引语也必须被认出来。
-            # 原实现只走过上面那条英文分支，于是**所有中文引语被当成噪声丢弃**，
-            # 核验器报「0 条引语」还判 PASS——比不检查更危险。
             cjk = len(CJK_CHAR_RE.findall(q))
-            return cjk >= 8 and cjk >= len(q) * 0.4
+            if cjk >= 8 and cjk >= len(q) * 0.4:
+                # 中文（或中英混排）引语按**汉字数**判。
+                # 2026-10-09（#61）：旧实现先判 `len(q) < 12` 就丢，而 12 字符是**英文**尺度——
+                # 中文 7 个字已是完整命题（「天行健，君子以自強不息」11 字、
+                # 「不可為典要，唯變所適」10 字、「窮理盡性以至於命」8 字），
+                # 于是最该被核验的经典引语整类进不了核验，还被计入 noise **静默消失**。
+                # 实测 zhouyi-yili 卡 25 条候选只认出 9 条（16 条被丢，其中 8 条为 8~11 字）。
+                # **这是同一类「用英文假设处理中文」的第 5 例（前四例：#52/#55/#56/#60）。**
+                return True
+            if re.match(r"[A-Za-z0-9]", q) and re.search(r"[A-Za-z]{2}", q):
+                return len(q) >= 12      # ASCII 引语仍用字符下限（约 2 个英文词）
+            return False
 
-        quotes = [q for q in re.findall(r'"([^"\n]{12,600})"', line) if _is_quote(q)]
-        # 中文卡片用「」或 “”，必须一并识别（#56）
-        quotes += [q for q in re.findall(r"[「“]([^」”\n]{12,600})[」”]", line) if _is_quote(q)]
-        noise += len(re.findall(r'"([^"\n]{12,600})"', line)) - len(quotes)
+        # 抽取正则的下限也必须放宽到 4 字符，否则短中文引语**根本进不了候选**，
+        # 修了 _is_quote 也白修（两道闸门都卡在同一个英文尺度上）。
+        _cands: list[str] = re.findall(r'"([^"\n]{4,600})"', line) \
+            + re.findall(r"[「“]([^」”\n]{4,600})[」”]", line)
+        quotes = [q for q in _cands if _is_quote(q)]
+        quote_candidates += len(_cands)
+        # 抽取层对账（C10）：候选 = 认出 + 噪声 + 因太短跳过的中文候选。
+        # 旧实现把"太短的中文候选"混进 noise，于是**看不见自己漏了什么**。
+        skipped_here = [q for q in _cands
+                        if q not in quotes and len(CJK_CHAR_RE.findall(q)) >= 4]
+        skipped_cjk_short += len(skipped_here)
+        for q in skipped_here:
+            loc = _find_in_corpus(q)
+            entry = {"line": lineno, "quote": q.strip()[:60], "in_corpus": loc}
+            if loc:
+                # 短候选**逐字见于语料** → 多半是真引语。若同行声明了 §N，就顺手对照一下
+                # 声明位置与语料实际位置（**只提示，不判失败**——短词恰好出现在语料里
+                # 是常态，据此判失败会制造假阳性；但完全不报就是又一个静默盲区）。
+                if cits:
+                    entry["declared"] = [{"src": s, "para": t} for s, t in cits]
+                    entry["status"] = "hit" if any(
+                        s == loc["src"] and t == loc["para"] for s, t in cits) else "mismatch"
+                else:
+                    entry["status"] = "unattributed"
+            short_samples.append(entry)
+        noise += len(_cands) - len(quotes) - len(skipped_here)
         for q in quotes:
             seen_quotes += 1
             # 该行所有段号里，任一命中即算锚定成功（并列锚点是合法用法）
@@ -431,6 +483,21 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
                                "best_rate": r.get("rate")} for r in unanchored_list],
         "unresolved_sources": unresolved,
         "noise_filtered": noise,
+        # #61 抽取层对账：候选 = 认出（seen）+ 噪声 + 因太短跳过的中文候选。
+        # 这三项必须严格加和等于 candidates（`balanced` 为机器可判的自检位）。
+        "quote_candidates": quote_candidates,
+        "skipped_cjk_short": skipped_cjk_short,
+        "skipped_cjk_short_samples": short_samples[:20],
+        # 短候选里**逐字见于语料**的那些：多半是真经典引语（只是汉字数 <8 被判成短语）。
+        # 只提示、不判失败——但要让人看见，否则就是又一个静默盲区。
+        "short_but_in_corpus": [s for s in short_samples if s.get("in_corpus")][:20],
+        "extraction_reconciliation": {
+            "candidates": quote_candidates,
+            "quotes_seen": seen_quotes,
+            "noise_filtered": noise,
+            "skipped_cjk_short": skipped_cjk_short,
+            "balanced": quote_candidates == seen_quotes + noise + skipped_cjk_short,
+        },
         # 对账：见到的引语 = 各 verdict 之和（分区必须严丝合缝，漏一项就是账不平）
         "reconciliation": {
             "seen": seen_quotes,

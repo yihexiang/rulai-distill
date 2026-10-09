@@ -388,6 +388,31 @@ DEFECTS = [
      "critical", "tool_gap",
      "接着 #52~#59 的同类假设审「按语言做判断」那一处——用英文为主语料 + 中文表格行做探针",
      ["t_verify_quotes_lang_filter_not_silent"]),
+    ("tdlib.anchor", "引语长度门槛按**英文尺度**设计，8~11 字的中文引语整类被丢且计入 noise 静默消失",
+     "两道闸门都卡在同一个英文尺度：抽取正则 `[「“]([^」”\\n]{12,600})[」”]` 的下限、"
+     "`_is_quote()` 的 `len(q) < 12`。中文 7 个字已是完整命题——"
+     "「天行健，君子以自強不息」(11 字)、「不可為典要，唯變所適」(10 字) 从未进入核验。\n"
+     "实测 zhouyi-yili 卡 25 条候选只认出 9 条（16 条被丢，其中 8 条为 8~11 字）",
+     "长度门槛语言自适应：中文按汉字数判（≥8 且密度 ≥0.4），ASCII 才用 12 字符下限；"
+     "抽取正则下限放宽到 4 字符；新增 quote_candidates / skipped_cjk_short / "
+     "short_but_in_corpus 与 extraction_reconciliation.balanced，"
+     "候选 = 认出 + 噪声 + 中文太短跳过**必须对账平**",
+     "critical", "tool_gap",
+     "用最终版工具体检 guoxue 四技能时，zhouyi-yili 的 quotes_seen=9 与卡片 25 条候选对不上——"
+     "**C10 纪律（引用数≠核验数必须逐条对账）第 2 次抓到同类「中文失明」**",
+     ["t_anchor_cjk_short_quotes"]),
+    ("tdlib.lintquotes", "把引号里的文件名/通配当成引语；且卡片按建议标注「节引」后省略号提示照旧反复报",
+     "①卡片写 `任一返回\"未找到 references/…md\"时…`，被判成「含省略号的引语」——"
+     "**工具自己的假阳性**（假阳性比漏报更坏：逼人去改一句本来正确的正文）。\n"
+     "②省略号给用户的处置是「补全为原文，**或明确标注为节引**」，但标注后提示不停——"
+     "**工具不认自己给的建议**",
+     "_looks_like_path()：`://`/`*`/`?` 或**斜杠后为非中文内容**即判技术 token，"
+     "technical_tokens_skipped 单独计数（中文夹斜杠的正文不误杀），vacuous 判定扣掉技术 token；"
+     "上下文出现「节引/節引」时省略号提示即停",
+     "major", "tool_gap",
+     "用最终版工具体检 guoxue 四技能时，zhouyi-yili 报「未找到 references/…md 含省略号」——"
+     "一看就不是引语；同轮 geju-yunshi 的合法节引在标注后仍被反复提示",
+     ["t_lint_quotes_technical_and_sectional"]),
 ]
 
 

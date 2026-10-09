@@ -488,6 +488,25 @@ def cmd_anchor(args) -> int:
           f"未标注段号 {rep['unanchored']}")
     print(f"   判定明细：{rep['tally']}")
     print(f"   对账：{rep['reconciliation']}")
+    # #61：抽取层对账——候选引语 = 认出 + 噪声 + 因太短跳过的中文候选。
+    # 旧实现把"太短的中文候选"混进 noise，看不出漏了什么；现在显式打印。
+    _er = rep.get("extraction_reconciliation") or {}
+    if _er:
+        print(f"   抽取：候选 {_er.get('candidates')} = 认出 {_er.get('quotes_seen')}"
+              f" + 噪声 {_er.get('noise_filtered')} + 中文太短跳过 {_er.get('skipped_cjk_short')}"
+              f"（自检 {_er.get('balanced')}）")
+    if rep.get("skipped_cjk_short"):
+        in_corp = rep.get("short_but_in_corpus") or []
+        mismatch = [s for s in in_corp if s.get("status") == "mismatch"]
+        warn(f"{rep['skipped_cjk_short']} 条中文候选因「汉字数 <8」被判为术语/短语、未纳入裁决"
+             f"（**不判失败**）；其中 {len(in_corp)} 条**逐字见于语料**，多半是真引语"
+             + (f"，且 {len(mismatch)} 条声明段号与语料实际位置**对不上**：" if mismatch else "："))
+        for s in (mismatch or in_corp)[:8]:
+            ic = s.get("in_corpus") or {}
+            dec = "、".join(f"{d['src']} §{d['para']}" for d in (s.get("declared") or [])) or "无"
+            tail = f"声明 {dec} ≠ 实际" if s.get("status") == "mismatch" else "建议补 §N"
+            info(f"      第 {s['line']} 行「{s['quote']}」（语料 {ic.get('src')} §{ic.get('para')}）"
+                 f"—— {tail}")
     if args.json_out:
         write_json(Path(args.json_out).expanduser(), rep)
         ok(f"已写出 {args.json_out}")
@@ -548,7 +567,9 @@ def cmd_lint_quotes(args) -> int:
         corpora[pp.stem] = pp.read_text(encoding="utf-8", errors="replace")
     rep = lintquotes.lint(Path(args.card).expanduser(), corpora)
     extra = "" if rep["corpus_provided"] else "（未给 --corpus：只做省略号检查）"
-    print(f"   检查引语 {rep['quotes_checked']} 条{extra}")
+    tech = rep.get("technical_tokens_skipped") or 0
+    print(f"   检查引语 {rep['quotes_checked']} 条{extra}"
+          + (f"；跳过 {tech} 条技术 token（文件名/通配/URL，不是引语）" if tech else ""))
     if args.json_out:
         write_json(Path(args.json_out).expanduser(), rep)
         ok(f"已写出 {args.json_out}")
