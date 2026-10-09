@@ -1,4 +1,4 @@
-# reference · 命令速查（34 个子命令）
+# reference · 命令速查（35 个子命令）
 
 > 全部命令纯本地、零网络。`td.py --help` 与各子命令 `--help` 是权威来源，本文是带场景的速查。
 
@@ -17,6 +17,10 @@
 | 人物六路调研骨架 | `td.py research init <dir> --person 名字` |
 | 合并多路调研 | `td.py research merge <files…> --out merged.md` |
 | 静态校验 | `td.py validate <dir>` |
+| 引语逐字核验（是否真在语料里） | `td.py verify-quotes <card> <corpus> [--allow-empty]` |
+| 引语段号锚定（是否在它声明的那一段里） | `td.py anchor <card> --corpus <逐字稿 \| 书类【第N段】语料>` |
+| 书类语料规整成【第N段】 | `td.py corpus-anchor <原文> -o <out>` |
+| 覆盖审计（穷举语料未覆盖段） | `td.py audit-coverage <card> <corpus>` |
 | FIDELITY 门槛 | `td.py gate <report> [--min A\|B\|C\|D] [--allow-fallback]` |
 | 该 single 还是 pack | `td.py strategy <bundle> [--purpose …] [--trigger-ready]` |
 | 发布 | `td.py compile <bundle> --out <dir> [--mode pack\|single] [--force] [--overwrite]` |

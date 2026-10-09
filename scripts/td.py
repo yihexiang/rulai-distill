@@ -413,6 +413,23 @@ def cmd_anchor(args) -> int:
     return EXIT_OK
 
 
+def cmd_corpus_anchor(args) -> int:
+    head("书类语料规整 · 产出 anchor 可读的【第N段】形式")
+    from tdlib.anchor import normalize_book_corpus
+    src = Path(args.infile).expanduser()
+    text = src.read_text(encoding="utf-8", errors="replace")
+    out_text, stats = normalize_book_corpus(text)
+    if args.out:
+        dst = Path(args.out).expanduser()
+        dst.write_text(out_text + "\n", encoding="utf-8")
+        ok(f"已写出 {dst}（{stats['segments']} 段"
+           + ("，已按出现顺序重新编号" if stats["resequenced"] else "）"))
+    else:
+        print(out_text)
+    info(f"段数 {stats['segments']}；原文件含【第N段】标记：{stats['had_markers']}")
+    return EXIT_OK
+
+
 def cmd_overlap(args) -> int:
     head("语料重叠检测 · 换素材重蒸馏前的零重叠证明")
     info("口径：新语料的 n-gram 有多少出现在旧语料里 + 整句是否重复；"
@@ -599,7 +616,9 @@ def cmd_verify_quotes(args) -> int:
     head(f"引语核验 · {Path(args.card).name}")
     res = evals.verify_quotes(Path(args.card), Path(args.corpus))
     k = res["refs_by_kind"]
-    info(f"引用 {res['refs_total']} 个（条目引用 {k['entry_refs']} + 时间戳 {k['timestamp_refs']}）")
+    bk_checked = res.get("book_block", {}).get("checked", 0)
+    info(f"引用 {res['refs_total'] + bk_checked} 个（条目引用 {k['entry_refs']} "
+         f"+ 时间戳 {k['timestamp_refs']} + 书类引用块 {bk_checked}）")
     # 引用总数必须能加总还原，否则报告会自相矛盾（曾出现"引用 44 个但只核到 3 条"
     # 而不说明其余去处的缺陷）。三类归宿逐项打印。
     print(f"   逐字引语核验 {res['quotes_checked']} 条 → 命中 {res['verified']} 条")
@@ -988,10 +1007,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     q = sub.add_parser("anchor", help="引语段号锚定：验引语是否真在它声明的 §N 段内")
     q.add_argument("card", help="卡片或候选文件（写明 §N 与引语的那份）")
-    q.add_argument("--corpus", nargs="+", required=True, help="逐字稿（段号来源，可多份）")
+    q.add_argument("--corpus", nargs="+", required=True, help="逐字稿 / 书类【第N段】语料（段号来源，可多份）")
     q.add_argument("--n", type=int, default=5)
     q.add_argument("--json-out", help="把报告写成 JSON")
     q.set_defaults(func=cmd_anchor)
+
+    q = sub.add_parser("corpus-anchor",
+                       help="书类语料规整：把书类原文产出成 anchor 可读的【第N段】形式")
+    q.add_argument("infile", help="书类原文（可带或不含【第N段】标记）")
+    q.add_argument("-o", "--out", help="输出文件（不指定则打印到 stdout）")
+    q.set_defaults(func=cmd_corpus_anchor)
 
     q = sub.add_parser("overlap", help="语料重叠检测：证明两批素材零重叠（换素材重蒸馏前用）")
     q.add_argument("--new", required=True, help="新语料（.md/.txt）")

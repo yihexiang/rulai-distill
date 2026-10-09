@@ -342,7 +342,7 @@ def _registry_entry(bundle: dict, r: dict, manifest: dict, mode: str, staging: P
         "name": str(fm.get("title") or r["slug"])[:80],
         "summary": _summary(fm, src, r)[:240],
         "source_type": "bundled",
-        "source_url": "https://github.com/kangarooking/cangjie-skill",
+        "source_url": "https://github.com/yihexiang/rulai-distill",
         "skill_path": f"skills/{r['slug']}",
         "output_mode": "pack" if mode == "pack" else "single",
         "skill_count": 1,

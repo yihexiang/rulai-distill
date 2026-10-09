@@ -9,8 +9,8 @@ __pycache__/
 venv/
 
 # ----本包运行产物（不应进版本库）----
-# 分块侧车缓存：可由 `td.py chunk <file>` 重新生成
-*.md.td/
+# 分块侧车缓存：可由 `td.py chunk <file>` 重新生成（源码是 .md 还是 .txt 都覆盖）
+*.td/
 # 运行留痕（run 级留痕目录）
 runs/
 # 发布快照

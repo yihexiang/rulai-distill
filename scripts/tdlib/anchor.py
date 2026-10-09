@@ -33,6 +33,9 @@ from pathlib import Path
 
 WORD_RE = re.compile(r"[a-z0-9']+")
 TS_RE = re.compile(r"^\[(\d\d:\d\d:\d\d(?:\.\d+)?)\]", re.M)
+# 书类语料用 【第N段】 / 【第N条】 作段号标记（复审 #1：anchor 此前只认 [时间戳]，
+# 书类语料会直接 ValueError）。两类标记都支持后，anchor 原生覆盖书/视频/人物三类素材。
+BOOK_RE = re.compile(r"【第(\d+)[段条]】")
 # 卡片里的段号有三种写法，必须都认：
 #   "src-01 §227"  —— 显式带来源（多份语料时用）
 #   "§227"         —— 裸段号，默认指第一份语料（本项目卡片的事实约定）
@@ -73,7 +76,11 @@ def _resolve_src(raw: str | None, corpora: dict) -> str | None:
 # 语料按段号切分
 # --------------------------------------------------------------------------
 def split_paragraphs(text: str) -> dict[int, str]:
-    """按 `[时间戳]` 出现位置把逐字稿切成 {段号: 该段全文}。
+    """按段号标记把语料切成 {段号: 该段全文}。
+
+    支持两类标记（复审 #1）：
+      * `[时间戳]`  —— 视频/播客/逐字稿，段号按出现顺序 0,1,2…（与卡片 §N 一致）
+      * `【第N段】` / `【第N条】` —— 书类语料，段号用标记里的显式 N（与卡片「第N段」对应）
 
     段号从 0 起，与 `tools/show.py --start/--end` 以及卡片里写的 §N 完全一致——
     **这一条必须三处同源**，否则核验器会系统性错位（见缺陷 #24/#29）。
@@ -81,19 +88,56 @@ def split_paragraphs(text: str) -> dict[int, str]:
     # 注意：re.M 必须编进 pattern。给已编译 pattern 的 finditer 传flags **无效**，
     # 会静默返回空列表 → 全篇判 0 段 → 核验器对任何引语都PASS。
     # **这正是缺陷 #28「if not cands: continue 静默跳过」的同一种死法。**
-    marks = [(m.start(), m.group(1)) for m in TS_RE.finditer(text)]
+    marks: list[tuple[int, str, int | None]] = []
+    for m in TS_RE.finditer(text):
+        marks.append((m.start(), "ts", None))
+    for m in BOOK_RE.finditer(text):
+        marks.append((m.start(), "book", int(m.group(1))))
     if not marks:
         raise ValueError(
-            "逐字稿里找不到任何 [时间戳] 行——无法建立段号索引。"
-            "请确认传的是 td.py transcript 产出的文件（原始 SRT 没有这个格式）。")
+            "语料里找不到任何 [时间戳] 或 【第N段】 标记——无法建立段号索引。"
+            "书类语料请用 td.py corpus-anchor 规整成 【第N段】 形式，"
+            "视频/播客请用 td.py transcript 产出 [时间戳] 逐字稿。")
+    marks.sort(key=lambda x: x[0])
     out: dict[int, str] = {}
-    for i, (start, _ts) in enumerate(marks):
+    cursor = 0
+    for i, (start, kind, num) in enumerate(marks):
         end = marks[i + 1][0] if i + 1 < len(marks) else len(text)
-        out[i] = text[start:end]
+        if kind == "ts":
+            seg = cursor
+            cursor += 1
+        else:
+            seg = num  # 书类用显式段号，直接对应卡片里写的「第N段」
+        out[seg] = text[start:end]
     return out
 
 
 CJK_CHAR_RE = re.compile(r"[\u4e00-\u9fff]")
+
+
+def normalize_book_corpus(text: str) -> tuple[str, dict]:
+    """把书类原文规整成 anchor 可读的 `【第N段】` 形式（复审 #1 的"内置转换器"）。
+
+    * 已有 `【第N段】` 标记：按标记切段、重新顺序编号（去掉跳号/重复）。
+    * 无标记：按空行切段、逐段编号。
+    anchor 原生读 `【第N段】`，所以规整后即可直接 `td.py anchor <卡> --corpus <规整后>`。
+    返回 (规整后文本, 统计)。
+    """
+    if BOOK_RE.search(text):
+        parts = BOOK_RE.split(text)
+        blocks = []
+        for i in range(1, len(parts), 2):
+            body = (parts[i + 1] if i + 1 < len(parts) else "").strip()
+            if body:
+                blocks.append(body)
+        resequenced = True
+        had = True
+    else:
+        blocks = [b.strip() for b in re.split(r"\n\s*\n", text.strip()) if b.strip()]
+        resequenced = False
+        had = False
+    out = "\n\n".join(f"【第{i}段】\n{b}" for i, b in enumerate(blocks, 1))
+    return out, {"segments": len(blocks), "had_markers": had, "resequenced": resequenced}
 
 
 def norm_words(text: str) -> list[str]:
@@ -229,8 +273,19 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
     noise = 0   # 被引语形状过滤掉的中文正文数
 
     default_src = next(iter(corpora)) if corpora else None
+    last_book_target: int | None = None  # 上一个显式「第N段」，供「同上」沿用（复审 #1）
 
     for lineno, line in enumerate(lines, 1):
+        is_block = line.lstrip().startswith(">")
+        # 书类引用块的段号信号：出处行写「—— 《书名》第N段」。
+        # last_book_target **不随离开引用块重置**——「—— 同上」就是故意跨块沿用上一个
+        # 显式段号（书类卡常写成「第1段 / 同上 / 同上」三连），重置会让它们全部退化成
+        # 「未标注段号」而被判 SPAN_HIT。block_target 只在向后看**真的看到**段号信号
+        # （第N段 / 同上）时才赋值，所以不重置也不会让无出处的块凭空拿到段号。
+        if is_block:
+            mseg = re.search(r"第(\d+)[段条]", line)
+            if mseg:
+                last_book_target = int(mseg.group(1))
         # 一行里可能有多个 §N（并列时间戳），也可能有多个引语
         cits = []
         for m in CITE_RE.finditer(line):
@@ -244,6 +299,20 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
             cits += [(stem, g) for g in group]
         if cits:
             citations_seen += 1
+        # 书类引用块：本行是引语但无内联 §N 时，向后看同一引用块的下一行取段号。
+        # 书类卡常见「> 「引语」」在「> —— 《书》第N段」**之前**，必须向后看。
+        block_target: int | None = None
+        if is_block and not cits:
+            nxt = lineno
+            while nxt < len(lines) and lines[nxt].lstrip().startswith(">"):
+                nm = re.search(r"第(\d+)[段条]", lines[nxt])
+                if nm:
+                    block_target = int(nm.group(1))
+                    break
+                if "同上" in lines[nxt] and last_book_target is not None:
+                    block_target = last_book_target
+                    break
+                nxt += 1
         # 引语必须"以英文词开头、以英文词收尾"才算引语。
         # 单纯 r'"([^"\n]{12,600})"' 会把两个引号之间的**中文正文**也当成引语
         # （如 `"Give me some evidence for that" ——**同一句式对敌我双方各用一次**。`）。
@@ -268,8 +337,12 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
             seen_quotes += 1
             # 该行所有段号里，任一命中即算锚定成功（并列锚点是合法用法）
             best_local = None
+            # 书类块无内联 §N 时，用块携带的第N段（向后看取到的）作为目标
+            targets = cits if cits else (
+                [(default_src, block_target)] if block_target is not None
+                else [(default_src, None)])
             # 每个标注 (来源, 段号) 各查一次：**段号只在它自己的来源内解释**
-            for stem, target in (cits or [(default_src, None)]):
+            for stem, target in targets:
                 para = corpora.get(stem) if stem else None
                 if not para:
                     # 来源解析不到必须显式记一笔，不能静默 continue——
@@ -292,7 +365,7 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
                                "candidates": [], "words": 0}
             r["line"] = lineno
             r["quote"] = q[:160]
-            r["anchored"] = bool(cits)
+            r["anchored"] = bool(cits) or block_target is not None
             results.append(r)
 
     tally: dict[str, int] = {}

@@ -19,7 +19,7 @@
 
 | 维度 | 状态 | 证据 |
 |---|---|---|
-| **机械可靠性** | ✅ 可信 | 76 项回归全绿；`gate` 因评测模式拒绝放行（实测生效）；`overlap` 能抓到 100% 重叠；`anchor` 能抓到挂错段号的引语 |
+| **机械可靠性** | ✅ 可信 | 82 项回归全绿；`gate` 因评测模式拒绝放行（实测生效）；`overlap` 能抓到 100% 重叠；`anchor` 能抓到挂错段号的引语 |
 | **产出正确性** | ❌ **尚不可信** | 最近一次独立评分 **60/100（C 级）**，其中含一处**编造引语**；且因答题者与卡片作者未隔离，该分数本身也有折扣 |
 
 具体地说，这个项目目前**做不到**的事：
@@ -153,7 +153,7 @@ git clone https://github.com/yihexiang/rulai-distill.git ~/.codex/skills/rulai-d
 ```bash
 git clone https://github.com/yihexiang/rulai-distill.git && cd rulai-distill
 python3 scripts/td.py doctor        # 自检：打印能力矩阵与缺失的可选依赖
-python3 tests/e2e.py                # 跑 76 项回归
+python3 tests/e2e.py                # 跑 82 项回归
 ```
 
 `scripts/td.py` 是纯本地、零网络、零依赖可跑的薄CLI，任何 Python ≥ 3.10 都能直接用。
@@ -199,7 +199,7 @@ python3 scripts/td.py trigger record suite.json --out sheet.md
 python3 scripts/td.py trigger score suite.json answers.json
 ```
 
-**回归测试**：`python3 tests/e2e.py`（76 项，覆盖全部命令与 vendored 上游实跑）
+**回归测试**：`python3 tests/e2e.py`（82 项，覆盖全部命令与 vendored 上游实跑）
 
 ---
 
@@ -232,11 +232,11 @@ rulai-distill/
 ├── references/               ← scoring-rubric / trigger-playbook / failure-modes / media-pipeline
 ├── examples/walkthrough.md   ← 真实跑通记录
 ├── scripts/
-│   ├── td.py                 ← 薄 CLI（34 个子命令）
+│   ├── td.py                 ← 薄 CLI（35 个子命令）
 │   ├── tdlib/                ← util / chunking / transcript / fetch / research / validate
 │   │                            / fidelity / strategy / publish / evals / evolve / promptc / upstream
 │   └── vendor/cangjie/       ← 上游 MIT 原件 + PROVENANCE.md（不改）
-└── tests/e2e.py              ← 端到端回归（76 项，双解释器各跑一遍）
+└── tests/e2e.py              ← 端到端回归（82 项，双解释器各跑一遍）
 ```
 
 ---
@@ -246,7 +246,7 @@ rulai-distill/
 1. **语义提取由 Agent 完成，不由脚本完成**。`td.py` 只做确定性文件操作。
 2. **FIDELITY 分数不是自证**。无独立 sub-agent 能力时标 `fallback-self`，
    `gate` **默认拒绝**（需显式 `--allow-fallback`），且按 80% 折算、维度 2 作废。
-3. **唯一联网的命令是 `fetch-subtitle`，且默认 dry-run**。其余 33 个子命令纯本地。
+3. **唯一联网的命令是 `fetch-subtitle`，且默认 dry-run**。其余 34 个子命令纯本地。
    已有本地字幕时完全不需要联网。
 4. **`--force` 发布是技术债**。manifest 会留 `forced: true`，事后可审计。
 5. **触发评测不做 LLM 调用**（本包零网络）：Agent 作答、脚本判分，容错 0。

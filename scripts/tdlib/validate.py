@@ -40,6 +40,10 @@ NON_CARD_DOCS = {"FIDELITY.md", "SOURCES.md", "BOOK_OVERVIEW.md", "README.md",
 
 def _is_skill_doc(path: Path) -> bool:
     parts = {p.lower() for p in path.parts}
+    # 复审 #4：references/ 下的 .md 是卡片的参考资料（如 guoxue 的 bazi/zhouyi），
+    # 不是技能卡本身——当成卡片校验会因为它们没有 frontmatter 而误判「不允许发布」。
+    if "references" in parts:
+        return False
     return "skills" in parts and path.name not in NON_CARD_DOCS
 
 

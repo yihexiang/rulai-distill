@@ -1813,6 +1813,22 @@ def t_ci_present():
     assert "红线" in text or "grep -rnE" in text, "CI 未做红线扫描"
 
 
+def _td_skip_rel(rel: Path) -> bool:
+    """C11（2026-10-09 复审 #2）：已安装副本比对时跳过生成物/缓存。
+
+    跑过 `td.py chunk` 后磁盘上会出现 `<src>.td/` 侧车目录，runs/、.snapshots/、
+    .staging/ 也是运行留痕——这些已 gitignore，但 C11 比对的是磁盘实际文件，
+    不跳过会误报"全局副本缺 N 个文件"。复审实测：在仓库跑一次 chunk 生成
+    `sunzi-ji.txt.td/`，C11 立即以"缺 7 个文件"失败。
+    """
+    skip = {".git", "__pycache__", ".pytest_cache", "runs", ".snapshots", ".staging"}
+    if set(rel.parts) & skip or rel.suffix == ".pyc":
+        return True
+    if any(p.endswith(".td") for p in rel.parts):  # chunk 侧车目录 <src>.td/
+        return True
+    return False
+
+
 def t_installed_copy_in_sync():
     """C11：已安装副本（`~/.workbuddy/skills/rulai-distill`）必须与项目目录一致。
 
@@ -1828,13 +1844,12 @@ def t_installed_copy_in_sync():
         # 未安装（CI / 别人的机器）不是缺陷，但要说清楚，不能静默跳过
         assert os.environ.get("TD_SKIP_INSTALL_CHECK") is None, "检查逻辑异常"
         return
-    skip = {".git", "__pycache__", ".pytest_cache"}
     diffs, missing = [], []
     for src in sorted(ROOT.rglob("*")):
         if not src.is_file():
             continue
         rel = src.relative_to(ROOT)
-        if set(rel.parts) & skip or rel.suffix == ".pyc":
+        if _td_skip_rel(rel):
             continue
         dst = installed / rel
         if not dst.exists():
@@ -1843,6 +1858,135 @@ def t_installed_copy_in_sync():
             diffs.append(str(rel))
     assert not missing, f"全局副本缺 {len(missing)} 个文件（改完没同步？）：{missing[:8]}"
     assert not diffs, f"全局副本有 {len(diffs)} 个文件与项目不一致（改完没同步？）：{diffs[:8]}"
+
+
+def t_c11_skips_generated_artifacts():
+    """C11（复审 #2）：生成物必须被跳过，不能误报「全局副本缺 N 个文件」。
+
+    复审实测：在仓库跑一次 chunk 生成 `sunzi-ji.txt.td/`，C11 立即以「缺 7 个文件」失败——
+    而 .gitignore 当时只写 `*.md.td/`，源码是 .txt 时漏掉（项目自己的样本就是 .txt）。
+    """
+    assert _td_skip_rel(Path("sunzi-ji.txt.td/chunks.jsonl")), \
+        "chunk 侧车目录 *.td/ 必须被 C11 跳过"
+    assert _td_skip_rel(Path("runs/x.json")), "runs/ 必须被跳过"
+    assert _td_skip_rel(Path(".snapshots/y")) and _td_skip_rel(Path(".staging/z")), \
+        ".snapshots/ 与 .staging/ 必须被跳过"
+    assert not _td_skip_rel(Path("scripts/td.py")), "正常源码文件不能被跳过"
+    assert not _td_skip_rel(Path("SKILL.md")), "正常文档不能被跳过"
+    gi = (ROOT / ".gitignore").read_text(encoding="utf-8")
+    assert "*.td/" in gi, ".gitignore 必须忽略 *.td/（源码是 .txt 时也覆盖）"
+
+
+def t_validate_exempts_references():
+    """复审 #4：references/ 下的 .md 是参考资料，不是技能卡。
+
+    当成卡片校验会因缺 frontmatter 而误判「不允许发布」（guoxue 的 bazi/zhouyi 实测中招）。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import validate as V
+    with tempfile.TemporaryDirectory() as d:
+        base = Path(d)
+        sk = base / "skills" / "demo"
+        (sk / "references").mkdir(parents=True)
+        (sk / "SKILL.md").write_text(
+            "---\nname: demo\ndescription: 用于演示校验豁免。不做：通用问答。\n---\n\n"
+            "# E — 可执行步骤\n\n**Step 1 · 做**\n\n完成标准：做完。\n\n"
+            "# B — 边界\n\n失败模式：无。\n", encoding="utf-8")
+        (sk / "references" / "yijing.md").write_text(
+            "# 参考\n\n这是参考资料，不是卡片，没有 frontmatter。\n", encoding="utf-8")
+        problems, stats = V.validate_path(base)
+    errs = [p for p in problems if p[0] == "error"]
+    assert not any("references" in p[1] for p in errs), \
+        f"references/ 下的 .md 不应按卡片校验：{[p for p in errs if 'references' in p[1]]}"
+    assert stats["docs"] >= 1, \
+        f"references/*.md 应被记为 docs（不是卡片）：{stats}"
+
+
+def t_publish_source_url_rulai():
+    """复审 #4：registry 元数据的 source_url 不能硬编码成上游 cangjie 仓库。"""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import publish as P
+    entry = P._registry_entry(
+        {}, {"slug": "demo", "fidelity_score": 90, "fidelity_grade": "A"},
+        {}, "pack", Path("/nonexistent-staging"))
+    assert entry["source_url"] == "https://github.com/yihexiang/rulai-distill", \
+        f"source_url 应为本项目仓库，实际 {entry['source_url']}"
+    assert "cangjie" not in entry["source_url"], "source_url 不得指向上游 cangjie 仓库"
+
+
+def t_verify_quotes_display_merges_book_block():
+    """复审 #3：头部「引用 N 个」必须把书类引用块算进去。
+
+    否则会出现「引用 0 个」与「逐字引语核验 3 条」并列的矛盾读感。
+    """
+    card = ROOT / "examples/sample-bundle/skills/five-affairs-seven-questions/SKILL.md"
+    corpus = ROOT / "examples/sample-bundle/sources/sunzi-ji.txt"
+    proc = run(["verify-quotes", str(card), str(corpus)], expect=0)
+    line = next((l for l in proc.stdout.splitlines()
+                 if "引用" in l and "个" in l and "书类" in l), "")
+    assert line, f"引用行未计入书类引用块：{proc.stdout[:400]}"
+    assert "书类引用块 3" in line, f"书类引用块计数应为 3：{line!r}"
+
+
+def t_anchor_book_corpus():
+    """复审 #1：anchor 必须原生支持书类 `【第N段】` 语料 + 书类引用块写法。
+
+    此前 split_paragraphs 只认 [时间戳]，书类语料直接 ValueError；
+    且书类卡把段号写在**下一行**的出处行（`> —— 《书》第N段`），必须向后看绑定。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import anchor as A
+    with tempfile.TemporaryDirectory() as d:
+        base = Path(d)
+        corpus = base / "book.txt"
+        corpus.write_text(
+            "【第1段】\n兵者，國之大事，死生之地，存亡之道，不可不察也。"
+            "故經之以五事，校之以計，而索其情。\n\n"
+            "【第2段】\n凡此五者，將莫不聞，知之者勝，不知者不勝。\n",
+            encoding="utf-8")
+        paras = A.split_paragraphs(corpus.read_text(encoding="utf-8"))
+        assert set(paras) == {1, 2}, \
+            f"书类语料应按显式段号切成 {{1, 2}}，实际 {set(paras)}"
+        corpora = A.load_corpora([corpus])
+        # 书类卡写法：引语在前、出处（第N段）在下一行；后续引语用「同上」跨块沿用
+        card = base / "card.md"
+        card.write_text(
+            "# 卡片\n\n"
+            "> 「兵者，國之大事，死生之地，存亡之道，不可不察也。」\n"
+            "> —— 《孙子兵法·計篇》第1段\n\n"
+            "> 「故經之以五事，校之以計，而索其情」\n"
+            "> —— 同上\n\n", encoding="utf-8")
+        rep = A.verify_file(card, corpora)
+        assert rep["quotes_seen"] >= 2, \
+            f"书类引用块里的引语必须被抽出来（含同上那块）：{rep['quotes_seen']}"
+        assert rep["anchored_checked"] >= 2, \
+            ("「同上」必须继承上一个显式段号（否则会退化成未标注段号）："
+             f"verdict={rep['tally']} {rep['failures']}")
+        assert rep["verdict"] == "PASS", f"书类卡应判 PASS：{rep['tally']} {rep['failures']}"
+        # 挂错段号必须仍然能抓出来（加了书类支持不能让门槛变松）
+        bad = base / "bad.md"
+        bad.write_text(
+            "> 「兵者，國之大事，死生之地，存亡之道，不可不察也。」\n"
+            "> —— 《孙子兵法·計篇》第2段\n", encoding="utf-8")
+        rep2 = A.verify_file(bad, corpora)
+        assert rep2["verdict"] == "FAIL", \
+            f"声明第2段、实际在第1段必须判 FAIL（挂错段号）：{rep2['tally']}"
+
+
+def t_corpus_anchor_command():
+    """复审 #1：corpus-anchor 把书类原文规整成 anchor 可读的【第N段】形式。"""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import anchor as A
+    with tempfile.TemporaryDirectory() as d:
+        base = Path(d)
+        src = base / "raw.txt"
+        src.write_text("第一段文字在这里。\n\n第二段文字在这里。\n", encoding="utf-8")
+        out = base / "norm.txt"
+        run(["corpus-anchor", str(src), "-o", str(out)], expect=0)
+        text = out.read_text(encoding="utf-8")
+    assert "【第1段】" in text and "【第2段】" in text, f"应产出连续段号：{text!r}"
+    paras = A.split_paragraphs(text)
+    assert set(paras) == {1, 2}, f"规整后应可被 anchor 切出 2 段：{set(paras)}"
 
 
 def t_anchor_verifier():
@@ -2657,6 +2801,9 @@ def main() -> int:
         ("英文字幕去重精度（n-gram）", t_transcript_dedupe_precision),
         ("引语核验·归属声明块不误判", t_verify_quotes_attribution_block),
         ("引语核验·书类引用块（出处信号+空集守卫）", t_verify_quotes_book_block),
+        ("引语核验·头部计数并入书类引用块（复审#3）", t_verify_quotes_display_merges_book_block),
+        ("validate 豁免 references/ 下资料（复审#4）", t_validate_exempts_references),
+        ("publish registry source_url 指向本项目（复审#4）", t_publish_source_url_rulai),
         ("无限定的素材缺席全称判断", t_no_unqualified_absence_claims),
         ("C7 评分期冻结完整性", t_eval_freeze_integrity),
         ("C8 盲测材料匿名性", t_style_decoy_anonymity),
@@ -2669,7 +2816,10 @@ def main() -> int:
         ("CI 四个 workflow 齐备", t_ci_present),
         ("C6 vendored 上游完整性（sha256 基线）", t_vendor_integrity),
         ("C11 已安装副本与项目一致（#44）", t_installed_copy_in_sync),
+        ("C11 跳过生成物/侧车目录（复审#2）", t_c11_skips_generated_artifacts),
         ("引语段号锚定（#46）", t_anchor_verifier),
+        ("anchor 支持书类【第N段】语料（复审#1）", t_anchor_book_corpus),
+        ("corpus-anchor 书类语料规整（复审#1）", t_corpus_anchor_command),
         ("素材零重叠检测（8-gram 包含率）", t_overlap_detector),
         ("测试不许漏注册（#45）", t_no_unregistered_tests),
         ("GUIDE 黄金路径端到端（#51）", t_guide_walkthrough),
