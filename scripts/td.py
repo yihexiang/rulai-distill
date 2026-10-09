@@ -636,9 +636,12 @@ def cmd_strategy(args) -> int:
 def cmd_compile(args) -> int:
     head("compile")
     res = publish.compile_bundle(Path(args.bundle), Path(args.out), allow_grade=args.allow_grade,
-                                 force=args.force, overwrite=args.overwrite, mode=args.mode)
+                                 force=args.force, overwrite=args.overwrite, mode=args.mode,
+                                 with_reports=getattr(args, "with_reports", False))
     for r in res["skills"]:
         print(f"   ✓ {r['slug']:<28} FIDELITY {r['fidelity_score']}/{r['fidelity_grade']}")
+    if getattr(args, "with_reports", False):
+        info("--with-reports：FIDELITY 报告已随产物发布（skills/<slug>/FIDELITY.*）")
     if res["pre_snapshot"]:
         info(f"发布前快照：{res['pre_snapshot']}")
     ok(f"已发布 {res['count']} 个技能（mode={res['mode']}）→ {res['out']}")
@@ -1201,6 +1204,8 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("--allow-grade", choices=["A", "B", "C", "D"])
     q.add_argument("--force", action="store_true")
     q.add_argument("--overwrite", action="store_true")
+    q.add_argument("--with-reports", action="store_true",
+                   help="把 FIDELITY 报告一并放进产物（质量证据随包发布）")
     q.set_defaults(func=cmd_compile)
 
     q = sub.add_parser("snapshot", help="创建快照")

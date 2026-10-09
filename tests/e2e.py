@@ -636,6 +636,29 @@ def t_ci_artifact_gate():
     assert rep.exists(), f"样例报告缺失：{rep}"
     run(["gate", str(rep), "--allow-single-scorer"])
 
+
+def t_registry_structured_fidelity_and_reports():
+    """复审 #2/#3：registry 旁挂 fidelity **结构化**；FIDELITY 报告**随产物发布**。"""
+    with tempfile.TemporaryDirectory() as d:
+        b = setup(Path(d))
+        out = Path(d) / "dist"
+        run(["compile", str(b), "--out", str(out), "--with-reports"])
+        # #3 报告随包
+        assert (out / "skills" / "major-contradiction" / "FIDELITY.md").exists(), \
+            "--with-reports 应把 FIDELITY 报告放进产物"
+        man = json.loads((out / "BUILD_MANIFEST.json").read_text(encoding="utf-8"))
+        assert man.get("with_reports") is True, man.get("with_reports")
+        # #2 registry 旁挂结构化 fidelity（不再只有 score/grade）
+        meta = json.loads((out / "registry" / "_td-meta.json").read_text(encoding="utf-8"))
+        fid = meta["entries"]["major-contradiction"]["fidelity"]
+        assert fid.get("dimensions"), f"fidelity 应含结构化维度：{fid}"
+        assert "eval_mode" in fid, f"fidelity 应含 eval_mode：{fid}"
+        # 默认（不带 --with-reports）不随包发布报告
+        out2 = Path(d) / "dist2"
+        run(["compile", str(b), "--out", str(out2)])
+        assert not (out2 / "skills" / "major-contradiction" / "FIDELITY.md").exists(), \
+            "默认不应随包发布报告"
+
 def t_strategy():
     with tempfile.TemporaryDirectory() as d:
         b = setup(Path(d))
@@ -3015,6 +3038,7 @@ def main() -> int:
         ("eval-kit 加固·失败产物/同名评分者（复审 G1）", t_g1_evalkit_hardening),
         ("validate 豁免根级辅助文档（复审）", t_validate_exempts_aux_docs),
         ("CI 样例 gate 步骤（复审 G2）", t_ci_artifact_gate),
+        ("registry 结构化 fidelity + 报告随包（复审 #2/#3）", t_registry_structured_fidelity_and_reports),
         ("strategy single/pack 决策", t_strategy),
         ("compile 原子发布 + 手改检测 + 回滚", t_compile_and_publish),
         ("compile single 模式", t_compile_single_mode),

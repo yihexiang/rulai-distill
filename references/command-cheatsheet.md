@@ -25,7 +25,7 @@
 | FIDELITY 门槛（默认要求交叉复核） | `td.py gate <report> [--min A\|B\|C\|D] [--scores 95,88] [--allow-fallback] [--allow-single-scorer]` |
 | 独立评测套件（题库/评分模板/JSON 回传） | `td.py eval-kit init <card> --out <dir>` → `td.py eval-kit check --answers a.json --scores s1.json s2.json --out FIDELITY.json` |
 | 该 single 还是 pack | `td.py strategy <bundle> [--purpose …] [--trigger-ready]` |
-| 发布 | `td.py compile <bundle> --out <dir> [--mode pack\|single] [--force] [--overwrite]` |
+| 发布 | `td.py compile <bundle> --out <dir> [--mode pack\|single] [--force] [--overwrite] [--with-reports]`（`--with-reports` 让 FIDELITY 报告随产物发布） |
 | 手动存档点 | `td.py snapshot <dir> [--label "改前"]` |
 | 回滚 | `td.py rollback <dir> --to <id>\|latest` |
 | 生成触发测试 | `td.py trigger build <bundle> --out suite.json` |

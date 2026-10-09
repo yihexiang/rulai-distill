@@ -43,7 +43,7 @@
 | 写操作默认 dry-run | `repair` / `patch` / `update` | 蒸馏产物的价值在人工精修 |
 | 并发写锁 | `compile`（WriterLock） | 两个进程同时发布会产生半个 target |
 | run 级留痕 | `chunk` 的 `runs/` | 回答"这次分块是怎么来的" |
-| 约束即测试 | `CONSTRAINTS.md` + **88** 项回归 | 不需要用户反复纠正（项数由 `t_docs_no_drift` 强制与代码一致） |
+| 约束即测试 | `CONSTRAINTS.md` + **89** 项回归 | 不需要用户反复纠正（项数由 `t_docs_no_drift` 强制与代码一致） |
 | 失败用例集 | `failure list/export` | 缺陷沉淀为可机校验的 failure-case |
 
 ## 三、明确声明不做

@@ -159,7 +159,13 @@ def load_bundle(bundle_path: Path) -> dict:
 
 def compile_bundle(bundle_path: Path, out: Path, allow_grade: str | None = None,
                    force: bool = False, overwrite: bool = False,
-                   mode: str = "pack") -> dict:
+                   mode: str = "pack", with_reports: bool = False) -> dict:
+    """编译 bundle。
+
+    with_reports=True：把每张卡的 FIDELITY 报告（若存在）一并放进产物
+    （`skills/<slug>/FIDELITY.<ext>`），让质量证据**随包发布**（复审 #3）。
+    默认 False，保持既有产物形状不变。
+    """
     bundle_path = Path(bundle_path).resolve()
     out = Path(out).resolve()
     if not bundle_path.is_dir():
@@ -186,6 +192,7 @@ def compile_bundle(bundle_path: Path, out: Path, allow_grade: str | None = None,
     try:
         published: dict[str, str] = {}
         results = []
+        fid_reports: dict[str, dict | None] = {}
         for s, src in entries:
             slug = s["slug"]
             if not src.exists():
@@ -197,7 +204,7 @@ def compile_bundle(bundle_path: Path, out: Path, allow_grade: str | None = None,
             if fm.get("name") and fm["name"] != slug:
                 raise ToolError(f"[{slug}] frontmatter name 与 bundle slug 不一致：{fm.get('name')}")
 
-            score, grade, rep_path = _fidelity_for(bundle_path, src, s)
+            score, grade, rep_path, rep_dict = _fidelity_for(bundle_path, src, s)
             if score is None or grade is None:
                 if not force:
                     raise ToolError(f"[{slug}] 缺少 FIDELITY 报告且未给 fidelity_score",
@@ -225,8 +232,16 @@ def compile_bundle(bundle_path: Path, out: Path, allow_grade: str | None = None,
                 shutil.copy2(extra, dest / extra.name)
                 rel = str((dest / extra.name).relative_to(staging))
                 published[rel] = sha256_of(dest / extra.name)
+            # 报告随包发布：FIDELITY 报告（质量证据）随卡一并进产物。
+            # 注意**不含**答案/诱饵等测试材料（那些会泄题）。
+            if with_reports and rep_path and Path(rep_path).exists():
+                rf = dest / ("FIDELITY" + Path(rep_path).suffix)
+                shutil.copy2(rep_path, rf)
+                rel = str(rf.relative_to(staging))
+                published[rel] = sha256_of(rf)
             results.append({"slug": slug, "fidelity_score": score, "fidelity_grade": grade,
                             "report": str(rep_path) if rep_path else None})
+            fid_reports[slug] = rep_dict
 
         if mode == "single":
             _write_single_entry(staging, bundle, results, published)
@@ -240,6 +255,7 @@ def compile_bundle(bundle_path: Path, out: Path, allow_grade: str | None = None,
             "source": bundle.get("source", {}),
             "min_grade_enforced": min_grade,
             "forced": bool(force),
+            "with_reports": bool(with_reports),
             "skills": results,
             "published_hashes": published,
         }
@@ -260,10 +276,15 @@ def compile_bundle(bundle_path: Path, out: Path, allow_grade: str | None = None,
             res = contracts.validate("registry-entry", entry)
             if res["ok"]:
                 contracts.write_verified("registry-entry", entry, reg, f"{r['slug']}.json")
-                # 契约装不下的本包信息（FIDELITY 明细、素材、版本）走旁挂文件
+                # 契约装不下的本包信息（FIDELITY 明细、素材、版本）走旁挂文件。
+                # fidelity 为**结构化**：除 score/grade/report 外，含
+                # eval_mode / dimensions / graders / cross_grader_gap / blocking_issues
+                # （可从 FIDELITY 报告解析出的机器可读字段）。
                 td_meta["entries"][r["slug"]] = {
-                    "fidelity": {"score": r.get("fidelity_score"), "grade": r.get("fidelity_grade"),
-                                 "report": r.get("report")},
+                    "fidelity": {"score": r.get("fidelity_score"),
+                                 "grade": r.get("fidelity_grade"),
+                                 "report": r.get("report"),
+                                 **_structured_fidelity(fid_reports.get(r["slug"]))},
                     "source": bundle.get("source", {}),
                     "bundle_version": bundle.get("version"),
                     "published_at": manifest["built_at"],
@@ -429,14 +450,31 @@ def _fm(path: Path) -> dict:
 
 
 def _fidelity_for(bundle_dir: Path, src: Path, entry: dict):
+    """返回 (score, grade, report_path, report_dict)。
+
+    report_dict 供 registry 旁挂写出**结构化** FIDELITY（维度/评分者/交叉复核），
+    不只是 score/grade 两个数——复审 #2「registry 结构化 fidelity」。
+    """
     for cand in (src.parent / "FIDELITY.md", src.with_name("FIDELITY.md"),
                  bundle_dir / "fidelity" / f"{entry['slug']}.json",
                  bundle_dir / "fidelity" / f"{entry['slug']}.md"):
         if cand.exists():
             rep = parse_report(cand)
-            return rep.get("total", entry.get("fidelity_score")), rep.get("grade",
-                   entry.get("fidelity_grade")), cand
-    return entry.get("fidelity_score"), entry.get("fidelity_grade"), None
+            return (rep.get("total", entry.get("fidelity_score")),
+                    rep.get("grade", entry.get("fidelity_grade")), cand, rep)
+    return entry.get("fidelity_score"), entry.get("fidelity_grade"), None, None
+
+
+_STRUCT_KEYS = ("eval_mode", "total", "grade", "dimensions", "answerer", "graders",
+                "cross_grader_gap", "unparsed_dims", "total_mismatch",
+                "threshold_fragile", "blocking_issues")
+
+
+def _structured_fidelity(rep: dict | None) -> dict:
+    """从 FIDELITY 报告里取**机器可读**的子集，写进 registry 旁挂（不是散文）。"""
+    if not rep:
+        return {}
+    return {k: rep[k] for k in _STRUCT_KEYS if k in rep and rep[k] not in (None, [], {})}
 
 
 def _write_single_entry(staging: Path, bundle: dict, results: list, published: dict) -> None:
