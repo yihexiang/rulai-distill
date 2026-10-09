@@ -19,8 +19,8 @@
 
 | 维度 | 状态 | 证据 |
 |---|---|---|
-| **机械可靠性** | ✅ 可信 | 85 项回归全绿；`gate` 默认要求交叉复核记录（实测生效）；`overlap` 能抓到 100% 重叠；`anchor` 能抓到挂错段号的引语 |
-| **产出正确性** | ❌ **尚不可信** | 最近一次独立评分 **60/100（C 级）**，其中含一处**编造引语**；且因答题者与卡片作者未隔离，该分数本身也有折扣 |
+| **机械可靠性** | ✅ 可信 | 88 项回归全绿；`gate` 默认要求交叉复核记录（实测生效）；`overlap`/`anchor`/`lint-quotes` 均实测能抓真问题；工具链在 **12 张真实卡**上实跑零崩溃、零假红 |
+| **产出正确性** | ⚠️ **偏弱，且强依赖素材** | 展示样本卡 `five-affairs` 已跑通**首份真实交叉复核**（`eval-kit`：独立答题 Agent + 2 个独立评分 Agent 90/98，分差 8 → 合并 **93/A**，`gate` 放行）。但**最近一次真实蒸馏**（`musk-decisions`）独立评分 **60/100（C 级）**、含一处编造引语，且**尚未重跑**；样本卡是精修展示件，**不能代表开放素材的普遍水平** |
 
 具体地说，这个项目目前**做不到**的事：
 
@@ -153,7 +153,7 @@ git clone https://github.com/yihexiang/rulai-distill.git ~/.codex/skills/rulai-d
 ```bash
 git clone https://github.com/yihexiang/rulai-distill.git && cd rulai-distill
 python3 scripts/td.py doctor        # 自检：打印能力矩阵与缺失的可选依赖
-python3 tests/e2e.py                # 跑 85 项回归
+python3 tests/e2e.py                # 跑 88 项回归
 ```
 
 `scripts/td.py` 是纯本地、零网络、零依赖可跑的薄CLI，任何 Python ≥ 3.10 都能直接用。
@@ -199,7 +199,7 @@ python3 scripts/td.py trigger record suite.json --out sheet.md
 python3 scripts/td.py trigger score suite.json answers.json
 ```
 
-**回归测试**：`python3 tests/e2e.py`（85 项，覆盖全部命令与 vendored 上游实跑）
+**回归测试**：`python3 tests/e2e.py`（88 项，覆盖全部命令与 vendored 上游实跑）
 
 ---
 
@@ -236,7 +236,7 @@ rulai-distill/
 │   ├── tdlib/                ← util / chunking / transcript / fetch / research / validate
 │   │                            / fidelity / strategy / publish / evals / evolve / promptc / upstream
 │   └── vendor/cangjie/       ← 上游 MIT 原件 + PROVENANCE.md（不改）
-└── tests/e2e.py              ← 端到端回归（85 项，双解释器各跑一遍）
+└── tests/e2e.py              ← 端到端回归（88 项，双解释器各跑一遍）
 ```
 
 ---

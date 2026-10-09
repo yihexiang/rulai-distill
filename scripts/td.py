@@ -446,7 +446,8 @@ def cmd_eval_kit(args) -> int:
                         [Path(p).expanduser() for p in args.scores],
                         subject=args.subject)
     head("eval-kit · 汇总独立评分并过交叉复核门禁")
-    print(f"   答题者 {res['answerer']!r}   评分者 {res['graders']}（{len(res['graders'])} 个）")
+    print(f"   答题者 {res['answerer']!r}   评分者 {res['graders']}"
+          f"（{res.get('unique_graders', len(res['graders']))} 个唯一）")
     cr = res["cross"]
     print(f"   分差门禁 判定 {cr['verdict']}（分差 {cr.get('spread', 0):g}／阈值 "
           f"{cr.get('threshold', fid.CROSS_REVIEW_THRESHOLD):g}）")
@@ -461,13 +462,17 @@ def cmd_eval_kit(args) -> int:
     if not vres["ok"]:
         die("产出的 FIDELITY JSON 不符合本包 fidelity 契约（这是工具自己的错）",
             *vres["errors"][:6])
+    if res["verdict"] != "pass":
+        # 复审 G1：失败**不得**产出「普通产物」——否则它照样能被喂给 gate。
+        # 写成 .rejected.json 供排查，并明确它不可用于放行。
+        rej = out.with_name(out.stem + ".rejected" + out.suffix)
+        write_json(rej, res["report"])
+        die("eval-kit 判定不通过：不得据此宣称质量（已写出 " + rej.name + " 供排查）",
+            "看上面的 errors / blocking_issues：答题或评分未填全、评分者 <2 个**不同**标识、"
+            "评分者与答题者同名、或分差 >10（评分分歧过大须人工复核）",
+            "修好回传文件后重跑 eval-kit check")
     write_json(out, res["report"])
     ok(f"已写出 FIDELITY 报告：{out}")
-    if res["verdict"] != "pass":
-        die("eval-kit 判定不通过：不得据此宣称质量",
-            "看上面的 errors / blocking_issues：答题或评分未填全、评分人数 <2、"
-            "或分差 >10（评分分歧过大须人工复核）",
-            "修好回传文件后重跑 eval-kit check")
     info(f"下一步：td.py gate {out}")
     return EXIT_OK
 

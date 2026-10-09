@@ -40,11 +40,22 @@ NON_CARD_DOCS = {"FIDELITY.md", "SOURCES.md", "BOOK_OVERVIEW.md", "README.md",
 
 def _is_skill_doc(path: Path) -> bool:
     parts = {p.lower() for p in path.parts}
-    # 复审 #4：references/ 下的 .md 是卡片的参考资料（如 guoxue 的 bazi/zhouyi），
-    # 不是技能卡本身——当成卡片校验会因为它们没有 frontmatter 而误判「不允许发布」。
+    if "skills" not in parts or path.name in NON_CARD_DOCS:
+        return False
+    # references/ 下的 .md 是卡片的参考资料，不是卡片本身。
     if "references" in parts:
         return False
-    return "skills" in parts and path.name not in NON_CARD_DOCS
+    # SKILL.md 恒为卡片（哪怕 frontmatter 坏了，也要让 check_card 去报错，不能静默放过）。
+    if path.name == "SKILL.md":
+        return True
+    # 复审：技能目录**根级**还有一批辅助文档（VERIFY.md / COVERAGE.md / …），
+    # 它们被当成卡片校验会因缺 frontmatter 而误判「不允许发布」（guoxue zhouyi 实测 error 6）。
+    # 判据用「有没有 frontmatter」而不是硬编码文件名——每加一份新辅助文档不会再漏。
+    try:
+        fm, _ = load_frontmatter(path)
+    except Exception:  # noqa: BLE001 —— frontmatter 坏了仍当卡片，让 check_card 去报错
+        return True
+    return bool(fm.get("name") or fm.get("description"))
 
 
 def iter_markdown(base: Path, skip_dirs: tuple[str, ...] = (".td", ".td_snapshots", ".git")):

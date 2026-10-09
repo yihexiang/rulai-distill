@@ -202,6 +202,11 @@ def vetoes(rep: dict) -> list[str]:
         out.append("评测模式无法判定：不能证明答题与评分是独立 Agent")
     if rep.get("fallback_applied") and "对外" in (rep.get("self_eval_note") or ""):
         out.append("自测结果被用于对外质量宣称")
+    # 复审 G1：报告自带 blocking_issues（eval-kit 判 fail 时会写）→ 一票否决。
+    # gate 此前只读总分/人数，于是「失败产物」照样能过——现在见到即拒（纵深防御）。
+    if rep.get("blocking_issues"):
+        out.append("报告载有 blocking_issues（评测未通过）：不得放行 —— "
+                   + "；".join(str(x) for x in rep["blocking_issues"][:3]))
     return out
 
 

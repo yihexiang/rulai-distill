@@ -534,18 +534,107 @@ def t_lint_quotes():
         rep = L.lint(p, {"c": corpus})
         assert rep["vacuous"] is True and rep["verdict"] == "vacuous", rep
 
-    # 6) 真实样本卡：必须命中简繁（将/众/强/练/赏/罚）+ 省略号 + 归属
+    # 6) 真实样本卡（本轮已把引语统一成语料的繁体字形）：应干净、判 pass。
+    #    这条同时是「作者举例框（语言信号）里的示范句不算引语」的守卫。
     card = ROOT / "examples/sample-bundle/skills/five-affairs-seven-questions/SKILL.md"
     src = ROOT / "examples/sample-bundle/sources/sunzi-ji.txt"
     r = L.lint(card, {"sunzi": src.read_text(encoding="utf-8")})
-    assert r["verdict"] == "fail", f"样本卡含简繁不一致，应判 fail：{r['by_kind']}"
-    assert r["by_kind"].get("glyph", 0) >= 3, f"应命中多处简繁：{r['by_kind']}"
-    assert r["by_kind"].get("ellipsis", 0) >= 1 and r["by_kind"].get("authorship", 0) >= 1, r["by_kind"]
+    assert r["verdict"] == "pass", f"样本卡修好后应判 pass：{r['by_kind']} {r['findings'][:2]}"
+    assert r["by_kind"].get("glyph", 0) == 0, f"样本卡不应再有用字不一致：{r['by_kind']}"
 
-    # 7) CLI：带语料 → glyph 判失败 exit 1；不带语料 → 只做省略号检查，exit 0
-    run(["lint-quotes", str(card), "--corpus", str(src)], expect=1)
+    # 7) CLI：干净卡 → exit 0（带/不带语料都是）
+    run(["lint-quotes", str(card), "--corpus", str(src)], expect=0)
     run(["lint-quotes", str(card)], expect=0)
-    run(["lint-quotes", str(card), "--corpus", str(src), "--strict"], expect=1)
+    # 7b) CLI glyph 判失败路径（临时卡：正文简体引语 vs 繁体语料）
+    with tempfile.TemporaryDirectory() as d:
+        bad = Path(d) / "bad.md"
+        bad.write_text("> 「兵者，國之大事，死生之地，存亡之道，不可不察也。」\n"
+                       "> —— 《孫子兵法·計篇》第1段\n\n"
+                       "他说「知之者胜，不知者不胜」。\n", encoding="utf-8")
+        run(["lint-quotes", str(bad), "--corpus", str(src)], expect=1)
+
+
+def t_g1_evalkit_hardening():
+    """复审 G1：①失败产物不得过 gate；②同名评分者不算独立复核。
+
+    实测两次 exit=0 的翻车：空答题产物 / 同名评分产物都能过 gate；grader-1 ×2 被当
+    2 个独立评分者。修法：唯一评分者校验 + 失败写 .rejected + blocking_issues 一票否决。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import evalkit, fidelity as F
+    with tempfile.TemporaryDirectory() as d:
+        base = Path(d)
+
+        def sc(name, grader, dims):
+            p = base / name
+            p.write_text(json.dumps({"grader": grader, "dimensions": {
+                k: {"score": v, "max": m} for (k, v), m in zip(dims.items(), [30, 20, 20, 15, 15])}},
+                ensure_ascii=False), encoding="utf-8")
+            return p
+
+        dimsA = {"consistency": 24, "style": 15, "edge_honesty": 17,
+                 "source_transparency": 12, "structure": 12}
+        dimsB = {"consistency": 22, "style": 14, "edge_honesty": 16,
+                 "source_transparency": 11, "structure": 13}
+        ans = base / "a.json"
+        ans.write_text(json.dumps({"answerer": "answerer-A",
+                                   "answers": [{"id": "q1", "answer": "x"}]}, ensure_ascii=False),
+                       encoding="utf-8")
+        s1 = sc("s1.json", "grader-1", dimsA)
+        s2dup = sc("s2dup.json", "grader-1", dimsB)   # 与 s1 同名 → 不算独立
+
+        r = evalkit.check(ans, [s1, s2dup])
+        assert r["verdict"] == "fail", f"同名评分者不得放行：{r}"
+        assert any("重复" in e for e in r["errors"]), r["errors"]
+        assert r["unique_graders"] == 1, r
+
+        # blocking_issues → gate 一票否决（fail 产物即便存在也放行不了）
+        rep = {"total": 90, "grade": "A", "eval_mode": "dual-agent",
+               "dimensions": {"consistency": 28, "style": 18, "edge_honesty": 18,
+                              "source_transparency": 13, "structure": 13},
+               "blocking_issues": ["评测未通过：评分分歧过大"]}
+        passed, reasons = F.gate(rep, "A")
+        assert not passed and any("blocking_issues" in x for x in reasons), reasons
+
+        # 失败时 CLI 写 .rejected，不写普通 out
+        out = base / "FIDELITY.json"
+        run(["eval-kit", "check", "--answers", str(ans), "--scores", str(s1), str(s2dup),
+             "--out", str(out)], expect=1)
+        assert not out.exists(), "失败不得写出普通产物（否则照样能喂给 gate）"
+        assert (base / "FIDELITY.rejected.json").exists(), "应写出 .rejected.json 供排查"
+
+
+def t_validate_exempts_aux_docs():
+    """复审：技能目录根级辅助文档（VERIFY.md/COVERAGE.md，无 frontmatter）不得被当卡片。
+
+    guoxue zhouyi 实测：VERIFY.md / COVERAGE.md 被当卡片 → error 6「不允许发布」。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import validate as V
+    with tempfile.TemporaryDirectory() as d:
+        base = Path(d)
+        sk = base / "skills" / "demo"
+        sk.mkdir(parents=True)
+        (sk / "SKILL.md").write_text(
+            "---\nname: demo\ndescription: 用于演示辅助文档豁免。不做：通用问答。\n---\n\n"
+            "# E — 可执行步骤\n\n**Step 1 · 做**\n\n完成标准：做完。\n\n"
+            "# B — 边界\n\n失败模式：无。\n", encoding="utf-8")
+        (sk / "VERIFY.md").write_text("# VERIFY · demo\n\n> 核验记录，无 frontmatter。\n",
+                                      encoding="utf-8")
+        (sk / "COVERAGE.md").write_text("# COVERAGE · demo\n\n> 覆盖审计，无 frontmatter。\n",
+                                        encoding="utf-8")
+        problems, stats = V.validate_path(base)
+    errs = [p for p in problems if p[0] == "error"]
+    bad = [p for p in errs if "VERIFY" in p[1] or "COVERAGE" in p[1]]
+    assert not bad, f"根级辅助文档不应按卡片校验：{bad}"
+    assert stats["cards"] == 1, f"只应把 SKILL.md 当卡片：{stats}"
+
+
+def t_ci_artifact_gate():
+    """复审 G2：CI 的样例 gate 步骤必须真能过——防策略变更静默打破 CI。"""
+    rep = ROOT / "examples/sample-bundle/eval/fidelity-report.md"
+    assert rep.exists(), f"样例报告缺失：{rep}"
+    run(["gate", str(rep), "--allow-single-scorer"])
 
 def t_strategy():
     with tempfile.TemporaryDirectory() as d:
@@ -2923,6 +3012,9 @@ def main() -> int:
         ("gate 默认要求交叉复核记录（复审 P0）", t_gate_requires_cross_review),
         ("eval-kit 独立质检闭环（复审 P0）", t_eval_kit),
         ("lint-quotes 引语体检（复审 P1）", t_lint_quotes),
+        ("eval-kit 加固·失败产物/同名评分者（复审 G1）", t_g1_evalkit_hardening),
+        ("validate 豁免根级辅助文档（复审）", t_validate_exempts_aux_docs),
+        ("CI 样例 gate 步骤（复审 G2）", t_ci_artifact_gate),
         ("strategy single/pack 决策", t_strategy),
         ("compile 原子发布 + 手改检测 + 回滚", t_compile_and_publish),
         ("compile single 模式", t_compile_single_mode),

@@ -224,6 +224,13 @@ def check(answers_path: Path, score_paths: list[Path], subject: str | None = Non
             grader_totals.append(float(sum(dims.values())))
 
     errors = a_errs + g_errs
+    # 复审 G1：cross-review 要的是**独立**评分者，同名不算两个人。
+    # 实测 grader-1 ×2 曾被当 2 个评分者放行——那等于把"同一人打两次分"当交叉复核。
+    dup = sorted({g for g in graders if graders.count(g) > 1})
+    if dup:
+        errors.append(f"评分者标识重复（{dup}）：交叉复核要求 ≥2 个**不同**的独立评分者，"
+                      "同一标识填两次不构成独立复核")
+    uniq_graders = len(set(graders))
     # 分差门禁：<2 个有效评分者 → insufficient_scorers（不得当"已复核"）。
     if grader_totals:
         cross = fid.cross_review(grader_totals, subject=subject)
@@ -260,8 +267,8 @@ def check(answers_path: Path, score_paths: list[Path], subject: str | None = Non
         "grade": grade,
         "blocking_issues": blocking,
     }
-    verdict = "pass" if (not errors and len(graders) >= fid.CROSS_REVIEW_MIN_SCORERS
+    verdict = "pass" if (not errors and uniq_graders >= fid.CROSS_REVIEW_MIN_SCORERS
                          and cross.get("verdict") == "pass"
                          and not (answerer and any(g == answerer for g in graders))) else "fail"
     return {"report": report, "cross": cross, "verdict": verdict, "errors": errors,
-            "graders": graders, "answerer": answerer}
+            "graders": graders, "unique_graders": uniq_graders, "answerer": answerer}

@@ -39,6 +39,9 @@ from pathlib import Path
 QUOTE_PATTERNS = [re.compile(r"「([^」]{8,400})」", re.S),
                   re.compile(r'"([^"\n]{8,400})"')]
 META_TAGS = ("归属拆分", "**归属**", "归属：", "归属标注", "措辞修正", "口径统一", "更正记录")
+# 作者举例框：卡片常在这类小节里用引号列出"用户会怎么说"的示范句——那是作者行文，
+# 不是来源引语。把它们与元描述框同等跳过（否则 authorship 检查会误报，假阳性更坏）。
+AUTHOR_FRAME = ("语言信号", "用户会怎么说", "触发情境")
 ELLIPSIS_RE = re.compile(r"…|\.\.\.|⋯|。。。")
 # 作者行文特征：必须同时出现人称代词与选择/假设词，才判"疑似作者举例"（降低误报）
 _AUTHOR_PRON = re.compile(r"[我咱]|你")
@@ -123,8 +126,13 @@ def extract_quotes(text: str) -> list[dict]:
                 if len(q) < 8:
                     continue
                 ctx = "\n".join(lines[max(0, i - 2):min(len(lines), i + 1)])
-                out.append({"line": i, "quote": q,
-                            "meta": any(t in ctx for t in META_TAGS)})
+                # 作者举例框的标记通常在小节标题上，离引语可能隔几行 → 用更宽的窗口
+                ctx_wide = "\n".join(lines[max(0, i - 8):min(len(lines), i + 1)])
+                out.append({
+                    "line": i, "quote": q,
+                    "meta": (any(t in ctx for t in META_TAGS)
+                             or any(t in ctx_wide for t in AUTHOR_FRAME)),
+                })
     return out
 
 
