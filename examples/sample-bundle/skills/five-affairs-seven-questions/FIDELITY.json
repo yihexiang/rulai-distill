@@ -1,0 +1,20 @@
+{
+  "schema": "rulai-distill/fidelity/v1",
+  "subject": "five-affairs-seven-questions",
+  "date": "2026-10-09",
+  "eval_mode": "dual-agent",
+  "answerer": "answerer-subagent-1",
+  "graders": ["grader-1", "grader-2"],
+  "cross_grader_gap": 8.0,
+  "dimensions": {
+    "consistency": 28,
+    "style": 19,
+    "edge_honesty": 19,
+    "source_transparency": 12,
+    "structure": 15
+  },
+  "total": 93,
+  "grade": "A",
+  "blocking_issues": [],
+  "verdict": "pass"
+}

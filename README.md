@@ -19,7 +19,7 @@
 
 | 维度 | 状态 | 证据 |
 |---|---|---|
-| **机械可靠性** | ✅ 可信 | 89 项回归全绿；`gate` 默认要求交叉复核记录（实测生效）；`overlap`/`anchor`/`lint-quotes` 均实测能抓真问题；工具链在 **12 张真实卡**上实跑零崩溃、零假红 |
+| **机械可靠性** | ✅ 可信 | 93 项回归全绿；`gate` 默认要求交叉复核记录（实测生效）；`overlap`/`anchor`/`lint-quotes` 均实测能抓真问题；工具链在 **12 张真实卡**上实跑零崩溃、零假红 |
 | **产出正确性** | ⚠️ **已跑通闭环，仍强依赖素材** | `eval-kit` 已对两张卡跑通**真实交叉复核**（独立答题 Agent + 2 个独立评分 Agent）：展示样本卡 `five-affairs` **93/A**（90/98，分差 8）；真实人物卡 `musk-decisions` **修正三处缺陷后重跑 90/A**（92/89，分差 3），**替代旧的 60/C 单评分结论**。⚠️ 两者是**结构独立**（子 Agent 隔离）而非组织独立（无第二人复评），且 `musk-decisions` 只测了 3 道人工题（非全 8 题）；样本卡是精修展示件，**不能代表开放素材的普遍水平** |
 
 具体地说，这个项目目前**做不到**的事：
@@ -27,9 +27,13 @@
 1. **不能保证卡片里的引语挂对了地方。** 2026-10-05 的实测里，
    独立评分 Agent 抓出一处编造引用（把《暗黑破坏神》的一个 boss 名当成方法论证据），
    而当时的三层机械核验（validate、引语存在性、回归）**全部放行**。
-2. **不能保证卡片作者与评分者分离。** FIDELITY 的核心是「答题 Agent ≠ 卡片作者」，
-   但子 Agent 落盘在本环境下不稳定，独立答题两次失败，实际降级为自评。
-3. **样本量只有 3**（书籍 / 人物 / 视频各一次），任何"全链路已验证"的说法都偏早。
+2. **独立性只在「结构」层面成立，不是「组织」层面。** FIDELITY 的核心是「答题 Agent ≠ 卡片作者」；
+   现在这条**已被真实跑通**（`eval-kit`：独立答题子 Agent + 2 个独立评分子 Agent），但它仍是
+   同一台机器上的子 Agent —— **没有第二个人复评**，且子 Agent 落盘在长任务下仍不稳定
+   （历史实测派 4 次仅 1 次可靠落盘）。
+3. **开放素材上的样本仍然小。** `eval-kit` 只对 **2 张卡**跑通交叉复核（其中 `musk-decisions`
+   仅测 3 道人工题）；**12 张真实卡**跑工具链零崩溃，但那证明的是"工具能跑"，**不是"卡片都好"**。
+   任何"全链路已验证"的说法都偏早。
 
 **它现在适合当什么用**：流程骨架与门禁参考 —— 校验、门禁、快照、回滚、
 契约化产物这一层是扎实的，可以直接复用。
@@ -153,7 +157,7 @@ git clone https://github.com/yihexiang/rulai-distill.git ~/.codex/skills/rulai-d
 ```bash
 git clone https://github.com/yihexiang/rulai-distill.git && cd rulai-distill
 python3 scripts/td.py doctor        # 自检：打印能力矩阵与缺失的可选依赖
-python3 tests/e2e.py                # 跑 89 项回归
+python3 tests/e2e.py                # 跑 93 项回归
 ```
 
 `scripts/td.py` 是纯本地、零网络、零依赖可跑的薄CLI，任何 Python ≥ 3.10 都能直接用。
@@ -199,7 +203,7 @@ python3 scripts/td.py trigger record suite.json --out sheet.md
 python3 scripts/td.py trigger score suite.json answers.json
 ```
 
-**回归测试**：`python3 tests/e2e.py`（89 项，覆盖全部命令与 vendored 上游实跑）
+**回归测试**：`python3 tests/e2e.py`（93 项，覆盖全部命令与 vendored 上游实跑）
 
 ---
 
@@ -236,7 +240,7 @@ rulai-distill/
 │   ├── tdlib/                ← util / chunking / transcript / fetch / research / validate
 │   │                            / fidelity / strategy / publish / evals / evolve / promptc / upstream
 │   └── vendor/cangjie/       ← 上游 MIT 原件 + PROVENANCE.md（不改）
-└── tests/e2e.py              ← 端到端回归（89 项，双解释器各跑一遍）
+└── tests/e2e.py              ← 端到端回归（93 项，双解释器各跑一遍）
 ```
 
 ---
@@ -250,5 +254,5 @@ rulai-distill/
    已有本地字幕时完全不需要联网。
 4. **`--force` 发布是技术债**。manifest 会留 `forced: true`，事后可审计。
 5. **触发评测不做 LLM 调用**（本包零网络）：Agent 作答、脚本判分，容错 0。
-6. **未实测项**：长书场景的实际 token 节省量需真实跑一本 15 万字的书才能量化，
-   目前只有分块机制与实测的分块行为数据。
+6. **已测规模、未测节省**。长书场景实测的是**语料规模**（能处理 113 万字符的推文合集、
+   5 万字的《渊海子平》）与分块行为；**"分块检索 vs 整本灌入"实际省了多少 token 尚未量化**。

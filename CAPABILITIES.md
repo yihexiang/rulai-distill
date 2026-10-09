@@ -31,10 +31,13 @@
 
 | 能力 | 入口 | 要解决的问题 |
 |---|---|---|
-| FIDELITY 出厂质检 + 发布门槛 | `gate` / `compile` | nuwa 的质检是人工评分卡，本包做成可执行门禁 |
+| FIDELITY 出厂质检 + 发布门槛 | `gate` / `compile` | nuwa 的质检是人工评分卡，本包做成可执行门禁；失败产物带 `verdict=fail`/`blocking_issues`，`gate` 见到即拒（防"改名冒充正常报告"） |
+| 独立质检闭环（eval-kit） | `eval-kit init/check` | FIDELITY 的独立性原本**靠人组织**：题库/答题/双评分/分差门禁全部产品化，产出可被 `gate` 直接消费的 JSON；空集/单评分/同名评分者/分差>10 一律不判通过 |
 | 交叉复核门禁（nuwa 第三铁律） | `cross-review` / `gate --scores` | 「2 个独立评分 agent、分差 >10 人工复核」原本只存在于散文；现由 `cross_review()` 强制，且 `gate` 见到 `needs_human_review` 一律拒绝放行（缺陷 #43） |
 | 自测降级规则 | `gate --allow-fallback` | 自评自证必须被显式降级并留痕 |
 | 引语机械核验 | `verify-quotes` | 人工抽查密度不可能达到 18/18 |
+| 引语段号锚定 | `anchor` | 防「引语真实存在但挂错段号」（缺陷 #46）。无 §N 标注的引语归 `UNANCHORED`：**不判失败**（与 verify-quotes / lint-quotes 同口径），但如实计数、列出 |
+| 引语体检（核验之前） | `lint-quotes` | 提示"为什么核不到"：简繁/异体用字不一致（确证 → 判失败）、引语含省略号、把作者行文当引语 |
 | 调研车道覆盖审计 | `research merge` | 防止「一手 100%」掩盖 2/6 路缺失 |
 | 字幕获取（唯一联网） | `fetch-subtitle` | 默认 dry-run，marker 落在 --out 内 |
 | 逐字稿生成 | `transcript` | SRT/VTT + 去重 + 成段 + 多集合并 |
@@ -43,7 +46,7 @@
 | 写操作默认 dry-run | `repair` / `patch` / `update` | 蒸馏产物的价值在人工精修 |
 | 并发写锁 | `compile`（WriterLock） | 两个进程同时发布会产生半个 target |
 | run 级留痕 | `chunk` 的 `runs/` | 回答"这次分块是怎么来的" |
-| 约束即测试 | `CONSTRAINTS.md` + **89** 项回归 | 不需要用户反复纠正（项数由 `t_docs_no_drift` 强制与代码一致） |
+| 约束即测试 | `CONSTRAINTS.md` + **93** 项回归 | 不需要用户反复纠正（项数由 `t_docs_no_drift` 强制与代码一致） |
 | 失败用例集 | `failure list/export` | 缺陷沉淀为可机校验的 failure-case |
 
 ## 三、明确声明不做
@@ -55,7 +58,7 @@
 
 ## 四、覆盖度自检
 
-`tests/e2e.py` 中的三条测试保证本表不腐烂：
+`tests/e2e.py` 中的四条测试保证本表不腐烂：
 
 - `t_upstream_coverage`：上游 16 类能力的 vendored 脚本必须全部存在
 - `t_contract_list`：11 份契约映射必须全部存在
@@ -71,7 +74,7 @@
 |---|---|
 | `pipeline-check` | 代码回归（零依赖 + 完整依赖两轮）+ 红线扫描 |
 | `contract-check` | 契约合规 + **vendored 上游 sha256 完整性** |
-| `artifact-check` | 随包样本可核验（含 `verify-quotes` **防空集假绿**） |
+| `artifact-check` | 随包样本可核验（`validate` + `verify-quotes` 防空集假绿 + `lint-quotes` + `anchor` 段号锚定 + `gate` **交叉复核报告**） |
 | `docs-check` | 文档声明的数字与代码不漂移 + Markdown 死链/重复章节 |
 
 > `verify-quotes` 对**空集**也会输出「✅ 全部引语核到」（0 引用 → 0 核验 → pass），

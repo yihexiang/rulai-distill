@@ -252,9 +252,25 @@ def check(answers_path: Path, score_paths: list[Path], subject: str | None = Non
     total = sum(dims.values())
     grade = fid.grade_of(total)
 
-    blocking: list[str] = list(cross.get("reasons") or [])
+    # 先算 verdict（report 里要写它——"失败产物改名当正常报告"的防线）
+    verdict = "pass" if (not errors and uniq_graders >= fid.CROSS_REVIEW_MIN_SCORERS
+                         and cross.get("verdict") == "pass"
+                         and not (answerer and any(g == answerer for g in graders))) else "fail"
+
+    # 复审 G1 残余（2026-10-09）：blocking_issues 必须**穷尽**所有"不得放行"的理由。
+    # 此前只收交叉复核 reasons + 同名，于是 **errors 类失败**（如空答题）写出的产物
+    # blocking_issues 为空 → 把它改名成正常报告，gate 照样放行（实测 exit 0）。
+    # 修法：①errors 全量并入；②报告带 verdict；③fid.vetoes 对 verdict=fail 一律拒。
+    blocking: list[str] = []
+    # 交叉复核**未过**才计入否决。注意 cross.reasons 里还有一条"多个评分给相同分数"
+    # 的提醒——那是 pass 时的提示，**不能**当否决项（否则两个评分者恰好都给 95 就误杀）。
+    if cross.get("verdict") != "pass":
+        blocking += list(cross.get("reasons") or [])
     if answerer and any(g == answerer for g in graders):
         blocking.append(f"答题者与评分者同名（{answerer}）：不满足独立质检要求")
+    for e in errors:
+        if e not in blocking:
+            blocking.append(e)
     report = {
         "schema": "rulai-distill/fidelity/v1",
         "subject": subject or str(answers.get("subject") or "unnamed"),
@@ -266,9 +282,7 @@ def check(answers_path: Path, score_paths: list[Path], subject: str | None = Non
         "total": total,
         "grade": grade,
         "blocking_issues": blocking,
+        "verdict": verdict,
     }
-    verdict = "pass" if (not errors and uniq_graders >= fid.CROSS_REVIEW_MIN_SCORERS
-                         and cross.get("verdict") == "pass"
-                         and not (answerer and any(g == answerer for g in graders))) else "fail"
     return {"report": report, "cross": cross, "verdict": verdict, "errors": errors,
             "graders": graders, "unique_graders": uniq_graders, "answerer": answerer}

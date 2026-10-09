@@ -10,8 +10,9 @@
 | `sources/sunzi-ji.txt` | 孫子正文（計篇第1段，500 余字） | 真实一手材料 |
 | `SOURCES.md` | 素材清单 + 一手占比 1.00 + 覆盖度自检 | 真实 |
 | `skills/five-affairs-seven-questions/SKILL.md` | 能力卡（五事七问 · 开局校准） | 真实蒸馏产物 |
+| `skills/five-affairs-seven-questions/FIDELITY.json` | **交叉复核**报告（2 个独立评分者 90/98，分差 8 → 合并 **93/A**）→ `gate` 直接吃它 | 真实（eval-kit 产出） |
 | `eval/answers.md` | 双 Agent 盲测答题**逐字原始输出** | 真实 |
-| `eval/fidelity-report.md` | 独立评分 Agent 的 FIDELITY 报告 **93/100 A** | 真实 |
+| `eval/fidelity-report.md` | 第一轮**单评分** FIDELITY 报告的人类可读叙事（93/100 A）——**已被 FIDELITY.json 的交叉复核取代为门禁依据** | 真实 |
 | `eval/style-decoys.md` | 风格辨识度的两个通用腔调对照 | 主 Agent 撰写（已披露作者） |
 | `eval/trigger-answers.json` | 触发评测答题原始作答 + 判分事故记录 | 真实 |
 | `eval/TRIGGER-REPORT.md` | 触发评测报告 6/7 | 真实 |
@@ -23,7 +24,7 @@
 
 | 评测 | 结果 | 一句话 |
 |---|---|---|
-| **FIDELITY（双 Agent）** | **93/100 A** | 边缘诚实度满分（20/20），结构完整度 13/15（A1 段被判 0/2） |
+| **FIDELITY（双 Agent · 交叉复核）** | **93/100 A** | 2 个独立评分者 90/98（分差 8，≤10）→ 合并 93/A；边缘诚实度满分（19/20×2） |
 | **触发压力测试** | 6/7，precision 1.0，F1 0.889 | 诱饵 100% 挡住；1 条 cross-skill 失败（如实保留） |
 | **E4 no-skill 对照** | **边际增益** | 对照组自发做了三问式尽调，**基座模型本来就很强** |
 
@@ -55,8 +56,8 @@
 python3 scripts/td.py validate examples/sample-bundle
 python3 scripts/td.py output-eval examples/sample-bundle/skills/five-affairs-seven-questions/SKILL.md
 
-# FIDELITY 门槛（读双 Agent 报告）
-python3 scripts/td.py gate examples/sample-bundle/eval/fidelity-report.md --min B
+# FIDELITY 门槛（读**交叉复核**报告；2 个独立评分者，分差 8）
+python3 scripts/td.py gate examples/sample-bundle/skills/five-affairs-seven-questions/FIDELITY.json --min B
 
 # 触发评测（重跑判分）
 python3 scripts/td.py trigger score examples/sample-bundle/test-suite.json \
@@ -70,6 +71,6 @@ python3 scripts/td.py compile examples/sample-bundle --out /tmp/td-sample
 
 | 项 | 状态 |
 |---|---|
-| 第二评分者交叉校验 | **未做**。93 分来自单一评分 Agent，`cross_grader_gap` 为空 |
+| 第二评分者交叉校验 | **已做**（eval-kit 跑通：独立答题子 Agent + 2 个独立评分子 Agent，90/98、分差 8 → 93/A）。⚠️ 这是**结构独立**（子 Agent 隔离）而非组织独立（无第二个人复评） |
 | 跨技能混淆题 x-01 | **失败未修**。可能是对照技能 description 不可区分，也可能是题面分界不干净 |
-| FIDELITY 复评 | 卡片按评分建议改过（A1/阈值/B段），**改动后未重新评分**。按方法论，改完必须重评，否则分数不再对应产物 |
+| FIDELITY 复评 | **已复评**。卡片按第一轮评分建议改过（A1 去虚构 / 阈值抗漂移 / B 段补篇目），随后由 eval-kit 交叉复核重评为 93/A（见 `skills/five-affairs-seven-questions/FIDELITY.json`）。两轮同为 93 分**但依据不同**：第一轮扣在已修的 A1 段，重评轮扣在一致性与来源透明度 |

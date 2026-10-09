@@ -11,6 +11,7 @@ on:
       - 'examples/**'
       - 'templates/**'
       - 'scripts/tdlib/validate.py'
+      - 'scripts/tdlib/anchor.py'
       - 'scripts/tdlib/evals.py'
       - 'scripts/tdlib/fidelity.py'
       - '.github/workflows/artifact-check.yml'
@@ -36,11 +37,11 @@ jobs:
           echo "$out"
           echo "$out" | grep -q "error 0" || { echo "::error::样本未通过静态校验"; exit 1; }
 
-      # 样本报告只有 1 个独立评分者（fidelity-grader）。gate 默认要求交叉复核，
-      # 所以这里显式 --allow-single-scorer：**诚实豁免**，不是绕过——样本就一份评分，
-      # 我们不假装它做过交叉复核。真实的双评分工流见 eval-kit。
-      - name: FIDELITY 门禁（样本报告，单评分显式豁免）
-        run: python scripts/td.py gate examples/sample-bundle/eval/fidelity-report.md --allow-single-scorer
+      # FIDELITY 门禁：样例卡自带**交叉复核**报告（2 个独立评分者，分差 8）。
+      # 此前用的是单评分报告 + --allow-single-scorer 诚实豁免；现换成 eval-kit 产出的
+      # 交叉复核报告，**豁免不再需要**——"样例三件套全绿"因此是事实而非声明（复审 #2）。
+      - name: FIDELITY 门禁（样例卡交叉复核报告）
+        run: python scripts/td.py gate examples/sample-bundle/skills/five-affairs-seven-questions/FIDELITY.json --min B
 
       # 关键：verify-quotes 对**空集**也会输出「✅ 全部引语核到」（0 引用 → 0 核验 → pass）。
       # 这种假绿比报错更危险，所以这里必须用 fixture 断言 verified > 0，而不是只看退出码。
@@ -100,9 +101,19 @@ jobs:
 
       # 引语体检：样例卡不得有简繁/异体**用字不一致**（glyph 判失败）。
       # 提示级（省略号 / 归属可疑）不判失败——CI 只看硬失败，避免启发式噪声卡 CI。
-      - name: 引语体检（lint-quotes，样例卡无用字不一致）
+      - name: '引语体检（lint-quotes，样例卡无用字不一致）'
         run: |
           python scripts/td.py lint-quotes \
+            examples/sample-bundle/skills/five-affairs-seven-questions/SKILL.md \
+            --corpus examples/sample-bundle/sources/sunzi-ji.txt
+
+      # 段号锚定：样例卡里**带 §N 的引语**必须全部锚在声明的段号内。
+      # 无 §N 标注的引语属"不可定位"，单列计数、**不判失败**（与 verify-quotes /
+      # lint-quotes「无出处即跳过」同口径，复审 #1）。此前 anchor 未接 CI，
+      # 于是"样例三件套全绿"只是一句没被机器验证的话——现在它是事实。
+      - name: 引语段号锚定（anchor，样例卡）
+        run: |
+          python scripts/td.py anchor \
             examples/sample-bundle/skills/five-affairs-seven-questions/SKILL.md \
             --corpus examples/sample-bundle/sources/sunzi-ji.txt
 

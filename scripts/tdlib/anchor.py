@@ -15,8 +15,12 @@
 
 三道判定，逐级降级但**绝不静默放过**：
 1. **ANCHOR_HIT**  —— 引语在 §N 段内（含跨行拼接，见`--allow-span`）
-2. **SPAN_HIT**    —— 跨了相邻段（引语被字幕分段切断），报出来并记`spans`
-3. **ANCHOR_MISS** —— §N 段内没有；给出**最可能的真实段号**供人工确认
+2. **SPAN_HIT**    —— 引语存在但**不在它声明的那一段**（段号挂错 / 字幕分段），报出来并记`spans`
+3. **ANCHOR_MISS** —— 段内没有；给出**最可能的真实段号**供人工确认
+
+另有一类**不计入失败**：**UNANCHORED** —— 引语没有 §N 标注（不可定位）。
+它不判失败（与 verify-quotes / lint-quotes 的"无出处即跳过"同口径），但如实计数、如实列出，
+绝不静默——**"没有段号"和"段号写错"是两件事，混在一起会让好卡片被误判**（复审 #1）。
 
 设计上的三条硬规矩（都是被本项目自己的缺陷教出来的）：
 - **不猜**。找不到就报 ANCHOR_MISS 并给候选段号，绝不"大概是"。
@@ -206,13 +210,34 @@ def check_quote_in_para(quote: str, para_texts: dict[int, str], n: int = 5,
     # 3 词是下限：真实的短引语（如 "except with Uber"）只有 3 词，
     # 门槛设 4 会让它永远 TOO_SHORT —— 那等于给短引语开后门。
     k = min(n, max(2, len(qw) // 2)) if len(qw) >= 3 else None
+
+    # 复审 #1（2026-10-09）：**无 §N 标注的引语**（target is None）不是"挂错段号"，
+    # 而是"根本没有可锚定的段号"——本命令无从核验。此前它被判 SPAN_HIT / NOT_IN_CORPUS
+    # 并计入 FAIL，于是官方样例卡（3 条 R 段引语带 §、另 3 条正文引语不带 §）被判 FAIL，
+    # 与 verify-quotes（无出处引用块跳过）、lint-quotes（语言信号框跳过）口径不一致。
+    # 现在单列为 UNANCHORED：**不判失败**，但如实计数、如实列出（不静默）。
+    # 关键：UNANCHORED 由**标注有无**唯一确定，与 TOO_SHORT 不重叠——
+    # 所以 `unanchored` 计数与 reconciliation 的分区完全一致，对账必平。
+    # 挂了 §N 的引语照旧严判，本模块的第一性目的（抓"引语挂错段号"）不受影响。
+    def _unanchored(rates: dict[str, float] | None = None) -> dict:
+        rates = rates or {}
+        best = max(rates, key=lambda kk: rates[kk]) if rates else None
+        best_rate = round(rates[best], 3) if best is not None else None
+        # 在语料里确实存在（命中率 ≥0.6）就把段号报出来供人工补标；否则置 None，不假装有命中。
+        return {"verdict": "UNANCHORED",
+                "hit_at": best if (best_rate is not None and best_rate >= 0.6) else None,
+                "spans": sorted(rates), "candidates": _top(rates),
+                "words": len(qw), "ngram": k or 0, "rate": best_rate}
+
     if k is None:
-        return {"verdict": "TOO_SHORT", "hit_at": None, "spans": [],
-                "candidates": [], "words": len(qw), "ngram": 0}
+        return _unanchored() if target is None else {
+            "verdict": "TOO_SHORT", "hit_at": None, "spans": [],
+            "candidates": [], "words": len(qw), "ngram": 0}
     qsh = shingles(qw, k)
     if not qsh:
-        return {"verdict": "TOO_SHORT", "hit_at": None, "spans": [],
-                "candidates": [], "words": len(qw), "ngram": 0}
+        return _unanchored() if target is None else {
+            "verdict": "TOO_SHORT", "hit_at": None, "spans": [],
+            "candidates": [], "words": len(qw), "ngram": 0}
 
     rates: dict[int, float] = {}
     for num, ptext in para_texts.items():
@@ -223,6 +248,9 @@ def check_quote_in_para(quote: str, para_texts: dict[int, str], n: int = 5,
         if hit:
             rates[num] = hit / len(qsh)
 
+    if target is None:
+        return _unanchored(rates)
+
     if not rates:
         return {"verdict": "NOT_IN_CORPUS", "hit_at": None, "spans": [],
                 "candidates": [], "words": len(qw)}
@@ -230,7 +258,8 @@ def check_quote_in_para(quote: str, para_texts: dict[int, str], n: int = 5,
     best = max(rates, key=lambda k: rates[k])
     # 严格门槛：与 verify_quotes 对齐（>=0.6 判命中），避免两个工具口径打架
     if rates[best] >= 0.6:   # noqa: PLR2004 —— 与 verify_quotes 同口径
-        if target is not None and best == target:
+        # 走到这里 target 必不为 None（target is None 已在上面归 UNANCHORED 提前返回）
+        if best == target:
             return {"verdict": "ANCHOR_HIT", "hit_at": best, "spans": [],
                     "candidates": _top(rates), "words": len(qw), "ngram": k,
                     "rate": round(rates[best], 3)}
@@ -239,7 +268,7 @@ def check_quote_in_para(quote: str, para_texts: dict[int, str], n: int = 5,
         return {"verdict": "SPAN_HIT", "hit_at": best, "spans": sorted(rates),
                 "candidates": _top(rates), "words": len(qw), "ngram": k,
                 "rate": round(rates[best], 3)}
-    if target is not None and rates.get(target, 0.0) >= 0.4:
+    if rates.get(target, 0.0) >= 0.4:
         # 落在声明段内但命中率 0.4~0.6：多半是**跨段引语被字幕分段切开**。
         # 不放行（那会给"段号写错"开门），但也不误判为段号错——
         # 归为 PARTIAL 交人工一句判断。**0.4 是"值得看一眼"，不是"算通过"。**
@@ -376,9 +405,12 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
     # （旧版把 SPAN_HIT 也算过，那等于给"段号写错"开后门。）
     anchored = sum(1 for r in results if r["verdict"] == "ANCHOR_HIT")
     partial = [r for r in results if r["verdict"] == "ANCHOR_PARTIAL"]
+    # 复审 #1：失败只统计**带段号标注**的失配。无 §N 的引语归 UNANCHORED（不可定位），
+    # 单列出来、如实计数，但不判失败——它不是"挂错段号"，是"没段号可锚"。
     miss = [r for r in results
-            if r["verdict"] in ("ANCHOR_MISS", "NOT_IN_CORPUS", "SPAN_HIT")]
-    unanchored = sum(1 for r in results if not r["anchored"])
+            if r["anchored"] and r["verdict"] in ("ANCHOR_MISS", "NOT_IN_CORPUS", "SPAN_HIT")]
+    unanchored_list = [r for r in results if r["verdict"] == "UNANCHORED"]
+    unanchored = len(unanchored_list)
 
     return {
         "file": str(claim_file),
@@ -393,12 +425,18 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
         "anchored_checked": anchored,
         "tally": tally,
         "unanchored": unanchored,
+        # 无标注引语的明细（不判失败，但必须看得见——静默的"没检查"比报错更难查）
+        "unanchored_quotes": [{"line": r["line"], "quote": r["quote"],
+                               "in_corpus_at": r.get("hit_at"),
+                               "best_rate": r.get("rate")} for r in unanchored_list],
         "unresolved_sources": unresolved,
         "noise_filtered": noise,
-        # 对账：见到的引语 = 已锚定核验 + 未锚定 + 失配+ 过短
+        # 对账：见到的引语 = 各 verdict 之和（分区必须严丝合缝，漏一项就是账不平）
         "reconciliation": {
             "seen": seen_quotes,
             "anchor_hit": anchored,
+            "unanchored": unanchored,
+            "anchor_partial": sum(1 for r in results if r["verdict"] == "ANCHOR_PARTIAL"),
             "span_hit": sum(1 for r in results if r["verdict"] == "SPAN_HIT"),
             "anchor_miss": sum(1 for r in results if r["verdict"] == "ANCHOR_MISS"),
             "not_in_corpus": sum(1 for r in results if r["verdict"] == "NOT_IN_CORPUS"),

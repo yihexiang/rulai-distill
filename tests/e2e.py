@@ -603,6 +603,24 @@ def t_g1_evalkit_hardening():
         assert not out.exists(), "失败不得写出普通产物（否则照样能喂给 gate）"
         assert (base / "FIDELITY.rejected.json").exists(), "应写出 .rejected.json 供排查"
 
+        # 复审 #3（G1 残余）：**errors 类失败**（空答题）产物若改名当正常报告，gate 必须仍拒。
+        # 此前这种产物的 blocking_issues 为空 → gate 放行（实测 exit 0）。
+        s2 = sc("s2.json", "grader-2", dimsB)      # 与 s1 不同名 → 交叉复核本身没问题
+        empty_ans = base / "empty.json"
+        empty_ans.write_text(json.dumps({"answerer": "answerer-A", "answers": []},
+                                        ensure_ascii=False), encoding="utf-8")
+        rej = base / "EMPTY.rejected.json"
+        run(["eval-kit", "check", "--answers", str(empty_ans), "--scores", str(s1), str(s2),
+             "--out", str(base / "EMPTY.json")], expect=1)
+        data = json.loads(rej.read_text(encoding="utf-8"))
+        assert data.get("blocking_issues"), f"errors 类失败必须并入 blocking_issues：{data}"
+        assert data.get("verdict") == "fail", f"失败产物必须带 verdict=fail：{data}"
+        norm = base / "renamed-as-normal.json"    # 冒充正常报告
+        os.replace(rej, norm)
+        g = run(["gate", str(norm), "--min", "A"], expect=1)
+        assert ("verdict=fail" in g.stdout) or ("blocking_issues" in g.stdout), \
+            f"改名冒充的报告必须仍被拒：{g.stdout}"
+
 
 def t_validate_exempts_aux_docs():
     """复审：技能目录根级辅助文档（VERIFY.md/COVERAGE.md，无 frontmatter）不得被当卡片。
@@ -630,11 +648,53 @@ def t_validate_exempts_aux_docs():
     assert stats["cards"] == 1, f"只应把 SKILL.md 当卡片：{stats}"
 
 
+def t_validate_flat_layout():
+    """复审 #4：扁平布局 `skills/*.md` **恒为卡片**——不得因无 frontmatter 被静默跳过。
+
+    实测：`skills/only-card.md`（无 frontmatter）被归为"文档"→ **完全不校验**（免检通行证）。
+    同时守住反方向：嵌套布局的技能目录根级辅助文档（skills/<slug>/VERIFY.md）仍应归文档，
+    否则会把上一轮的 validate 修复又推翻回去。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import validate as V
+    with tempfile.TemporaryDirectory() as d:
+        base = Path(d)
+        (base / "skills").mkdir(parents=True)
+        (base / "skills" / "flat-card.md").write_text(
+            "# 扁平卡片\n\n没有 frontmatter。\n", encoding="utf-8")
+        problems, stats = V.validate_path(base)
+    assert stats["cards"] == 1, f"扁平 skills/*.md 必须当卡片：{stats}"
+    assert any(p[0] == "error" and "name" in p[2] for p in problems), \
+        f"无 frontmatter 的扁平卡片应报缺失字段（而非静默免检）：{problems}"
+    with tempfile.TemporaryDirectory() as d2:
+        base2 = Path(d2)
+        sk = base2 / "skills" / "demo"
+        sk.mkdir(parents=True)
+        (sk / "SKILL.md").write_text(
+            "---\nname: demo\ndescription: 用于校验扁平与嵌套布局的区分。不做：通用问答。\n---\n\n"
+            "# E — 可执行步骤\n\n**Step 1 · 做**\n\n完成标准：做完。\n\n"
+            "# B — 边界\n\n失败模式：无。\n", encoding="utf-8")
+        (sk / "VERIFY.md").write_text("# VERIFY\n\n无 frontmatter 的辅助文档。\n",
+                                      encoding="utf-8")
+        _, stats2 = V.validate_path(base2)
+    assert stats2["cards"] == 1 and stats2["docs"] == 1, \
+        f"嵌套布局的辅助文档仍应归文档：{stats2}"
+
+
 def t_ci_artifact_gate():
-    """复审 G2：CI 的样例 gate 步骤必须真能过——防策略变更静默打破 CI。"""
-    rep = ROOT / "examples/sample-bundle/eval/fidelity-report.md"
-    assert rep.exists(), f"样例报告缺失：{rep}"
-    run(["gate", str(rep), "--allow-single-scorer"])
+    """复审 G2/#2：CI 的样例 gate 步骤必须真能过——防策略变更静默打破 CI。
+
+    复审 #2 后 CI 改用**交叉复核**报告（不再需要 --allow-single-scorer 豁免）：
+    样例卡自带 `FIDELITY.json`（2 个独立评分者、分差 8）→ gate 直接放行。
+    """
+    rep = ROOT / "examples/sample-bundle/skills/five-affairs-seven-questions/FIDELITY.json"
+    assert rep.exists(), f"样例交叉复核报告缺失：{rep}"
+    out = run(["gate", str(rep), "--min", "B"]).stdout
+    assert "通过门槛" in out, out
+    assert "交叉复核" in out, f"gate 应识别报告内嵌的交叉复核：{out}"
+    # 旧单评分报告仍在（作人类可读的叙事），但不再作为 CI 门禁依据
+    old = ROOT / "examples/sample-bundle/eval/fidelity-report.md"
+    assert old.exists(), "人类可读的 FIDELITY 报告应保留"
 
 
 def t_registry_structured_fidelity_and_reports():
@@ -658,6 +718,46 @@ def t_registry_structured_fidelity_and_reports():
         run(["compile", str(b), "--out", str(out2)])
         assert not (out2 / "skills" / "major-contradiction" / "FIDELITY.md").exists(), \
             "默认不应随包发布报告"
+
+
+def t_compile_with_reports_honest():
+    """复审 #2：`--with-reports` **未找到报告时不得宣称"已随产物发布"**（假绿）。
+
+    此前成功提示是无条件打印的：实测官方样例 bundle 打印「FIDELITY 报告已随产物发布」，
+    但产物里只有 SKILL.md（查找路径不含样例的报告位置）。现在：真复制了才说"已写入"，
+    没找到就 warn 并列出 slug。**没做过的事不许说做过。**
+    """
+    with tempfile.TemporaryDirectory() as d:
+        b = setup(Path(d))
+        for slug in ("major-contradiction", "sequence-execution"):
+            (b / "skills" / slug / "FIDELITY.md").unlink()
+        out = Path(d) / "dist"
+        p = run(["compile", str(b), "--out", str(out), "--with-reports", "--force"])
+        assert "已写入产物" not in p.stdout, f"没找到报告却宣称已发布（假绿）：{p.stdout}"
+        assert "未找到" in p.stdout, f"应明确 warn 未找到报告：{p.stdout}"
+        assert not list((out / "skills").rglob("FIDELITY.*")), "无报告时产物里不应出现报告"
+    with tempfile.TemporaryDirectory() as d2:
+        b2 = setup(Path(d2))
+        out2 = Path(d2) / "dist"
+        p2 = run(["compile", str(b2), "--out", str(out2), "--with-reports"])
+        assert "已写入产物" in p2.stdout, f"确有报告时应如实报告已发布：{p2.stdout}"
+        assert (out2 / "skills" / "major-contradiction" / "FIDELITY.md").exists()
+
+
+def t_compile_finds_card_json_report():
+    """复审 #2：卡同级的 `FIDELITY.json` 也必须被找到（此前只认 FIDELITY.md）。
+
+    样例 bundle 的真实报告就是 FIDELITY.json；查找不到 → 门禁数据缺失 + with-reports 假绿。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import publish
+    rep = ROOT / "examples/sample-bundle/skills/five-affairs-seven-questions/FIDELITY.json"
+    src = ROOT / "examples/sample-bundle/skills/five-affairs-seven-questions/SKILL.md"
+    score, grade, path, rdict = publish._fidelity_for(ROOT / "examples/sample-bundle",
+                                                      src, {"slug": "five-affairs-seven-questions"})
+    assert path is not None and Path(path) == rep, f"应找到卡片同级 FIDELITY.json：{path}"
+    assert (score, grade) == (93, "A"), (score, grade)
+    assert rdict and rdict.get("graders") == ["grader-1", "grader-2"], rdict
 
 def t_strategy():
     with tempfile.TemporaryDirectory() as d:
@@ -2790,6 +2890,40 @@ def t_anchor_chinese_not_vacuous():
         assert p3.returncode != 0, "空集假绿必须判失败，不能打印 PASS"
 
 
+def t_anchor_unanchored_not_fail():
+    """复审 #1：无 §N 标注的引语 = **不可定位**，不得判失败（口径与 verify-quotes/lint 一致）。
+
+    此前 anchor 的注释写「只检查带 §N 标注的引语」，实现却把无标注引语计入 miss 判 FAIL——
+    官方样例卡因此 exit 1（3 条 R 段引语带 §，另 3 条正文/语言信号引语不带 §）。
+    **注释与行为不符**是"声称≠实际"的典型；本条测试把二者钉在一起。
+
+    同时守住反方向：口径放宽**不得**把"带 §N 但挂错段号"也放过——那才是本命令的第一性目的。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import anchor
+
+    card = ROOT / "examples/sample-bundle/skills/five-affairs-seven-questions/SKILL.md"
+    src = ROOT / "examples/sample-bundle/sources/sunzi-ji.txt"
+    rep = anchor.verify_file(card, anchor.load_corpora([src]))
+    assert rep["verdict"] == "PASS", f"无标注引语不得判失败：{rep['tally']} {rep['failures']}"
+    assert rep["anchored_checked"] >= 3, f"带 §N 的引语应照旧核验：{rep['tally']}"
+    assert rep["unanchored"] >= 1, "无标注引语必须如实计数（不静默）"
+    assert len(rep["unanchored_quotes"]) == rep["unanchored"], \
+        f"无标注明细条数应与计数一致：{len(rep['unanchored_quotes'])} vs {rep['unanchored']}"
+    # 对账必须平：seen = 各 verdict 之和（分区严丝合缝）
+    rec = rep["reconciliation"]
+    assert sum(v for kk, v in rec.items() if kk != "seen") == rec["seen"], \
+        f"对账不平（分区漏项）：{rec}"
+    # 反方向：带 §N 但挂错段号仍必须判 FAIL
+    bad = Path(tempfile.mkdtemp()) / "bad.md"
+    bad.write_text("> 「兵者，國之大事，死生之地，存亡之道，不可不察也。」——§2\n",
+                   encoding="utf-8")
+    assert anchor.verify_file(bad, anchor.load_corpora([src]))["verdict"] == "FAIL", \
+        "带 §N 但挂错段号必须仍判 FAIL（放宽口径不得放过真问题）"
+    # CLI 端到端：样例卡 exit 0
+    run(["anchor", str(card), "--corpus", str(src)], expect=0)
+
+
 def t_verify_quotes_misplaced_vs_fabricated():
     """「引语挂错位置」与「引语是编造的」必须分开报，且都判失败。
 
@@ -3038,7 +3172,10 @@ def main() -> int:
         ("eval-kit 加固·失败产物/同名评分者（复审 G1）", t_g1_evalkit_hardening),
         ("validate 豁免根级辅助文档（复审）", t_validate_exempts_aux_docs),
         ("CI 样例 gate 步骤（复审 G2）", t_ci_artifact_gate),
+        ("validate 扁平布局 skills/*.md 恒为卡片（复审 #4）", t_validate_flat_layout),
         ("registry 结构化 fidelity + 报告随包（复审 #2/#3）", t_registry_structured_fidelity_and_reports),
+        ("with-reports 未找到报告不得宣称已发布（复审 #2）", t_compile_with_reports_honest),
+        ("compile 能找到卡片同级 FIDELITY.json（复审 #2）", t_compile_finds_card_json_report),
         ("strategy single/pack 决策", t_strategy),
         ("compile 原子发布 + 手改检测 + 回滚", t_compile_and_publish),
         ("compile single 模式", t_compile_single_mode),
@@ -3096,6 +3233,7 @@ def main() -> int:
         ("C11 已安装副本与项目一致（#44）", t_installed_copy_in_sync),
         ("C11 跳过生成物/侧车目录（复审#2）", t_c11_skips_generated_artifacts),
         ("引语段号锚定（#46）", t_anchor_verifier),
+        ("anchor 无 §N 引语不计失败（复审 #1）", t_anchor_unanchored_not_fail),
         ("anchor 支持书类【第N段】语料（复审#1）", t_anchor_book_corpus),
         ("corpus-anchor 书类语料规整（复审#1）", t_corpus_anchor_command),
         ("素材零重叠检测（8-gram 包含率）", t_overlap_detector),

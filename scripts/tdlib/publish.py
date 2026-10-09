@@ -225,7 +225,8 @@ def compile_bundle(bundle_path: Path, out: Path, allow_grade: str | None = None,
             shutil.copy2(src, outfile)
             published[str(outfile.relative_to(staging))] = sha256_of(outfile)
             for extra in sorted(src.parent.glob("*")):
-                if not extra.is_file() or extra.name in ("SKILL.md", "FIDELITY.md", MANIFEST_NAME):
+                if (not extra.is_file() or extra.name in ("SKILL.md", MANIFEST_NAME)
+                        or extra.name.startswith("FIDELITY.")):
                     continue
                 if extra.resolve() in sibling_srcs or extra.suffix not in SKILL_SUFFIXES:
                     continue
@@ -234,13 +235,18 @@ def compile_bundle(bundle_path: Path, out: Path, allow_grade: str | None = None,
                 published[rel] = sha256_of(dest / extra.name)
             # 报告随包发布：FIDELITY 报告（质量证据）随卡一并进产物。
             # 注意**不含**答案/诱饵等测试材料（那些会泄题）。
+            # report_published 如实记录**这次是否真的复制了报告**——供 CLI 判断
+            # 该不该打印"已随产物发布"（复审 #4：此前无条件打印，是假绿）。
+            report_published = False
             if with_reports and rep_path and Path(rep_path).exists():
                 rf = dest / ("FIDELITY" + Path(rep_path).suffix)
                 shutil.copy2(rep_path, rf)
                 rel = str(rf.relative_to(staging))
                 published[rel] = sha256_of(rf)
+                report_published = True
             results.append({"slug": slug, "fidelity_score": score, "fidelity_grade": grade,
-                            "report": str(rep_path) if rep_path else None})
+                            "report": str(rep_path) if rep_path else None,
+                            "report_published": report_published})
             fid_reports[slug] = rep_dict
 
         if mode == "single":
@@ -454,10 +460,24 @@ def _fidelity_for(bundle_dir: Path, src: Path, entry: dict):
 
     report_dict 供 registry 旁挂写出**结构化** FIDELITY（维度/评分者/交叉复核），
     不只是 score/grade 两个数——复审 #2「registry 结构化 fidelity」。
+
+    查找路径（复审 #4：此前只有 `FIDELITY.md` 与 `fidelity/<slug>.*`，漏掉了
+    **卡片同级的 `FIDELITY.json`** 与 **`eval/<slug>.*`**——于是样例 bundle 明明有
+    质量报告却找不到，compile 还照样打印「报告已随产物发布」= 假绿）：
+      1. 卡片同级 `FIDELITY.{md,json}`（阶段 4b 的约定位置）
+      2. `bundle/fidelity/<slug>.{json,md}` 与 `bundle/eval/<slug>.{json,md}`（按 slug）
+    只找**与 slug 一一对应**的位置；**不做**"整个 bundle 共用一份报告"的兜底——
+    那会把一张卡的分数错挂到所有卡上（比找不到更坏）。
     """
-    for cand in (src.parent / "FIDELITY.md", src.with_name("FIDELITY.md"),
-                 bundle_dir / "fidelity" / f"{entry['slug']}.json",
-                 bundle_dir / "fidelity" / f"{entry['slug']}.md"):
+    cands = [
+        src.parent / "FIDELITY.md", src.with_name("FIDELITY.md"),
+        src.parent / "FIDELITY.json", src.with_name("FIDELITY.json"),
+        bundle_dir / "fidelity" / f"{entry['slug']}.json",
+        bundle_dir / "fidelity" / f"{entry['slug']}.md",
+        bundle_dir / "eval" / f"{entry['slug']}.json",
+        bundle_dir / "eval" / f"{entry['slug']}.md",
+    ]
+    for cand in cands:
         if cand.exists():
             rep = parse_report(cand)
             return (rep.get("total", entry.get("fidelity_score")),

@@ -34,6 +34,10 @@
     "total": { "type": "number", "minimum": 0, "maximum": 100 },
     "grade": { "enum": ["A", "B", "C", "D"] },
     "weakest_dimension": { "type": "string" },
-    "blocking_issues": { "type": "array", "items": { "type": "string" } }
+    "blocking_issues": { "type": "array", "items": { "type": "string" } },
+    "verdict": {
+      "enum": ["pass", "fail"],
+      "description": "评测自身的通过/失败判定（eval-kit check 写入）。gate 见到 fail 一律拒绝——防「失败产物改名当正常报告」蒙混过关。"
+    }
   }
 }

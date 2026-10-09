@@ -48,6 +48,13 @@ def _is_skill_doc(path: Path) -> bool:
     # SKILL.md 恒为卡片（哪怕 frontmatter 坏了，也要让 check_card 去报错，不能静默放过）。
     if path.name == "SKILL.md":
         return True
+    # 复审 #4（2026-10-09）：**扁平布局** `skills/*.md`——卡片直接放在 skills/ 下、
+    # 没有嵌套目录。这类文件既无目录名可依据，若再没有 frontmatter，就会被静默归为
+    # "文档"而**完全不校验**（实测：技能卡 0 / 文档 1，等于给了一张免检通行证）。
+    # 判据用"父目录名就是 skills"，与嵌套布局（skills/<slug>/SKILL.md，父目录是 <slug>）
+    # 天然区分，因此对现有嵌套产物零影响。
+    if path.parent.name.lower() == "skills":
+        return True
     # 复审：技能目录**根级**还有一批辅助文档（VERIFY.md / COVERAGE.md / …），
     # 它们被当成卡片校验会因缺 frontmatter 而误判「不允许发布」（guoxue zhouyi 实测 error 6）。
     # 判据用「有没有 frontmatter」而不是硬编码文件名——每加一份新辅助文档不会再漏。

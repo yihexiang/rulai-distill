@@ -196,6 +196,11 @@ def vetoes(rep: dict) -> list[str]:
     """返回一票否决项列表（空列表 = 通过）。"""
     out = []
     d = rep.get("dimensions") or {}
+    # 复审 G1 残余（2026-10-09）：报告自带 verdict=fail（eval-kit 产物）→ 一律拒。
+    # 此前"失败产物"只靠 blocking_issues 拦，而 errors 类失败（空答题）的 blocking 为空，
+    # 改名成正常报告就能放行。verdict 是比 blocking_issues 更强的显式信号。
+    if str(rep.get("verdict") or "").lower() == "fail":
+        out.append("报告 verdict=fail（评测自身判定未通过）：不得放行")
     if d.get("edge_honesty") == 0:
         out.append("维度 3 边缘诚实度 = 0：存在编造行为，产物比没有技能更危险")
     if rep.get("eval_mode") == "unknown":

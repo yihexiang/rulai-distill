@@ -501,8 +501,13 @@ def cmd_anchor(args) -> int:
             "按提示的实际段号改正，或若引语确实跨段则改写为可定位的形式；"
             "不要因为「引语本身存在」就放过——那正是本命令要防的")
     if rep["unanchored"]:
-        warn(f"{rep['unanchored']} 条引语没有 §N 标注，属不可定位——"
-             "本命令无法核验它们，需人工确认")
+        warn(f"{rep['unanchored']} 条引语没有 §N 标注，属不可定位——本命令无法核验它们"
+             "（**不判失败**，与 verify-quotes / lint-quotes「无出处即跳过」同口径），"
+             "但需人工确认它们该挂哪一段")
+        for u in rep.get("unanchored_quotes") or []:
+            where = (f"（在语料 §{u['in_corpus_at']} 命中）"
+                     if u.get("in_corpus_at") is not None else "（语料中也未命中）")
+            info(f"      第 {u['line']} 行「{u['quote'][:70]}」{where}")
     # #56：卡片有标注却一条引语都没抽出来 = 核验器没干活，不是"没问题"。
     # 空集不得判 PASS（与 v1.3 的「空集假绿」同一纪律）。
     if rep.get("vacuous"):
@@ -511,7 +516,9 @@ def cmd_anchor(args) -> int:
             "这不是通过，是核验器没干活。请确认引语写在引号里"
             "（支持 \"…\"、「…」、“…”），且长度 ≥12 字符；"
             "或先用 verify-quotes 确认引语能被识别")
-    ok(f"判定 PASS：{rep['anchored_checked']} 条引语全部锚定在声明的段号内")
+    tail = (f"；另有 {rep['unanchored']} 条无 §N 标注、不可定位（未核验）"
+            if rep["unanchored"] else "")
+    ok(f"判定 PASS：{rep['anchored_checked']} 条带段号标注的引语全部锚定在声明的段号内{tail}")
     return EXIT_OK
 
 
@@ -640,8 +647,20 @@ def cmd_compile(args) -> int:
                                  with_reports=getattr(args, "with_reports", False))
     for r in res["skills"]:
         print(f"   ✓ {r['slug']:<28} FIDELITY {r['fidelity_score']}/{r['fidelity_grade']}")
+    # 复审 #4：**只在真的复制了报告时才说"已随产物发布"**。
+    # 此前无条件打印，于是"没找到报告"的 bundle 也会看到成功提示——假绿。
     if getattr(args, "with_reports", False):
-        info("--with-reports：FIDELITY 报告已随产物发布（skills/<slug>/FIDELITY.*）")
+        done = [r["slug"] for r in res["skills"] if r.get("report_published")]
+        missing = [r["slug"] for r in res["skills"] if not r.get("report_published")]
+        if done:
+            info(f"--with-reports：{len(done)} 份 FIDELITY 报告已写入产物"
+                 f"（skills/<slug>/FIDELITY.*）：{'、'.join(done)}")
+        if missing:
+            warn(f"--with-reports：{len(missing)} 张卡**未找到** FIDELITY 报告，未随包发布："
+                 f"{'、'.join(missing)}（检查卡片同级 FIDELITY.md/.json 或 bundle 的 "
+                 "fidelity/<slug>.* / eval/<slug>.*）")
+        if not done:
+            warn("--with-reports 已指定，但没有任何报告被写入产物——产物里**没有**质量证据")
     if res["pre_snapshot"]:
         info(f"发布前快照：{res['pre_snapshot']}")
     ok(f"已发布 {res['count']} 个技能（mode={res['mode']}）→ {res['out']}")
