@@ -413,6 +413,19 @@ DEFECTS = [
      "用最终版工具体检 guoxue 四技能时，zhouyi-yili 报「未找到 references/…md 含省略号」——"
      "一看就不是引语；同轮 geju-yunshi 的合法节引在标注后仍被反复提示",
      ["t_lint_quotes_technical_and_sectional"]),
+    ("tdlib.validate", "死链检查把「该 md 所在的目录」当成\"根\"，正常的 `../` 相对链接一律被判「路径逃逸」",
+     "`check_dead_links` 调的是 `safe_target(md.parent, tgt)`，而 `safe_target` 的语义是"
+     "「解析基准与根是同一个」——那是给 bundle `src` 用的（必须待在自己目录里）。"
+     "用在链接上就成了：`skills/a/README.md` 里写 `[配套](../b/)`（同级技能，仍在包内）被判逃逸。\n"
+     "实测给 guoxue-skills 补四份技能介绍后**一次报出 27 条假阳性**，把正常文档判成「不允许发布」。\n"
+     "**这类假阳性的代价不是多看一行警告，而是逼人删掉正确的链接。**",
+     "新增 `util.safe_target_under(origin, rel, root)`：**解析基准**是链接所在目录、"
+     "**边界**才是校验根；`check_dead_links` 改用它。反方向同时守住——"
+     "真逃出校验根（`../../../etc/passwd`）与真死链仍照报",
+     "critical", "tool_gap",
+     "给 guoxue 四技能写介绍（用正常相对链接互相引用）后跑 validate 才发现——"
+     "**新写的文档成了这个守卫的第一个真实用户，它的假阳性这才第一次暴露**",
+     ["t_dead_link_relative_within_root"]),
 ]
 
 

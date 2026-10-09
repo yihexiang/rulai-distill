@@ -330,6 +330,54 @@ def t_research():
         assert "冲突" in text, "合并稿缺少冲突段落"
 
 
+def t_dead_link_relative_within_root():
+    """#63：**正常相对链接**（同级技能 / 回包根）不得被判「路径逃逸」。
+
+    死链检查此前写成 `safe_target(md.parent, tgt)`——把"根"当成了"该 md 所在的目录"，
+    于是 `skills/a/README.md` 里写 `../b/`（同级技能，完全合法且仍在包内）会被报
+    「路径逃逸出根目录」。实测：给 guoxue-skills 补四份技能介绍后，validate 一次报出
+    **27 条假阳性**，把一份正常文档判成"不可发布"——**假阳性会逼人删掉正确的链接**。
+
+    反方向同时守住：真逃出校验根、真死链，都必须继续报。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import validate as V
+
+    def card(name: str) -> str:
+        return ("---\n"
+                f"name: {name}\n"
+                f"description: 用于验证相对链接判定的探针卡，描述写够长度。不做：通用问答。\n"
+                "source_locator: 探针\n"
+                "---\n\n"
+                "# E — 可执行步骤\n\n**Step 1 · 做**\n\n完成标准：做完。\n\n"
+                "# B — 边界\n\n失败模式：无。\n")
+
+    with tempfile.TemporaryDirectory() as d:
+        base = Path(d)
+        for slug in ("a", "b"):
+            (base / "skills" / slug).mkdir(parents=True)
+            (base / "skills" / slug / "SKILL.md").write_text(card(slug), encoding="utf-8")
+        (base / "README.md").write_text(
+            "# 包首页\n\n见 [a](skills/a/) 与 [b](skills/b/SKILL.md)。\n", encoding="utf-8")
+        # 兄弟技能 + 回包根：两种合法的 `../` 链接
+        (base / "skills" / "a" / "README.md").write_text(
+            "# a 的说明\n\n[← 回首页](../../README.md) · [配套](../b/)\n", encoding="utf-8")
+        problems, _ = V.validate_path(base)
+        errs = [p for p in problems if p[0] == "error"]
+        assert not errs, f"合法相对链接被判错（假阳性）：{errs}"
+
+    with tempfile.TemporaryDirectory() as d2:
+        base2 = Path(d2)
+        (base2 / "README.md").write_text("# x\n\n[逃出去](../../../etc/passwd)\n",
+                                        encoding="utf-8")
+        problems2, _ = V.validate_path(base2)
+        assert any("逃逸" in p[2] for p in problems2), \
+            f"逃出校验根的链接必须仍被拒绝：{problems2}"
+        (base2 / "README.md").write_text("# x\n\n[不存在](nope/missing.md)\n", encoding="utf-8")
+        problems3, _ = V.validate_path(base2)
+        assert any("死链" in p[2] for p in problems3), f"真死链必须仍被报出：{problems3}"
+
+
 def t_validate_bundle():
     with tempfile.TemporaryDirectory() as d:
         b = setup(Path(d))
@@ -3264,6 +3312,7 @@ def main() -> int:
         ("transcript SRT 去重与时间戳", t_transcript),
         ("research 六路合并去重与冲突标记", t_research),
         ("validate 合格 bundle 零错误", t_validate_bundle),
+        ("死链检查：正常相对链接不误报（#63）", t_dead_link_relative_within_root),
         ("validate 拦截步骤禁令/完成标准/失败模式", t_validate_catches),
         ("output-eval 产物体检", t_output_eval),
         ("gate 门槛与自测降级", t_gate),

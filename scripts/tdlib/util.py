@@ -100,6 +100,31 @@ def safe_target(base: Path, rel: str) -> Path:
     return cand
 
 
+def safe_target_under(origin: Path, rel: str, root: Path) -> Path:
+    """把 rel 相对 **origin** 解析，并要求结果落在 **root** 内。
+
+    与 `safe_target` 的区别在"根"是谁：
+      * `safe_target(base, rel)` 的解析基准与根是同一个 —— 适合 bundle `src` 这类
+        **必须待在自己目录里**的场景。
+      * 本函数允许 `../` 这类**正常的相对链接**（同级技能、包根 README），
+        只禁止**逃出校验根**。
+
+    2026-10-10（#63）：死链检查此前误用 `safe_target(md.parent, tgt)`——根被当成
+    "该 md 所在的目录"，于是 `skills/a/README.md` 里写 `../b/`（同级技能，
+    完全合法且仍在包内）会被报成「路径逃逸出根目录」。**这是工具自己的假阳性**：
+    它会让每一份带相对链接的文档都不可发布，逼人把正常链接删掉。
+    """
+    if not rel:
+        raise ToolError("空路径")
+    if os.path.isabs(rel) or re.match(r"^[a-zA-Z][a-zA-Z0-9+.\-]*:", rel):
+        raise ToolError(f"非法路径（绝对或带协议）：{rel}")
+    cand = (origin / rel).resolve()
+    root_r = root.resolve()
+    if cand != root_r and root_r not in cand.parents:
+        raise ToolError(f"链接逃逸出校验根：{rel}")
+    return cand
+
+
 def ensure_dir(p: Path) -> Path:
     p.mkdir(parents=True, exist_ok=True)
     return p

@@ -16,7 +16,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from .util import (iter_links, load_frontmatter, read_text, safe_target, warn)
+from .util import (iter_links, load_frontmatter, read_text, safe_target,
+                   safe_target_under, warn)
 
 REQUIRED_FM = ["name", "description"]
 KEBAB_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
@@ -82,7 +83,9 @@ def check_dead_links(base: Path) -> list[tuple[str, str, str]]:
             continue
         for tgt in iter_links(body):
             try:
-                p = safe_target(md.parent, tgt)
+                # #63：解析基准是 md 所在目录，**但边界是校验根**。
+                # 用 safe_target(md.parent, …) 会把 `../同级技能/` 这类合法链接误判为逃逸。
+                p = safe_target_under(md.parent, tgt, base)
             except Exception as e:  # noqa: BLE001
                 problems.append(("error", _rel(md, base), str(e)))
                 continue
