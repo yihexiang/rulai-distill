@@ -64,12 +64,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      # 本包承诺零网络、零动态执行；这里做机器校验，避免将来被无意破坏
+      # 本包承诺零网络、零动态执行；这里做机器校验，避免将来被无意破坏。
+      # 红线用 \b 词边界，避免误伤良性标识符（cmd_output_eval / evals.output_eval）。
+      # 再用 grep -v 排除剩余的良性命中：output_eval 是「结果输出」不是「动态执行」；
+      # 设计原则 docstring（第 9 行）里描述性地写到 shell=True，不是真实调用。
       - name: 禁止危险调用模式
         run: |
-          ! grep -rnE "eval\(|exec\(|os\.system|shell=True|socket\.|requests\.|urllib\.request|httpx|aiohttp" \
+          ! grep -rnE "\beval\(|\bexec\(|os\.system|shell=True|socket\.|requests\.|urllib\.request|httpx|aiohttp" \
                scripts/td.py scripts/tdlib/ \
-               --include='*.py' | grep -v "不使用 eval"
+               --include='*.py' | grep -v -e "output_eval" -e "subprocess(shell=True)"
       - name: 禁止硬编码密钥
         run: |
           ! grep -rniE "api[_-]?key\s*=\s*['\"]|secret\s*=\s*['\"]|password\s*=\s*['\"]|Bearer [A-Za-z0-9]{20}" \

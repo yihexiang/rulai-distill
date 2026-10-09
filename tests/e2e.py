@@ -447,6 +447,46 @@ def t_compile_blocks_low_grade():
         assert m["forced"] is True
 
 
+def t_fidelity_parse_strictness():
+    """第三方测评 #2 / 报告 P1-2：FIDELITY 解析严格化。
+
+    旧解析：报告里漏一个维度、或声明总分与维度之和不符，都会被**静默忽略**，
+    gate 直接信任声明总分开绿灯。现在：漏维度进 `unparsed_dims` 显式提示；
+    声明总分 ≠ 维度之和 → `total_mismatch` 显式提示，且 gate 命令行打印警示。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import fidelity as fid
+    # ① 漏一个维度（结构完整度整段删掉）：总分声明 80，但维度之和只剩 67
+    missing_one = FIDELITY_MD.replace(
+        "## 维度 5 · 结构完整度（15 分）\n得分：13/15\n\n", "")
+    with tempfile.TemporaryDirectory() as d:
+        d = Path(d)
+        p = d / "r.md"
+        p.write_text(missing_one, encoding="utf-8")
+        rep = fid.parse_report(p)
+        assert "structure" in rep["unparsed_dims"], f"漏维度应进 unparsed_dims：{rep}"
+        assert rep["total_mismatch"] is True, (
+            f"声明总分(80)≠维度之和(67)应标记不一致：{rep}")
+        assert rep["declared_total"] == 80 and rep["dimension_sum"] == 67, rep
+        # gate 命令行应打印两条警示（漏维度 + 总分不一致）
+        o = run(["gate", str(p), "--allow-fallback"]).stdout
+        assert "未解析" in o, f"gate 应提示漏维度：{o}"
+        assert "不一致" in o, f"gate 应提示总分不一致：{o}"
+
+    # ② 维度齐全但声明总分写错（80 → 90）：维度之和 80，声明 90
+    wrong_total = FIDELITY_MD.replace("**80**", "**90**")
+    with tempfile.TemporaryDirectory() as d:
+        d = Path(d)
+        p2 = d / "r2.md"
+        p2.write_text(wrong_total, encoding="utf-8")
+        rep2 = fid.parse_report(p2)
+        assert not rep2["unparsed_dims"], f"维度齐全不应有未解析：{rep2}"
+        assert rep2["total_mismatch"] is True, (
+            f"声明 90 ≠ 维度之和 80 应标记不一致：{rep2}")
+        o2 = run(["gate", str(p2), "--allow-fallback"]).stdout
+        assert "不一致" in o2, f"gate 应提示总分不一致：{o2}"
+
+
 def t_trigger():
     with tempfile.TemporaryDirectory() as d:
         b = setup(Path(d))
@@ -688,6 +728,32 @@ def t_lexindex():
         # 缺索引文件：人话报错，不是裸 traceback
         miss = run(["lexindex", "--db", f"{d}/none.sqlite", "--query", "x"], expect=1)
         assert "索引不存在" in miss.stdout and "Traceback" not in miss.stdout, miss.stdout
+
+
+def t_lexindex_single_char_cjk():
+    """第三方测评 #2 / 报告 P0-2：单字 CJK 查询不能让 FTS5 崩。
+
+    旧 `_cjk_bigrams` 对单字 CJK 段返回空串，注入 FTS5 变成 `MATCH ''`
+    → sqlite3.OperationalError（fts5: syntax error）。单字查询（如「道」「法」）
+    在中文书类语料里极常见，一旦崩就整条索引不可用。修复：单字 CJK 原字入库。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import chunking
+    # 单元层：单字 CJK 必须返回自身，不得返回空串（否则注入 FTS5 变 MATCH '' → 崩）
+    assert chunking._cjk_bigrams("道") == "道", "单字 CJK 应原字入库"
+    assert chunking._cjk_bigrams("法") == "法", "单字 CJK 应原字入库"
+    assert chunking._cjk_bigrams("AB") == "ab", "英文整词不变"
+    with tempfile.TemporaryDirectory() as d:
+        d = Path(d)
+        src = d / "book.md"
+        src.write_text("# 道\n\n法者，曲制官道主用也。\n\n道\n", encoding="utf-8")
+        run(["chunk", str(src)])
+        sidecar = src.with_suffix(".md.td")
+        run(["lexindex", str(sidecar / "chunks.jsonl")])
+        q = run(["lexindex", "--db", str(sidecar / "lexical.sqlite"),
+                 "--query", "道"]).stdout
+        assert "Traceback" not in q, f"单字中文查询不应崩：{q}"
+        assert "命中" in q, f"单字中文查询应命中（独立单字块已索引）：{q}"
 
 
 def t_trigger_split_metrics():
@@ -1466,6 +1532,77 @@ def t_verify_quotes_attribution_block():
             f"正文块里的中文引语必须仍能被检出（防止过度放宽导致 #37 重演）：{r2}")
 
 
+def t_verify_quotes_book_block():
+    """第三方测评 #2 / 报告 P1：书类引用块纳入候选 + 空集守卫（含出处信号区分）。
+
+    书类语料（material_type: book）的引语写成 `> 「…」\n> —— 《书名》第N段` 或
+    `> —— 同上`，**不带** `【第N条】` / `[ts]` 定位标记。工具必须把这类引用块当作
+    引语候选去语料里核验，否则会空集假绿（与 anchor / audit-coverage 同源缺陷）。
+
+    但卡片自己的行文也大量用「」（概念包装，如「七个可以回答的问题」），
+    **没有出处信号**——若一律当引语去核 → 整篇必然 unverified（假红）。
+    因此只认带出处信号的引用块为书类引语候选；无信号的一律视为作者行文跳过。
+
+    同时验证空集守卫：卡片只含作者行文「」、无任何可识别出处/定位 → vacuous=True，
+    不得印「✅ 全部核到」（那正是报告点名的"引用 0 → 通过"假绿）。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import evals
+    with tempfile.TemporaryDirectory() as d:
+        d = Path(d)
+        corpus = d / "book.txt"
+        corpus.write_text(
+            "【第1段】兵者，國之大事，死生之地，存亡之道，不可不察也。"
+            "故經之以五事，校之以計，而索其情。\n"
+            "【第2段】凡此五者，將莫不聞，知之者勝，不知者不勝。"
+            "多算勝，少算不勝，而況於無算乎！\n",
+            encoding="utf-8")
+
+        # ① 真实书类引语（带出处信号）+ 作者行文概念引号（无出处信号）
+        card = d / "card.md"
+        card.write_text(
+            "> 「兵者，國之大事，死生之地，存亡之道，不可不察也。"
+            "故經之以五事，校之以計，而索其情」\n"
+            "> —— 《孫子兵法·計篇》第1段\n"
+            "\n"
+            "> 「凡此五者，將莫不聞，知之者勝，不知者不勝。」\n"
+            "> —— 同上\n"
+            "\n"
+            "> 这套方法解决的是：**如何把「不确定」变成「七个可以回答的问题」**。"
+            "它不预测结果。\n"
+            "\n"
+            "> 「多算勝，少算不勝，而況於無算乎！」\n"
+            "> —— 《孫子兵法·計篇》第2段\n",
+            encoding="utf-8")
+        r = evals.verify_quotes(card, corpus)
+        assert r["book_block"]["checked"] == 3, f"应核到 3 条书类引语：{r}"
+        assert r["book_block"]["verified"] == 3, f"3 条书类引语应全部核到：{r}"
+        assert r["book_block"]["no_provenance_blocks"] >= 1, (
+            f"作者行文概念引号块应被记为无出处信号、跳过：{r}")
+        assert not r["unverified"], f"作者行文概念引号不得被误判 unverified：{r}"
+        assert r["verdict"] == "pass", f"真实书类引语应判 pass：{r}"
+
+        # ② 空集守卫：只有作者行文「」、无任何可识别出处/定位 → vacuous
+        card2 = d / "card2.md"
+        card2.write_text(
+            "> 这套方法解决的是：**如何把「七个可以回答的问题」变成可执行步骤**。\n",
+            encoding="utf-8")
+        r2 = evals.verify_quotes(card2, corpus)
+        assert r2["vacuous"] is True, f"无出处信号且含引语候选应触发 vacuous：{r2}"
+        assert r2["verdict"] == "vacuous", f"vacuous 不得判通过：{r2}"
+
+        # ③ 带出处信号却是伪造引语 → 必须 fail（不能因"有出处"就放行）
+        card3 = d / "card3.md"
+        card3.write_text(
+            "> 「这句原文根本不存在于语料里，是随手编的。」\n"
+            "> —— 《孫子兵法·計篇》第3段\n",
+            encoding="utf-8")
+        r3 = evals.verify_quotes(card3, corpus)
+        assert r3["book_block"]["checked"] == 1, f"伪造书类引语应被计入候选：{r3}"
+        assert r3["verdict"] == "fail", f"伪造书类引语（带出处）必须 fail：{r3}"
+        assert r3["unverified"], f"伪造引语应进 unverified：{r3}"
+
+
 def t_no_unqualified_absence_claims():
     """C4/#42：卡片不得出现**无限定的"素材里没有 X"全称判断**。
 
@@ -1967,6 +2104,38 @@ def t_docs_no_drift():
     assert mtab.group(1) == ver, (
         f"README 能力对齐表表头是 v{mtab.group(1)}，实际当前版本是 v{ver}")
 
+    # 通用扫描：所有 .md 里出现「N 项回归」的总项数声明（排除「第 N 项回归测试」这种
+    # 特指某一条测试的写法）必须等于 n_tests。补这条是因为 73 / 63 这类漂移曾多次出现，
+    # 且散落在 GUIDE.md / OPEN-SOURCE-ASSESSMENT.md 等"主守卫"没扫到的文件里。
+    for md in sorted(ROOT.glob("**/*.md")):
+        if "node_modules" in str(md) or md.name == "node_modules":
+            continue
+        for line in md.read_text(encoding="utf-8", errors="ignore").splitlines():
+            if "项回归" not in line or "第" in line or "e2e.py" in line:
+                continue
+            for num in re.findall(r"(\d+)\s*项回归", line):
+                assert int(num) == n_tests, (
+                    f"{md.name} 声明回归 {num} 项，实际 {n_tests} 项：{line.strip()[:60]}")
+
+    # 2026-10-09（第三方测评 #2 / 报告 P2）：子命令数量纳入守卫。
+    # README 与 cheatsheet 曾分别写 25 / 22，而实际新增命令后已到 34——
+    # 典型的"文档声称 ≠ 代码行为"。现在用 argparse 解析实际子命令数强制一致。
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import td as _td
+    n_cmds = len(_td.build_parser()._subparsers._group_actions[0].choices)
+    cheat = (ROOT / "references" / "command-cheatsheet.md").read_text(encoding="utf-8")
+    for name, text in (("README.md", rd),
+                       ("references/command-cheatsheet.md", cheat)):
+        m = re.search(r"（(\d+)\s*个子命令）", text)
+        assert m, f"{name} 未声明子命令数量（格式：『（N 个子命令）』）"
+        assert int(m.group(1)) == n_cmds, (
+            f"{name} 声明 {m.group(1)} 个子命令，实际 {n_cmds} 个：数字由各文件同步到 argparse")
+    # README 首屏目录树里的 e2e 项数也要跟着走（形式：『端到端回归（N 项…）』）
+    m_e2e = re.search(r"端到端回归（(\d+)\s*项", rd)
+    assert m_e2e, "README.md 未标注 e2e 回归项数"
+    assert int(m_e2e.group(1)) == n_tests, (
+        f"README 声明 e2e {m_e2e.group(1)} 项，实际 {n_tests} 项")
+
     # 段落级重复：README 首屏的版本说明整段重复过一次（同样是在 docs-check 之后才出现）
     for para in re.findall(r"^(?:\*\*v\d+\.\d+\.\d+[^\n]*\n(?:\*\*[^\n]*\n|[^\n*][^\n]*\n){1,4})",
                            rd, re.M):
@@ -2464,6 +2633,8 @@ def main() -> int:
         ("分词器双向回归（CJK bigram / 英文整词）", t_bigram_tokenizer),
         ("lexindex 中英文都能检索", t_lexindex_both_scripts),
         ("lexindex FTS5 + 中文 bigram + 邻接块", t_lexindex),
+        ("lexindex 单字 CJK 查询不崩（P0-2）", t_lexindex_single_char_cjk),
+        ("FIDELITY 解析严格化（漏维度+总分不一致）", t_fidelity_parse_strictness),
         ("trigger split/prepare + P/R/F1 + 兄弟混淆率", t_trigger_split_metrics),
         ("判分器归一化字符串 none/null", t_answer_normalization),
         ("C3 契约清单完整可查", t_contract_list),
@@ -2485,6 +2656,7 @@ def main() -> int:
         ("引语核验计数对账与多形态（#31~#39）", t_verify_quotes_accounting),
         ("英文字幕去重精度（n-gram）", t_transcript_dedupe_precision),
         ("引语核验·归属声明块不误判", t_verify_quotes_attribution_block),
+        ("引语核验·书类引用块（出处信号+空集守卫）", t_verify_quotes_book_block),
         ("无限定的素材缺席全称判断", t_no_unqualified_absence_claims),
         ("C7 评分期冻结完整性", t_eval_freeze_integrity),
         ("C8 盲测材料匿名性", t_style_decoy_anonymity),

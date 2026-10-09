@@ -324,6 +324,15 @@ def cmd_gate(args) -> int:
     print(f"   总分 {rep.get('total', 0)}/100   等级 {rep.get('grade', 'D')}   评测模式 {rep.get('eval_mode', 'unknown')}")
     if rep.get("dimensions"):
         info("分项：" + "  ".join(f"{k}={v}" for k, v in rep["dimensions"].items()))
+    # 第三方测评 #2 / 报告 P1-2：解析严格化——漏维度 / 总分自相矛盾必须显式提示，
+    # 不能让 gate 在"看起来完整"的报告上开绿灯。
+    if rep.get("unparsed_dims"):
+        warn(f"报告有 {len(rep['unparsed_dims'])} 个维度未解析（{', '.join(rep['unparsed_dims'])}）："
+             "这些维度未被计入总分，请检查报告格式或手动补登，否则总分被低估")
+    if rep.get("total_mismatch"):
+        _decl, _sum = rep.get("declared_total"), rep.get("dimension_sum")
+        warn(f"报告声明总分 {_decl} 与各维度之和 {_sum} 不一致（差 {abs(_decl - _sum)}）："
+             "请以维度为准核查，勿直接信任声明总分")
     if rep.get("weakest_dimension"):
         info(f"最弱维度：{rep['weakest_dimension']}")
     for n in notes:
@@ -625,10 +634,22 @@ def cmd_verify_quotes(args) -> int:
               f"需人工确认它不是来源引语")
     if args.out:
         write_json(Path(args.out), res)
+    # 2026-10-09（第三方测评 #2 / 报告 P1）：空集守卫。
+    # 卡片含引语候选（「」/"" 引号）却一条都没进统计 = 工具无法锚定，不得判通过。
+    if res.get("vacuous"):
+        if args.allow_empty:
+            warn("空集假绿：卡片含引语但无定位标记，工具无法机器核验 —— 已按 --allow-empty 放行")
+            return EXIT_OK
+        die("⚠️ 空集假绿：卡片里含引语（「」/引号），但没有任何可识别的定位标记"
+            "（【第N条】/ [时间戳]），工具无法把引语锚定到语料、一条都没核验。",
+            "这正是「引用 0 个 → ✅ 全部核到」那类最危险的假绿。",
+            "修复二选一：① 给引语加定位标记（书类语料用 --allow-empty 仅作临时放行）；"
+            "② 改用 anchor 命令做段落级锚定核验。",
+            "绝不允许在「无法核验」的状态下宣布引语已核对。")
     if res["verdict"] == "pass":
-        n_skip = len(res.get("lang_skipped", []))
+        n_skip = len(res.get("lang_skipped", [])) + res.get("book_block", {}).get("lang_skipped", 0)
         if n_skip:
-            ok(f"已核引语全部在语料中核到 —— 但另有 {n_skip} 条中文候选**未核验**"
+            ok(f"已核引语全部在语料中核到 —— 但另有 {n_skip} 条候选**未核验**"
                f"（见上），**不等于它们没问题**")
         else:
             ok("全部引语在语料中核到")
@@ -1042,8 +1063,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     q = sub.add_parser("verify-quotes", help="机械核验卡片引语是否真在语料中")
     q.add_argument("card")
-    q.add_argument("corpus", help="语料文件（含【第N条 | 日期 | id】定位标记）")
+    q.add_argument("corpus", help="语料文件（含【第N条 | 日期 | id】定位标记，或书类逐字原文）")
     q.add_argument("--out")
+    q.add_argument("--allow-empty", action="store_true",
+                   help="卡片含引语却无定位标记、工具无法机器核验时，仍按空集放行（不推荐）")
     q.set_defaults(func=cmd_verify_quotes)
 
     q = sub.add_parser("audit-coverage", help="穷举语料，列出卡片未覆盖的段落")

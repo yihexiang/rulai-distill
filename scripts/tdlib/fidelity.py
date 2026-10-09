@@ -32,11 +32,19 @@ PERSONA_DIMS = [("consistency", r"立场/结论一致性", 30), ("style", r"风�
 FALLBACK_DISCOUNT = 0.8  # fallback-self 时维度 1/3 记录值打 8 折
 
 
-def _parse_dims(text: str, table) -> dict:
+def _parse_dims(text: str, table) -> tuple[dict, list[str]]:
+    """解析维度打分表。返回 (已解析维度, 未解析维度键列表)。
+
+    未解析的维度键（报告里该维度行没被正则命中，**或命中了但分数没解析出来**）
+    必须**显式返回**，不能静默丢弃——否则 gate 会基于一个被悄悄低估的总分开绿灯
+    （第三方测评 #2 / 报告 P1-2：解析宽松导致"看起来完整"的报告实际漏维度）。
+    """
     marks = [(k, pat, mx, re.search(pat, text)) for k, pat, mx in table]
-    out = {}
+    out: dict[str, int] = {}
+    missing: list[str] = []
     for key, _pat, mx, m in marks:
         if not m:
+            missing.append(key)
             continue
         start = m.end()
         nxt = next((mm.start() for _, _, _, mm in marks if mm and mm.start() > start), len(text))
@@ -44,7 +52,10 @@ def _parse_dims(text: str, table) -> dict:
         hit = re.search(rf"(\d{{1,3}})\s*/\s*{mx}", seg) or re.search(r"得分[:：]\s*(\d{1,3})", seg)
         if hit:
             out[key] = int(hit.group(1))
-    return out
+        else:
+            # 维度行存在但分数没解析出来（格式不对）→ 同样算未解析，提示而非假装 0
+            missing.append(key)
+    return out, missing
 
 
 def parse_report(path: Path) -> dict:
@@ -64,11 +75,16 @@ def parse_report(path: Path) -> dict:
         return data
 
     text = read_text(path)
-    dims = _parse_dims(text, DIMS)
+    dims, missing = _parse_dims(text, DIMS)
     if not dims:
-        dims = _parse_dims(text, PERSONA_DIMS)
+        dims, missing = _parse_dims(text, PERSONA_DIMS)
     m = re.search(r"\*\*?总分\*\*?[^\d\-]{0,8}(\d{1,3})", text)
-    total = int(m.group(1)) if m else sum(dims.values())
+    declared_total = int(m.group(1)) if m else None
+    sum_dims = sum(dims.values())
+    # 报告声明了总分，但其维度之和与之不符 = 报告自相矛盾（少维度 / 多维度 / 写错数）。
+    # 第三方测评 #2 / 报告 P1-2：这种不一致此前被静默忽略，gate 直接信任声明总分。
+    total_mismatch = declared_total is not None and declared_total != sum_dims
+    total = declared_total if declared_total is not None else sum_dims
     grade = grade_of(total)
     mode = "unknown"
     if "fallback-self" in text or "自测模式" in text:
@@ -80,8 +96,12 @@ def parse_report(path: Path) -> dict:
         "source_file": str(path),
         "eval_mode": mode,
         "total": total,
+        "declared_total": declared_total,
+        "dimension_sum": sum_dims,
+        "total_mismatch": bool(total_mismatch),
         "grade": grade,
         "dimensions": dims,
+        "unparsed_dims": missing,
         "weakest_dimension": weakest.group(1).strip() if weakest else None,
         "dual_agent_proof": bool(re.search(r"答题\s*Agent|评分\s*Agent|answerer|grader", text)),
     }

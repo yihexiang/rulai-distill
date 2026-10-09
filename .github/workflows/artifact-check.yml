@@ -74,6 +74,27 @@ jobs:
               sys.exit(1)
           PY
 
+      # 真实书类卡：书类引用块型引语（带出处信号 `—— 《…》` / `—— 同上`）也必须能核到。
+      # 这是新加的书类引用块路径（报告 P1-1），合成 fixture 只覆盖了条目/时间戳定位，
+      # 覆盖不到「引用块 + 出处信号」这种书类专属排版，所以这里用真实样本补上。
+      - name: 书类引用块核验（真实样本 five-affairs）
+        run: |
+          python scripts/td.py verify-quotes \
+            examples/sample-bundle/skills/five-affairs-seven-questions/SKILL.md \
+            examples/sample-bundle/sources/sunzi-ji.txt --out /tmp/book.json
+          python - <<'PY'
+          import json, sys
+          d = json.load(open("/tmp/book.json"))
+          print(f"quotes_checked={d['quotes_checked']} verified={d['verified']} "
+                f"book_block={d['book_block']} verdict={d['verdict']}")
+          if d["book_block"]["checked"] < 1:
+              print("::error::书类引用块路径未核验到任何引语")
+              sys.exit(1)
+          if d["verified"] != d["quotes_checked"]:
+              print("::error::存在核不到的引语")
+              sys.exit(1)
+          PY
+
       # 端到端：样本语料能真的蒸出东西（chunk → lexindex → 查询）
       - name: 蒸馏链路冒烟
         run: |

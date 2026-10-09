@@ -832,6 +832,75 @@ def verify_quotes(card: Path, corpus: Path) -> dict:
                 unverified.append({"ref": f"@{u['ref']}", "quote": u["quote"]})
         verified.extend({"ref": f"@{v['ref']}", "quote": v["quote"]} for v in ts_verified)
 
+    # ── 2026-10-09（第三方测评 #2 / 报告 P1）：引用块型引语纳入候选统计 + 空集守卫 ──
+    # 真实缺口：书类语料（material_type: book）的引语写成 `> 「…」——出处` 引用块，
+    # 不带 `【第N条】` / `[ts]` 定位标记，于是 refs_total 与 quotes_checked 都为 0，
+    # 工具却打印「✅ 全部引语在语料中核到」——空集假绿（与 anchor / audit-coverage 同源）。
+    # 这里把**未被任何定位标记覆盖的引用块**当作书类引语候选，去语料全文中核验。
+    # 安全边界（复用既有作者行文过滤 #35/#37/#60 的口径）：
+    #   · 只认 `>` 引用块行（书类引语的标准排版）；
+    #   · 排除归属声明块 / 表格行 / 「出处」行（作者行文重灾区）；
+    #   · 排除已被 `【第N条】` / `[ts]` 窗口覆盖的块（避免与上方逻辑重复计数）；
+    #   · 英文语料里的中文候选按作者行文过滤（同 ts 路径），不报错只留痕。
+    _locator_re = re.compile(r"【第\d+条|\[\d{2}:\d{2}:\d{2}")
+    _author_voice_tags = ("归属拆分", "**归属**", "归属：", "归属标注",
+                          "措辞修正", "口径统一", "更正记录")
+    # 出处信号：书类引语的标准引用排版是 `> 「…」\n> —— 《书名》第N段` 或 `> —— 同上`。
+    # 只认这两种规范形式（不认泛化的「出处」二字），否则会把卡片自己的概念引号
+    # （如 `「七个可以回答的问题」`、`「第一次做这类决策」`）误当成书类引语 → 假红。
+    _provenance_re = re.compile(r"——\s*《[^》]*》|——\s*同上")
+    _corpus_is_en_bk = (len(corpus_text) > 200 and
+                        len(re.findall(r"[\u4e00-\u9fff]", corpus_text)) / len(corpus_text) < 0.20)
+    bk_checked = bk_verified = 0
+    bk_lang_skipped: list[dict] = []
+    # 含「」但无出处信号的引用块 → 视为作者行文（概念引号），不计入书类引语候选。
+    # 只留痕不报 fail：与「引用块里确有引语却 0 核验」是两回事，避免假红。
+    bk_no_provenance: list[dict] = []
+    _norm_corpus_full = _norm(corpus_text)
+    for _blk in re.split(r"\n\n+", text):
+        if not _blk.lstrip().startswith(">"):
+            continue
+        if any(tag in _blk for tag in _author_voice_tags):
+            continue
+        if _locator_re.search(_blk):
+            continue  # 已被 ts / 第N条 窗口覆盖，上方已统计
+        # 无出处信号的引用块：里面的「」是作者行文（概念包装），不是来源引语。
+        if not _provenance_re.search(_blk):
+            _q_in = [q for q in (re.findall(r"「(.+?)」", _blk, re.S)
+                                 + re.findall(r'"([^"\n]{8,300})"', _blk))
+                     if len(_clean_frag(q)) >= 8]
+            if _q_in:
+                bk_no_provenance.append({"ref": "block",
+                                         "quotes": [_clean_frag(q)[:40] for q in _q_in]})
+            continue
+        for _q in (re.findall(r"「(.+?)」", _blk, re.S)
+                  + re.findall(r'"([^"\n]{8,300})"', _blk)):
+            _frag = _clean_frag(_q)
+            if len(_frag) < 8:
+                continue
+            if _corpus_is_en_bk and \
+                    len(re.findall(r"[\u4e00-\u9fff]", _frag)) / max(len(_frag), 1) > 0.30:
+                bk_lang_skipped.append({"ref": "block", "quote": _frag[:60],
+                                        "note": "英文语料的书类中文候选按作者行文过滤——本工具未核验"})
+                continue
+            bk_checked += 1
+            if _frag in _norm_corpus_full:
+                bk_verified += 1
+            else:
+                unverified.append({"ref": "block", "quote": _frag[:60]})
+
+    # 空集守卫（与 anchor / audit-coverage 同纪律）：卡片含引语候选（「」/"" 引号），
+    # 但**没有任何可识别的定位标记**（【第N条】/ [时间戳] / 书类出处信号），工具无法把
+    # 引语锚定到语料 → 不得判通过。这是「引用 0 个 → ✅ 全部核到」那类最危险的假绿。
+    # 关键：判据是「有没有锚点」，不是「核没核到」——有定位标记、却因语言过滤被判定为
+    # 作者行文的，工具已经"处理过"它，不算"无法锚定"，否则会让 #60 的 lang_filter 测试
+    # 误判（有 [ts] 却因中文候选被过滤 → ts_checked=0 → 假红），而真正该拦的是
+    # "只有作者行文概念引号、零锚点"的书类卡（见 t_verify_quotes_book_block ②）。
+    _raw_candidates = (len(re.findall(r"「[^」]{8,300}」", text))
+                      + len(re.findall(r'"[^"\n]{8,300}"', text)))
+    _has_anchor = bool(refs) or bool(ts_refs) or (bk_checked > 0)
+    vacuous = (not _has_anchor) and _raw_candidates > 0
+
     return {
         "schema": "rulai-distill/quote-verification@1",
         # 引用总数必须能**加总还原**，否则报告会自相矛盾（评分员抓过：
@@ -850,18 +919,30 @@ def verify_quotes(card: Path, corpus: Path) -> dict:
             "ts_locator_only": len(locator_only),
             "ts_unquoted": len([u for u in unquoted if u["ref"].startswith("@")]),
         },
-        "quotes_checked": checked + ts_checked,
-        "verified": len(verified),
+        "quotes_checked": checked + ts_checked + bk_checked,
+        "verified": len(verified) + bk_verified,
         "unverified": unverified,
         "misplaced": misplaced,
         "lang_skipped": lang_skipped,
+        "book_block": {
+            "checked": bk_checked,
+            "verified": bk_verified,
+            "lang_skipped": len(bk_lang_skipped),
+            "no_provenance_blocks": len(bk_no_provenance),
+        },
+        "book_block_lang_skipped": bk_lang_skipped,
+        "book_block_no_provenance": bk_no_provenance,
         "unquoted_refs": unquoted,
         "locator_only_refs": sorted(set(locator_only)),
         "orphaned_refs": sorted(set(orphaned)),
+        "vacuous": bool(vacuous),
         # #57：misplaced 必须一起算失败——它们分开只是为了让**提示**更准确，
         # 不是为了让判定变松。把「挂错位置」排除出 unverified 却不改这里，
         # 就会让挂错位置的引语整批变成 PASS（我刚引入又立刻堵上的假绿）。
-        "verdict": "pass" if not unverified and not orphaned and not misplaced else "fail",
+        # 2026-10-09：vacuous（有引语候选却 0 核验）同样不得判通过——空集假绿比报错危险。
+        "verdict": ("vacuous" if vacuous
+                    else "pass" if not unverified and not orphaned and not misplaced
+                    else "fail"),
         "reconciliation": {
             "entry_refs_accounted": len(set(refs)) == checked + len(
                 [u for u in unquoted if not u["ref"].startswith("@")]),

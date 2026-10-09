@@ -397,7 +397,12 @@ def _cjk_bigrams(text: str) -> str:
 
     def flush_cjk() -> None:
         if run:
-            out.extend(run[i] + run[i + 1] for i in range(len(run) - 1))
+            if len(run) == 1:
+                # 单字 CJK 段：原字入库。否则 `_cjk_bigrams("道")` 返回空串，
+                # 注入 FTS5 会变成 `MATCH ''` → OperationalError（第三方测评 P0-2）。
+                out.append(run[0])
+            else:
+                out.extend(run[i] + run[i + 1] for i in range(len(run) - 1))
             run.clear()
 
     for ch in text:
