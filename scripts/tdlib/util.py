@@ -313,10 +313,25 @@ def dump_frontmatter(fm: dict, body: str) -> str:
 
 _LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 _SCHEME_RE = re.compile(r"^(?:[a-zA-Z][a-zA-Z0-9+.\-]*:|#|mailto:)")
+# 围栏代码块 / 行内代码段
+_FENCE_RE = re.compile(r"(?ms)^\s*(?:```|~~~)[^\n]*\n.*?^\s*(?:```|~~~)\s*$")
+_INLINE_CODE_RE = re.compile(r"`[^`\n]*`")
+
+
+def strip_code(text: str) -> str:
+    """去掉围栏代码块与行内代码段，只留"正文"。
+
+    #64（2026-10-10）：文档里**举例说明** markdown 链接语法时（通常写在反引号里），
+    朴素的链接扫描会把它当成真链接。我在 CONSTRAINTS.md 的台账里写 `[配套](../b/)`
+    来举例"什么叫合法的相对链接"，结果 validate 判定它是个逃逸链接、CI 两处红。
+    **代码段里的 markdown 语法不是 markdown。**
+    """
+    return _INLINE_CODE_RE.sub(" ", _FENCE_RE.sub("\n", text))
 
 
 def iter_links(body: str):
-    for m in _LINK_RE.finditer(body):
+    # #64：先剥掉代码段——反引号里写的链接语法是**举例**，不是链接
+    for m in _LINK_RE.finditer(strip_code(body)):
         raw = m.group(1).strip()
         if not raw:
             continue

@@ -330,6 +330,41 @@ def t_research():
         assert "冲突" in text, "合并稿缺少冲突段落"
 
 
+def t_self_validate_clean_and_doc_structure():
+    """仓库自身必须通过 CI 的那两步：`td.py validate .` 与文档结构自检。
+
+    2026-10-10（#64）：这两步此前**只存在于 CI**（pipeline-check / docs-check），
+    本地回归跑不到。我在 CONSTRAINTS.md 的台账里举例写了 `[配套](../b/)`（反引号里），
+    本地 96 项全绿、CI 两处红。与 #51 同类：**改了文件却没按用户的路径跑一遍**。
+    现在把这两步钉进回归，本地就能拦住。
+
+    附带守住 #64 的根因：**代码段里的链接语法不是链接**。
+    """
+    # ① 仓库自身 validate：0 error（CI pipeline-check 的一步）
+    p = run(["validate", "."], cwd=ROOT)
+    assert "error 0" in p.stdout, f"仓库自身 validate 不干净：\n{p.stdout[-1200:]}"
+
+    # ② 文档结构自检（CI docs-check 的一步）
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "doc_structure_check", ROOT / "tests" / "doc_structure_check.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    bad = mod.check(ROOT)
+    assert not bad, f"文档结构问题：{bad}"
+
+    # ③ 根因守卫：反引号/围栏里的链接语法不得被当成真链接
+    with tempfile.TemporaryDirectory() as d:
+        wd = Path(d)
+        (wd / "x.md").write_text(
+            "举例：写 `[配套](../b/)` 就是相对链接；下面这个是代码块里的：\n\n"
+            "```\n[也不该算](../nope/)\n```\n", encoding="utf-8")
+        assert not mod.check(wd), "代码段里的链接语法被当成了真链接"
+        # 反方向：正文里真写了个不存在的链接，仍须报出
+        (wd / "y.md").write_text("见 [不存在](nope/missing.md)。\n", encoding="utf-8")
+        assert mod.check(wd), "真死链必须仍被报出"
+
+
 def t_dead_link_relative_within_root():
     """#63：**正常相对链接**（同级技能 / 回包根）不得被判「路径逃逸」。
 
@@ -3313,6 +3348,7 @@ def main() -> int:
         ("research 六路合并去重与冲突标记", t_research),
         ("validate 合格 bundle 零错误", t_validate_bundle),
         ("死链检查：正常相对链接不误报（#63）", t_dead_link_relative_within_root),
+        ("仓库自身 validate + 文档结构自检（#64）", t_self_validate_clean_and_doc_structure),
         ("validate 拦截步骤禁令/完成标准/失败模式", t_validate_catches),
         ("output-eval 产物体检", t_output_eval),
         ("gate 门槛与自测降级", t_gate),

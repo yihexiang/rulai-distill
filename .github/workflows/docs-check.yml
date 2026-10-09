@@ -44,26 +44,8 @@ jobs:
         run: python tests/e2e.py --only t_contract_ledger_no_silent_gap
 
       # Markdown 结构自检：死链与重复章节（纯文本层，无需构建）
+      # #64（2026-10-10）：这段逻辑原先内联在本文件里 → **本地回归跑不到它**，
+      # 于是「本地 96 项全绿、CI 两处红」成为可能。现已搬进 tests/doc_structure_check.py
+      # 并接入 tests/e2e.py（t_self_validate_clean_and_doc_structure），这里只调用。
       - name: Markdown 结构自检
-        run: |
-          python - <<'PY'
-          import re, sys
-          from pathlib import Path
-          bad = []
-          for p in sorted(Path(".").glob("*.md")):
-              text = p.read_text(encoding="utf-8")
-              heads = re.findall(r"^## (.+)$", text, re.M)
-              dup = [h for h in set(heads) if heads.count(h) > 1]
-              if dup:
-                  bad.append(f"{p}: 重复章节 {dup}")
-              for m in re.finditer(r"\]\((?!https?://|#)([^)]+)\)", text):
-                  t = m.group(1).split("#")[0]
-                  if t and not (p.parent / t).exists():
-                      bad.append(f"{p}: 死链 {t}")
-          if bad:
-              print("::error::Markdown 结构问题")
-              for b in bad:
-                  print(b)
-              sys.exit(1)
-          print("Markdown 结构自检通过")
-          PY
+        run: python tests/doc_structure_check.py

@@ -426,6 +426,21 @@ DEFECTS = [
      "给 guoxue 四技能写介绍（用正常相对链接互相引用）后跑 validate 才发现——"
      "**新写的文档成了这个守卫的第一个真实用户，它的假阳性这才第一次暴露**",
      ["t_dead_link_relative_within_root"]),
+    ("tests/ + docs-check", "文档结构检查把**代码段里的 markdown 链接语法**当真链接；"
+     "且这两步检查**只存在于 CI**，本地回归跑不到",
+     "我在 CONSTRAINTS.md 的 #63 条目里写 `[配套](../b/)` 举例说明"
+     "「什么叫合法的相对链接」，反引号并没有让扫描器豁免它。"
+     "本地 96 项全绿，推上去 **CI 两处红**（pipeline-check 的 `validate .` + docs-check 的结构自检）。\n"
+     "**与 #51 同类：改了文件却没按用户的路径跑一遍**——那两步只写在 workflow 里，本地测试网没覆盖。",
+     "①`util.strip_code()`：剥掉围栏代码块与行内代码段，`iter_links` 先过它——"
+     "**代码段里的 markdown 语法不是 markdown**；"
+     "②把内联在 `docs-check.yml` 里的结构检查搬进 `tests/doc_structure_check.py`，workflow 只调用；"
+     "③新增 `t_self_validate_clean_and_doc_structure`：把 CI 的那两步钉进本地回归，"
+     "并双向断言「代码段里的链接不算链接 / 正文里的死链仍要报」",
+     "critical", "tool_gap",
+     "又一次「新写的文档成了扫描器的第一个真实用户」——"
+     "**同一个模式当天连犯两次（#63/#64），说明缺的不是细心而是本地可跑的检查**",
+     ["t_self_validate_clean_and_doc_structure"]),
 ]
 
 
