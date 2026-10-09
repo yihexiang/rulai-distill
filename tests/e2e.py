@@ -496,6 +496,57 @@ def t_eval_kit():
         assert "通过门槛" in run(["gate", str(out), "--min", "B"]).stdout, \
             "gate 应能直接消费 eval-kit 产出的报告（内嵌交叉复核）"
 
+
+def t_lint_quotes():
+    """复审 P1：lint-quotes 引语体检器（简繁不一致 / 省略号 / 归属可疑）。
+
+    这三条是 guoxue 现场用过的检查里最确定的。纪律：glyph 只在**找到近似匹配**时报
+    （不越界抢 verify-quotes 的活）；ellipsis/authorship 是启发式，只提示。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import lintquotes as L
+    corpus = "【第1段】兵者，國之大事，死生之地，存亡之道，不可不察也。凡此五者，將莫不聞，知之者勝，不知者不勝。"
+    cc = L._clean(corpus)
+    sents = [L._clean(x) for x in re.split(r"[。！？；\n]+", corpus) if len(L._clean(x)) >= 8]
+
+    # 1) 简繁不一致：卡片简体、语料繁体 → glyph，且报出差异字形对
+    g = L.lint_corpus("「知之者胜，不知者不胜」", cc, sents)
+    assert g and g["kind"] == "glyph", f"简繁不一致应判 glyph：{g}"
+    assert ("胜", "勝") in g["pairs"], f"应报出 胜→勝 差异对：{g.get('pairs')}"
+
+    # 2) 省略号：非逐字原文 → ellipsis
+    e = L.lint_corpus("「主孰有道？将孰有能？…？」", cc, sents)
+    assert e and e["kind"] == "ellipsis", f"含省略号应判 ellipsis：{e}"
+
+    # 3) 归属可疑：语料里没有 + 作者行文特征 → authorship
+    a = L.lint_corpus("「该选 A 还是 B，我两边都说得通」", cc, sents)
+    assert a and a["kind"] == "authorship", f"疑似作者举例应判 authorship：{a}"
+
+    # 4) 规范引语（与语料逐字一致，繁体）→ 无发现（不许误报健康引语）
+    ok_ = L.lint_corpus("「凡此五者，將莫不聞，知之者勝，不知者不勝」", cc, sents)
+    assert ok_ is None, f"逐字一致的繁体引语不该报：{ok_}"
+
+    # 5) 空集守卫：卡片含引语候选但全在元描述框内 → vacuous，不判通过
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / "meta.md"
+        p.write_text("归属拆分：「这是足够长的引语候选文本，用来触发空集守卫」→ 作者\n",
+                     encoding="utf-8")
+        rep = L.lint(p, {"c": corpus})
+        assert rep["vacuous"] is True and rep["verdict"] == "vacuous", rep
+
+    # 6) 真实样本卡：必须命中简繁（将/众/强/练/赏/罚）+ 省略号 + 归属
+    card = ROOT / "examples/sample-bundle/skills/five-affairs-seven-questions/SKILL.md"
+    src = ROOT / "examples/sample-bundle/sources/sunzi-ji.txt"
+    r = L.lint(card, {"sunzi": src.read_text(encoding="utf-8")})
+    assert r["verdict"] == "fail", f"样本卡含简繁不一致，应判 fail：{r['by_kind']}"
+    assert r["by_kind"].get("glyph", 0) >= 3, f"应命中多处简繁：{r['by_kind']}"
+    assert r["by_kind"].get("ellipsis", 0) >= 1 and r["by_kind"].get("authorship", 0) >= 1, r["by_kind"]
+
+    # 7) CLI：带语料 → glyph 判失败 exit 1；不带语料 → 只做省略号检查，exit 0
+    run(["lint-quotes", str(card), "--corpus", str(src)], expect=1)
+    run(["lint-quotes", str(card)], expect=0)
+    run(["lint-quotes", str(card), "--corpus", str(src), "--strict"], expect=1)
+
 def t_strategy():
     with tempfile.TemporaryDirectory() as d:
         b = setup(Path(d))
@@ -2871,6 +2922,7 @@ def main() -> int:
         ("gate 门槛与自测降级", t_gate),
         ("gate 默认要求交叉复核记录（复审 P0）", t_gate_requires_cross_review),
         ("eval-kit 独立质检闭环（复审 P0）", t_eval_kit),
+        ("lint-quotes 引语体检（复审 P1）", t_lint_quotes),
         ("strategy single/pack 决策", t_strategy),
         ("compile 原子发布 + 手改检测 + 回滚", t_compile_and_publish),
         ("compile single 模式", t_compile_single_mode),

@@ -1,4 +1,4 @@
-# reference · 命令速查（36 个子命令）
+# reference · 命令速查（37 个子命令）
 
 > 全部命令纯本地、零网络。`td.py --help` 与各子命令 `--help` 是权威来源，本文是带场景的速查。
 
@@ -20,6 +20,7 @@
 | 引语逐字核验（是否真在语料里） | `td.py verify-quotes <card> <corpus> [--allow-empty]` |
 | 引语段号锚定（是否在它声明的那一段里） | `td.py anchor <card> --corpus <逐字稿 \| 书类【第N段】语料>` |
 | 书类语料规整成【第N段】 | `td.py corpus-anchor <原文> -o <out>` |
+| 引语体检（简繁不一致 / 省略号 / 归属可疑） | `td.py lint-quotes <card> --corpus <语料…> [--strict]` |
 | 覆盖审计（穷举语料未覆盖段） | `td.py audit-coverage <card> <corpus>` |
 | FIDELITY 门槛（默认要求交叉复核） | `td.py gate <report> [--min A\|B\|C\|D] [--scores 95,88] [--allow-fallback] [--allow-single-scorer]` |
 | 独立评测套件（题库/评分模板/JSON 回传） | `td.py eval-kit init <card> --out <dir>` → `td.py eval-kit check --answers a.json --scores s1.json s2.json --out FIDELITY.json` |

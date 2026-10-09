@@ -38,7 +38,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from tdlib import (anchor, chunking, contracts, evalkit, evolve, evals, fidelity as fid, fetch,
-                   overlap, promptc, publish, research, strategy, transcript,
+                   lintquotes, overlap, promptc, publish, research, strategy, transcript,
                    upstream, validate as vd)
 from tdlib.util import (METHOD_DIR, SCHEMA_DIR, TEMPLATE_DIR, ToolError, VERSION,
                         die, head, info, ok, read_json, read_text, warn, write_json)
@@ -524,6 +524,39 @@ def cmd_corpus_anchor(args) -> int:
     else:
         print(out_text)
     info(f"段数 {stats['segments']}；原文件含【第N段】标记：{stats['had_markers']}")
+    return EXIT_OK
+
+
+def cmd_lint_quotes(args) -> int:
+    head("引语体检 · 简繁不一致 / 省略号 / 归属可疑")
+    info("提示器：glyph（简繁/用字）确证判失败；省略号与归属可疑是启发式，只提示")
+    corpora: dict[str, str] = {}
+    for p in getattr(args, "corpus", []) or []:
+        pp = Path(p).expanduser()
+        corpora[pp.stem] = pp.read_text(encoding="utf-8", errors="replace")
+    rep = lintquotes.lint(Path(args.card).expanduser(), corpora)
+    extra = "" if rep["corpus_provided"] else "（未给 --corpus：只做省略号检查）"
+    print(f"   检查引语 {rep['quotes_checked']} 条{extra}")
+    if args.json_out:
+        write_json(Path(args.json_out).expanduser(), rep)
+        ok(f"已写出 {args.json_out}")
+    for f in rep["findings"]:
+        mark = "❌" if f["kind"] == "glyph" else "⚠️"
+        print(f"   {mark} 第 {f['line']} 行 [{f['kind']}] {f['why']}")
+        if f.get("pairs"):
+            print("        差异字形：" + "，".join(f"{a}→{b}" for a, b in f["pairs"]))
+        print(f"        「{f['quote'][:70]}」")
+    if rep.get("vacuous"):
+        die("⚠️ 空集假绿：卡片含引语候选，却一条都没抽出来 —— 体检器没干活，不是没问题",
+            "确认引语写在引号里（「…」/\"…\"），且长度 ≥8 字符")
+    if rep["verdict"] == "fail":
+        die("体检发现**确证**用字不一致（简繁/异体）—— 引语不是逐字原文，核验必然失败",
+            "把卡片引语统一成**语料所用字形**（见上列差异字形对），再跑 verify-quotes 确认")
+    if rep["findings"]:
+        warn(f"另有 {len(rep['findings'])} 条提示级发现（省略号 / 归属可疑），建议人工确认")
+        if args.strict:
+            die("--strict：存在提示级发现，按失败处理")
+    ok("未发现用字不一致（简繁/异体）")
     return EXIT_OK
 
 
@@ -1130,6 +1163,15 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("infile", help="书类原文（可带或不含【第N段】标记）")
     q.add_argument("-o", "--out", help="输出文件（不指定则打印到 stdout）")
     q.set_defaults(func=cmd_corpus_anchor)
+
+    q = sub.add_parser("lint-quotes",
+                       help="引语体检：简繁不一致 / 省略号 / 归属可疑（核验前的提示器）")
+    q.add_argument("card", help="卡片（SKILL.md）")
+    q.add_argument("--corpus", nargs="*", default=[],
+                   help="语料原文（可多份）；简繁与归属检查需要，省略号检查不需要")
+    q.add_argument("--json-out", help="把体检报告写成 JSON")
+    q.add_argument("--strict", action="store_true", help="任何发现（含提示级）都判失败")
+    q.set_defaults(func=cmd_lint_quotes)
 
     q = sub.add_parser("overlap", help="语料重叠检测：证明两批素材零重叠（换素材重蒸馏前用）")
     q.add_argument("--new", required=True, help="新语料（.md/.txt）")
