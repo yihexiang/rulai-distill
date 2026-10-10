@@ -1,0 +1,22 @@
+{
+  "schema": "rulai-distill/fidelity/v1",
+  "subject": "lunyu-conduct",
+  "eval_mode": "dual-agent",
+  "answerer": "answerer-openbundle-1",
+  "graders": [
+    "grader-lunyu-1",
+    "grader-lunyu-2"
+  ],
+  "cross_grader_gap": 1.0,
+  "dimensions": {
+    "consistency": 29,
+    "style": 20,
+    "edge_honesty": 20,
+    "source_transparency": 12,
+    "structure": 14
+  },
+  "total": 95,
+  "grade": "A",
+  "blocking_issues": [],
+  "verdict": "pass"
+}
