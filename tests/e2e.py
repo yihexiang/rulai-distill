@@ -709,6 +709,37 @@ def t_validate_claim_status():
         assert not bad_lines, f"{rel} 来源状态区块有未标注论断：{bad_lines[:2]}"
 
 
+def t_release_archive_reproducible():
+    """#76：发布资产必须可让外部用户复算——sha256 里写**相对文件名**。
+
+    此前 zip/sha256 是手工打的，sha256 里是绝对路径（`/tmp/…zip`），
+    而 README / Release notes 教用户跑 `shasum -c rulai-distill-1.8.0.zip.sha256`
+    ——**那条命令对下载来的用户必然失败**。文档教了一个跑不通的命令 =「声称≠实际」。
+
+    本测试直接跑 `tools/make_release.sh`（发布打包的唯一入口），验证：
+    ① sha256 行是相对文件名；② `shasum -c` 在产物目录里真的通过；
+    ③ zip 内容来自 HEAD（不是工作区脏文件）。
+    """
+    script = ROOT / "tools" / "make_release.sh"
+    assert script.exists(), f"发布打包脚本缺失：{script}（#76：打包必须是仓库内可复跑入口）"
+    with tempfile.TemporaryDirectory() as d:
+        out = Path(d) / "rel"
+        p = subprocess.run(["bash", str(script), "9.9.9-test", str(out)],
+                           capture_output=True, text=True)
+        assert p.returncode == 0, f"make_release.sh 失败：{p.stderr[-400:]}"
+        zips = list(out.glob("*.zip"))
+        sums = list(out.glob("*.sha256"))
+        assert len(zips) == 1 and len(sums) == 1, f"产物不齐：{zips} {sums}"
+        line = sums[0].read_text(encoding="utf-8").strip()
+        assert not line.split()[1].startswith("/"), (
+            f"sha256 必须是相对文件名（否则用户 shasum -c 失败）：{line}")
+        # 真的按用户的方式校验一次
+        chk = subprocess.run(["shasum", "-a", "256", "-c", sums[0].name],
+                             cwd=str(out), capture_output=True, text=True)
+        assert chk.returncode == 0, f"按文档命令校验失败：{chk.stdout} {chk.stderr}"
+        assert "OK" in chk.stdout, chk.stdout
+
+
 def t_eval_kit():
     """复审 P0：eval-kit 把 FIDELITY 独立质检闭环产品化。
 
@@ -4067,6 +4098,7 @@ def main() -> int:
         ("eval-kit 独立质检闭环（复审 P0）", t_eval_kit),
         ("eval-kit 效用对照 no-skill/with-skill（精品分水岭）", t_evalkit_utility_baseline),
         ("validate claim-level 来源状态（#75）", t_validate_claim_status),
+        ("发布资产可复算：sha256 相对路径（#76）", t_release_archive_reproducible),
         ("lint-quotes 引语体检（复审 P1）", t_lint_quotes),
         ("lint-quotes 技术 token 与节引标注（#62）", t_lint_quotes_technical_and_sectional),
         ("eval-kit 加固·失败产物/同名评分者（复审 G1）", t_g1_evalkit_hardening),

@@ -545,6 +545,23 @@ DEFECTS = [
      "真实水平评估（2026-10-10）杠杆 1：收尾 #72 同类。查证后确认与 #72 的差异——five-affairs "
      "有历史报告背书，病灶是「出处是被取代的文件+角色错记」，不是凭空捏造",
      ["t_cards_no_grader_backed_claims"]),
+    ("tools/make_release.sh（发布打包）",
+     "Release 的 sha256 资产写的是**绝对路径**（`/tmp/rulai-distill-1.8.0.zip`），"
+     "外部用户按文档跑 `shasum -c` 必然失败",
+     "zip 与 sha256 是手工打的（没有仓库内脚本），于是在哪个目录跑 shasum 就把哪个"
+     "路径写进资产：本地自测时用的是 `/tmp/…`。而 README / Release notes 教用户的"
+     "命令是 `shasum -c rulai-distill-1.8.0.zip.sha256`——**文档教了一个跑不通的命令**。"
+     "与 #72/#73 同病：声称（可校验）与实际（校验必然失败）不一致，且只有真正下载"
+     "过 zip 的人才会发现",
+     "①新增 `tools/make_release.sh` 作为发布打包的**唯一入口**：sha256 一律在产物"
+     "目录内生成 → 文件名是相对文件名，`shasum -c` 可用；zip 取 `git archive HEAD`"
+     "（不是工作区脏文件）。②已修 v1.7.0 / v1.8.0 两个 Release 的资产并做端到端验证"
+     "（清空目录 → 从 GitHub 下载 → `shasum -c` → OK）。③`t_release_archive_reproducible` "
+     "直接跑该脚本，断言相对路径 + 按用户方式校验通过",
+     "major", "tool_gap",
+     "2026-10-10 用户要求「把最新完成的文件同步到 GitHub」→ 逐项核验远端时发现："
+     "远端树、tag、zip 哈希都对，但文档教的校验命令跑不通",
+     ["t_release_archive_reproducible"]),
 ]
 
 
