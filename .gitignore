@@ -18,6 +18,8 @@ runs/
 *.lock
 # 编译 staging
 .staging/
+# 发布打包产物（make_release.sh 输出；zip+sha256 见 GitHub Release，不进版本库）
+dist/
 
 # ---- 蒸馏产物（体积大且含受版权素材，默认不入库）----
 #逐字稿/字幕/分块：受源素材版权约束，且可重新抓取
