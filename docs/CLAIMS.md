@@ -14,7 +14,7 @@
 
 <!-- facts:begin -->
 ```text
-tests = 107
+tests = 109
 subcommands = 37
 defects = 73
 ```
@@ -22,7 +22,7 @@ defects = 73
 
 | 量 | 值 | 怎么数的 |
 |---|---|---|
-| 回归项 | **107** | `tests/e2e.py` 的注册表条目数 |
+| 回归项 | **109** | `tests/e2e.py` 的注册表条目数 |
 | 子命令 | **37** | `td.py --help` 里 argparse 打印的 choices |
 | 缺陷台账 | **73** | `tdlib/defects.py` 的 `DEFECTS` 长度 |
 
@@ -42,6 +42,7 @@ defects = 73
 | 引语核验只能证明「它检查过的那一面」 | `t_verify_quotes_lang_filter_not_silent` · `t_anchor_unanchored_not_fail` | 2026-10-10 |
 | 长书分块的 token 节省：**区间 1.0×～34×**，短书/宽词几乎不省 | `t_token_savings_benchmark` · `benchmarks/token-savings/report-2026-10-10.md` | 2026-10-10 |
 | 缺陷台账里**多数错在验证工具自身**，不在卡片内容 | `t_defect_ledger_stats` | 2026-10-10 |
+| **效用对照（no-skill vs with-skill）已跑通**：lunyu 显著增益、five-affairs 中等增益；判据是四道**机械信号**（定位引用/引语复用/边界声明/术语复用），含题面泄漏剔除 | `t_evalkit_utility_baseline` · `docs/utility-evidence-2026-10-10.md` · `docs/utility-evidence-lunyu.json` | 2026-10-10 |
 | 缺陷数 / 分布 / 回归项数三者由测试强制相等 | `t_defect_ledger_stats` · `t_defect_regression_ledger` · `t_docs_no_drift` | 2026-10-10 |
 | 回归测试**不得静默依赖作者工作区** | `t_no_external_fixture_deps` | 2026-10-10 |
 | CI 的每一步都能在本地跑通（不必等CI 才发现） | `t_self_validate_clean_and_doc_structure` · `tests/ci_local.sh` | 2026-10-10 |

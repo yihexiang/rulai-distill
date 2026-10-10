@@ -13,7 +13,7 @@ compatibility: >-
   Runs fully offline otherwise. Follows the open Agent Skills spec, so it loads in
   Claude Code, Codex CLI, Cursor, Gemini CLI, GitHub Copilot, OpenCode, Hermes, WorkBuddy.
 metadata:
-  version: "1.7.0"
+  version: "1.8.0"
   lineage: "cangjie-skill(2.5.0) 全套工程能力 + nuwa-skill FIDELITY/字幕/六路调研 + yeadon 认知植入/prompt 编译"
   license: MIT
 ---
@@ -284,7 +284,7 @@ td.py count <dir>                                  # token 计量
 - 可选：`PyYAML`（严格 frontmatter）、`tiktoken`（精确 token 计量）、`jsonschema`
 - **无网络调用**：所有脚本纯本地，不访问任何外部 API
 - 自检：`python3 scripts/td.py doctor`
-- 回归：`python3 tests/e2e.py`（107 项，零依赖与完整依赖两种解释器各跑一遍）
+- 回归：`python3 tests/e2e.py`（109 项，零依赖与完整依赖两种解释器各跑一遍）
 - CI：`.github/workflows/pipeline-check.yml`（双版本矩阵 + 红线扫描 + Schema 校验）
 
 ## 许可

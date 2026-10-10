@@ -1,4 +1,4 @@
-# rulai-distill · 蒸馏工厂 v1.7.0
+# rulai-distill · 蒸馏工厂 v1.8.0
 
 把书籍 / 长视频 / 播客 / 访谈 / 人物素材，蒸馏成**可执行、可验证、可追溯**的 Agent Skills。
 
@@ -10,7 +10,7 @@
 [![Contract & vendor](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml/badge.svg)](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![python](https://img.shields.io/badge/python-%E2%89%A53.10-blue)
-![regression](https://img.shields.io/badge/regression-107%20passing-brightgreen)
+![regression](https://img.shields.io/badge/regression-109%20passing-brightgreen)
 
 > ### 别的蒸馏技能解决「生成」，这个解决「证明」。
 > **不打分不发版，而且不由自己打分。**
@@ -115,13 +115,62 @@ guoxue 那四张同属国学、同一套语料规整方式，**四张通过不�
 
 ---
 
+## 🧪 精品示例：同一道题，**有卡** vs **无卡**（可复算）
+
+2026-10-10 新增。此前本项目只能证明「卡片质量好」（引语可核、结构齐全、双评分 A 分），
+**证明不了「这张卡有用」**——现在补上同题对照（细则见
+[`docs/utility-evidence-2026-10-10.md`](./docs/utility-evidence-2026-10-10.md)）。
+
+题目（`lunyu-conduct` 题库 consistency-1）：*在「想判断一个人是否可信」的情境下，本卡给出的结论方向与理由是什么？*
+
+**没给卡片的回答（节选）**：
+
+> 【无卡片·如实声明】我没有拿到本卡正文，只在题库里看到了 description 片段，无法报告本卡实际的结论与理由。
+> 反推出的方向：该卡把《論語》当行为观测 + 自我校准框架……**理由层面属于无依据推断，请勿当作卡片口径评分。**
+
+**给了卡片的回答（节选）**：
+
+> 结论：必须落到可观察言行（观言行以定人品），而不是听宣言、看名号头衔。
+> 理由：①**一之三**「巧言令色，鮮矣仁」——不能停在"这话好不好听"的听言表层，要找言行对照（**四之二四**）；
+> ②君子/小人的差异在取向不在宣言——喻於義 vs 喻於利（**四之十六**）、坦蕩蕩 vs 長戚戚（**七之三六**）；
+> ③**四之七**「觀過，斯知仁矣」——观过比听言更准。
+> 产出形态：三选一结论「可交 / 观察（写截止日）/ 不交」，"再看看"没有截止日不是合法输出。
+
+**差别在哪（机器判，不是我说的）**：无卡答案给不出任何可复核的定位引用；
+有卡答案的每条论断都挂着篇-章号，别人能逐条回去核。这就是那四道机械信号里唯一区分度稳定的一道。
+
+**一键复算**（无需重跑 Agent，两份答题回传已随包）：
+
+```bash
+python3 scripts/td.py eval-kit utility \
+  --card examples/open-bundle/skills/lunyu-conduct/SKILL.md \
+  --with    examples/open-bundle/skills/lunyu-conduct/eval-kit/answers.json \
+  --without examples/open-bundle/skills/lunyu-conduct/eval-kit/answers-baseline.json \
+  --questions examples/open-bundle/skills/lunyu-conduct/eval-kit/questions.json \
+  --subject lunyu-conduct
+```
+
+**诚实的读法**：lunyu 显著增益（3/4 vs 1/4 命中）、five-affairs 中等增益（4/4 vs 3/4）；
+但 `boundary_declared`（声明"素材没讲"）在**无卡侧也命中**——那是模型的默认行为，不是卡片的功劳。
+**只证明了"可复核的定位引用"这一项**，没有证明结论更正确或更有说服力。
+
+### FAQ（三个最常被问的）
+
+| 问题 | 答 |
+|---|---|
+| 什么材料**不适合**做卡 | 单一会话/零散笔记（无稳定段号可锚）、纯时效性快讯（第二天即腐烂）、需要实时数据的问题（技能卡离线，答不了当天行情） |
+| 卡里写"不适用"会不会显得保守 | 那是**边缘诚实度**这一维的硬要求（`edge_honesty`），评分者会因"该声明却没说"扣分，不是扣在保守上 |
+| 我能不能只抄一张卡就用 | 可以，但**别声称你验证过**：外发前至少跑 `validate` + `anchor` + `lint-quotes`；要对外宣称质量，交交叉复核门禁（`gate`） |
+
+---
+
 ## 🚦 项目状态：beta，请先读这一段
 
 **流程可靠性已验证，但产出的卡片尚未达到可发布质量。** 这两件事必须分开说，因为证据强度完全不同。
 
 | 维度 | 状态 | 证据 |
 |---|---|---|
-| **机械可靠性** | ✅ 可信 | 107 项回归全绿；`gate` 默认要求交叉复核记录（实测生效）；`verify-quotes`/`anchor`/`lint-quotes` 均在真实素材上抓到过真问题；工具链在 **9 张真实卡**上实跑零崩溃、零假红 |
+| **机械可靠性** | ✅ 可信 | 109 项回归全绿；`gate` 默认要求交叉复核记录（实测生效）；`verify-quotes`/`anchor`/`lint-quotes` 均在真实素材上抓到过真问题；工具链在 **9 张真实卡**上实跑零崩溃、零假红 |
 | **产出正确性** | ⚠️ **已跑通闭环，仍强依赖素材** | `eval-kit` 已在 **7 张卡**上跑通**真实交叉复核**（独立答题 Agent + 2 个独立评分 Agent）：样本卡 `five-affairs` **93/A**、`musk-decisions` **90/A**，guoxue 四张 **93/95/96/96（A）**，开放素材 `lunyu-conduct` **95/A**。⚠️ 这些是**结构独立**而非组织独立；样本卡是精修展示件，**不能代表开放素材的普遍水平** |
 
 具体地说，这个项目目前**做不到**的事：
@@ -200,7 +249,7 @@ python3 scripts/td.py compile books/my-book --out ~/.workbuddy/skills/my-book --
 python3 scripts/td.py rollback ~/.workbuddy/skills/my-book --to latest
 ```
 
-**回归测试**：`python3 tests/e2e.py`（107 项，覆盖全部命令与 vendored 上游实跑）
+**回归测试**：`python3 tests/e2e.py`（109 项，覆盖全部命令与 vendored 上游实跑）
 
 > 📖 命令速查见 [`references/command-cheatsheet.md`](./references/command-cheatsheet.md)（37 个子命令）；
 > 第一次用请看 [`GUIDE.md`](./GUIDE.md) —— 完整流程 + 真实输出 + 故障排查表。
@@ -211,7 +260,7 @@ python3 scripts/td.py rollback ~/.workbuddy/skills/my-book --to latest
 
 `rulai-distill` 融合了三个开源项目的长处，并把它们的**契约**升格为权威标准。
 
-| 能力 | 来源 | rulai-distill v1.7.0 |
+| 能力 | 来源 | rulai-distill v1.8.0 |
 |---|---|---|
 | 结构感知分块 + 缓存 | cangjie `build_chunks` | **上游内置** `td.py upstream run chunk`；本包 `td.py chunk` 兜底 |
 | SQLite FTS5 词法索引 + 邻接块 | cangjie `build_index` | **上游内置** `td.py upstream run lexindex` |
@@ -274,7 +323,7 @@ rulai-distill/
 │   │                            / fidelity / evalkit / anchor / lintquotes / strategy / publish
 │   │                            / evals / evolve / promptc / upstream
 │   └── vendor/cangjie/       ← 上游 MIT 原件 + PROVENANCE.md（不改）
-└── tests/e2e.py              ← 端到端回归（107 项，双解释器各跑一遍）
+└── tests/e2e.py              ← 端到端回归（109 项，双解释器各跑一遍）
 ```
 
 ---

@@ -441,6 +441,8 @@ def cmd_eval_kit(args) -> int:
              "那是唯一能抓出「拿素材权威包装编造内容」的一维")
         info(f"下一步：读 {rep['out']}/README.md，让独立答题 Agent 填 answers.json")
         return EXIT_OK
+    if args.eval_cmd == "utility":
+        return _cmd_eval_kit_utility(args)
     # check
     res = evalkit.check(Path(args.answers).expanduser(),
                         [Path(p).expanduser() for p in args.scores],
@@ -474,6 +476,36 @@ def cmd_eval_kit(args) -> int:
     write_json(out, res["report"])
     ok(f"已写出 FIDELITY 报告：{out}")
     info(f"下一步：td.py gate {out}")
+    return EXIT_OK
+
+
+def _cmd_eval_kit_utility(args) -> int:
+    """eval-kit utility：同题对照 no-skill vs with-skill 的机械增益。"""
+    res = evalkit.utility(Path(args.card).expanduser(),
+                          Path(args.with_answers).expanduser(),
+                          Path(args.without_answers).expanduser(),
+                          subject=args.subject,
+                          questions_path=Path(args.questions).expanduser() if args.questions else None)
+    head("eval-kit utility · 用了这张卡 vs 没用这张卡（同题库 · 同 rubric · 跨会话）")
+    if res.get("errors"):
+        for e in res["errors"]:
+            warn(e)
+        die("效用对照的回传文件不合法：不得据此宣称增益", "修好 with/without 两份 answers 后重跑")
+    print(f"   机械信号：{'  '.join(res['signals'])}")
+    print("   " + "  ".join(f"{k}: with={int(res['with'][k])}/without={int(res['without'][k])}"
+                            for k in res["signals"]))
+    c = res["counts"]
+    label = {"significant": "显著增益", "moderate": "中等增益", "none": "**无显著增益**"}[res["gain"]]
+    print(f"   命中数 with={c['with']} / without={c['without']}（正向差 {c['delta']}）→ {label}")
+    if res.get("leaked_terms"):
+        print(f"   题面泄漏词已剔除（不算卡片功劳）：{res['leaked_terms']}")
+    if res["gain"] == "none":
+        warn("本卡在机械信号上与 no-skill 无显著差异——这是合法结论，**如实写 none，不许虚报**")
+    for b in res["boundary"]:
+        warn(f"边界：{b}")
+    if args.out:
+        write_json(Path(args.out).expanduser(), res)
+        ok(f"已写出效用对照报告：{args.out}")
     return EXIT_OK
 
 
@@ -1216,6 +1248,16 @@ def build_parser() -> argparse.ArgumentParser:
     c.add_argument("--subject", help="被评测对象标识，写进报告便于审计")
     c.add_argument("--out", help="FIDELITY JSON 输出路径（默认与 answers 同目录 FIDELITY.json）")
     c.set_defaults(func=cmd_eval_kit)
+    u = eq.add_parser("utility", help="同题对照：no-skill vs with-skill 的机械增益")
+    u.add_argument("--card", required=True, help="被评测的卡片（SKILL.md）")
+    u.add_argument("--with", dest="with_answers", required=True,
+                   help="**给了卡片**的答题回传 answers.json")
+    u.add_argument("--without", dest="without_answers", required=True,
+                   help="**没给卡片**的同题库答题回传 answers.json")
+    u.add_argument("--subject", help="被评测对象标识，写进报告便于审计")
+    u.add_argument("--questions", help="题库文件（给则剔除题面已出现的 tags，防照抄题面即算命中）")
+    u.add_argument("--out", help="效用对照报告 JSON 输出路径")
+    u.set_defaults(func=cmd_eval_kit)
 
     q = sub.add_parser("cross-review", help="多评分 Agent 交叉复核（分差 > 阈值须人工复核）")
     q.add_argument("scores", help="各评分 Agent 的总分，逗号分隔，如 95,88")

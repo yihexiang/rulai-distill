@@ -550,6 +550,165 @@ def t_gate_requires_cross_review():
         assert "通过门槛" in run(["gate", str(bare), "--min", "A", "--allow-single-scorer"]).stdout
 
 
+def t_evalkit_utility_baseline():
+    """精品分水岭（2026-10-10）：必须能量化「用了这张卡 vs 没用这张卡」的增益。
+
+    本项目此前只能证明「卡片的引语没造假、结构齐全、两个评分者打 A」，
+    证明不了**这张卡有用**——A 分可能只来自卡片写得好看。本条把「同题对照」变成命令
+    （`td.py eval-kit utility`）+ 可机判信号 + 回归测试。
+
+    两条硬纪律：
+    ① 增益判据是**机械信号**（定位引用 / 引语逐字复用 / 边界声明 / 卡片术语复用），
+       不是评分者的主观效用分——后者与卡片 FIDELITY 的 A 分不独立。
+    ② **无增益是合法结论**：without 也命中全部信号时必须判 none，不许虚报
+       （负向探针，与 #65「只跑正向等于检查器永远绿」同源）。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import evalkit
+
+    card = (ROOT / "examples/open-bundle/skills/lunyu-conduct/SKILL.md")
+    sig = evalkit.card_signals(card.read_text(encoding="utf-8"))
+    assert sig["tags"], "卡片 frontmatter tags 是专有元素锚点之一，不应为空"
+    assert sig["quote_keys"], "卡片 R 段引语应是专有元素锚点之一，不应为空"
+
+    def mk(path, answers, who):
+        path.write_text(json.dumps({
+            "schema": "rulai-distill/eval-kit-answers@1", "answerer": who,
+            "answers": [{"id": f"q{i}", "answer": a} for i, a in enumerate(answers)]},
+            ensure_ascii=False), encoding="utf-8")
+        return path
+
+    with tempfile.TemporaryDirectory() as d:
+        base = Path(d)
+        # with：带篇-章号定位 + 逐字复用 R 段引语 + 素材外明确「未覆盖」 + 复用术语
+        quote_head = sig["quote_keys"][0]
+        with_a = mk(base / "with.json", [
+            f"按一之三「{quote_head}…」的取向判断，结论是可交。",
+            "四之十六 提示喻於義而非喻利，属可交。",
+            "素材未覆盖这类问题，本卡不负责，需另找依据。",
+        ], "answerer-with")
+        # without：通用表述，无定位引用、无引语复用、无边界声明、无术语
+        without_a = mk(base / "without.json", [
+            "总体而言这个人比较可靠，值得合作。",
+            "建议进一步观察对方的行为表现。",
+            "这个问题需要综合考虑多方面因素。",
+        ], "answerer-without")
+
+        rep = evalkit.utility(card, with_a, without_a, subject="lunyu-conduct")
+        assert not rep["errors"], rep["errors"]
+        # 正例：with 命中 ≥3，without ≤1，正向差 ≥2 → 显著增益
+        assert rep["counts"]["with"] >= 3, f"with 侧应命中多数信号：{rep}"
+        assert rep["counts"]["without"] <= 1, f"without 侧不该命中卡片专有信号：{rep}"
+        assert rep["gain"] == "significant", f"应判显著增益：{rep['counts']} {rep['delta']}"
+        assert rep["boundary"], "效用报告必须自带边界声明（否则会被当成因果证据）"
+
+        # 负向探针：without 侧与 with 同样命中全部信号 → 必须判 none，不得虚报增益
+        # （#65 同源纪律：只跑正向等于检查器永远绿——「没有增益」这一支必须被钉住）
+        same_as_with = mk(base / "same.json", [
+            f"按一之三「{quote_head}…」的取向判断，结论是可交。",
+            "四之十六 提示喻於義而非喻利，属可交。",
+            "素材未覆盖这类问题，本卡不负责，需另找依据。",
+        ], "answerer-same")
+        rep2 = evalkit.utility(card, with_a, same_as_with, subject="lunyu-probe")
+        assert rep2["counts"]["delta"] == 0, f"两侧相同时正向差应为 0：{rep2['counts']}"
+        assert rep2["gain"] == "none", (
+            f"无增益必须判 none，不许虚报：{rep2['counts']} {rep2['delta']}")
+
+    # CLI 端到端：utility 子命令可跑通并落报告（用同一份 fixture 语料）
+    with tempfile.TemporaryDirectory() as d:
+        base = Path(d)
+        quote_head = sig["quote_keys"][0]
+
+        def mk2(path, answers, who):
+            return mk(path, answers, who)
+
+        with_a2 = mk2(base / "with.json", [
+            f"按一之三「{quote_head}…」的取向判断，结论是可交。",
+            "四之十六 提示喻於義而非喻利，属可交。",
+            "素材未覆盖这类问题，本卡不负责，需另找依据。",
+        ], "answerer-with")
+        without_a2 = mk2(base / "without.json", [
+            "总体而言这个人比较可靠，值得合作。",
+            "建议进一步观察对方的行为表现。",
+            "这个问题需要综合考虑多方面因素。",
+        ], "answerer-without")
+        out = base / "utility.json"
+        run(["eval-kit", "utility", "--card", str(card),
+             "--with", str(with_a2), "--without", str(without_a2),
+             "--out", str(out)], expect=0)
+        assert out.exists(), "utility 未写出报告"
+        rd = json.loads(out.read_text(encoding="utf-8"))
+        assert rd["gain"] == "significant", rd
+
+
+def t_validate_claim_status():
+    """#75 claim-level：关键论断必须能区分「原文 / 通法 / 本卡规则」。
+
+    缺口来源（缺陷 #72/#73 的同一个洞）：引语层（存在/段号/用字）已近完备，
+    但卡片**正文里的判断**没有被系统化溯源——于是「凭空安一个核验者」
+    （评分 Agent 核查确认）能混过 validate。修法是让卡片可选声明「来源状态」区块：
+    - 声明了 → 每条论断必须带 [原文]/[通法]/[本卡规则] 标签，缺一条即 **error**（拦截）；
+    - 没声明 → **warn** + 进存量审计报告（不卡死存量卡）。
+    含负向探针：坏卡塞进 bundle 必须真被拦住（#65：只跑正向等于永远绿）。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import validate as V
+
+    head = ("---\nname: probe-card\ndescription: |\n  测试用卡，描述足够长以通过描述长度检查，"
+            "并明确声明不做：不做占卜命理。\nsource_locator: p1\n---\n\n")
+    body_tail = ("\n\n## E — Execution（可执行步骤）\n\n**Step 1 · 做什么**\n\n"
+                 "- 完成标准：可核验\n\n## B — Boundary（边界）\n\n**失败模式**：无\n")
+
+    def mk(sec: str) -> Path:
+        p = Path(tempfile.mkdtemp()) / "SKILL.md"
+        p.write_text(head + "## I — Interpretation\n\n方法骨架。\n" + sec + body_tail,
+                     encoding="utf-8")
+        return p
+
+    good = mk("## 来源状态\n\n- [原文] 五项基线出自素材第1段\n- [通法] 「校」= 逐条核查（推演）\n"
+              "- [本卡规则] 结论必须二选一\n")
+    out = V.check_card(good, good.parent)
+    assert not any("来源状态" in m for _l, m in out), f"合规来源状态区块不该报问题：{out}"
+
+    # 无区块 → warn（存量卡路径，不 block）
+    none_sec = mk("")
+    out2 = V.check_card(none_sec, none_sec.parent)
+    assert any(l == "warn" and "来源状态" in m for l, m in out2), \
+        f"缺来源状态区块应给 warn（不 block 存量卡）：{out2}"
+
+    # 声明了却有条论断没标状态 → error（拦截）
+    bad = mk("## 来源状态\n\n- [原文] 这条有标签\n- 这条忘了标状态\n")
+    out3 = V.check_card(bad, bad.parent)
+    assert any(l == "error" and "未标状态" in m for l, m in out3), \
+        f"声明了区块就必须逐条标注，缺标签应 error：{out3}"
+
+    # 非法标签同样拦截（防止自造标签绕过）
+    bad2 = mk("## 来源状态\n\n- [我猜] 这条用了自造标签\n")
+    out4 = V.check_card(bad2, bad2.parent)
+    assert any(l == "error" and "未标状态" in m for l, m in out4), \
+        f"非三类的标签应被拦：{out4}"
+
+    # CLI 端到端：坏卡进 bundle 必须被 validate 拦住（exit≠0）
+    with tempfile.TemporaryDirectory() as d:
+        b = Path(d)
+        (b / "skills" / "probe").mkdir(parents=True)
+        (b / "skills" / "probe" / "SKILL.md").write_text(
+            head + "## I — Interpretation\n\n骨架。\n\n## 来源状态\n\n- 忘了标状态\n" + body_tail,
+            encoding="utf-8")
+        (b / "README.md").write_text("# probe bundle\n", encoding="utf-8")
+        run(["validate", str(b)], expect=1)
+
+    # 两张成品卡必须已声明来源状态（示范到位，新卡照抄）
+    for rel in ("examples/open-bundle/skills/lunyu-conduct/SKILL.md",
+                "examples/sample-bundle/skills/five-affairs-seven-questions/SKILL.md"):
+        t = (ROOT / rel).read_text(encoding="utf-8")
+        assert V.CLAIM_STATUS_SEC_RE.search(t), f"{rel} 应已声明『来源状态』区块（示范）"
+        sec = V.CLAIM_STATUS_SEC_RE.search(t).group(1)
+        bad_lines = [ln for ln in sec.splitlines()
+                     if re.match(r"^\s*[-*]\s+\S", ln) and not V.CLAIM_STATUS_TAG_RE.match(ln)]
+        assert not bad_lines, f"{rel} 来源状态区块有未标注论断：{bad_lines[:2]}"
+
+
 def t_eval_kit():
     """复审 P0：eval-kit 把 FIDELITY 独立质检闭环产品化。
 
@@ -3906,6 +4065,8 @@ def main() -> int:
         ("gate 门槛与自测降级", t_gate),
         ("gate 默认要求交叉复核记录（复审 P0）", t_gate_requires_cross_review),
         ("eval-kit 独立质检闭环（复审 P0）", t_eval_kit),
+        ("eval-kit 效用对照 no-skill/with-skill（精品分水岭）", t_evalkit_utility_baseline),
+        ("validate claim-level 来源状态（#75）", t_validate_claim_status),
         ("lint-quotes 引语体检（复审 P1）", t_lint_quotes),
         ("lint-quotes 技术 token 与节引标注（#62）", t_lint_quotes_technical_and_sectional),
         ("eval-kit 加固·失败产物/同名评分者（复审 G1）", t_g1_evalkit_hardening),

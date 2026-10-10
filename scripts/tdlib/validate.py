@@ -33,6 +33,11 @@ SOURCE_KEYS = re.compile(
     r"source_locator|source_book|source_chapter|source_manifest|素材来源|^#{1,4}\s*来源",
     re.M)
 ONE_HAND_RE = re.compile(r"\[一手\]|一手来源合计权重|coverage")
+# claim-level（#75）：关键论断的来源状态。区块标题匹配「来源状态 / 声明溯源 / claim status」，
+# 区块内每条论断须以 [原文] / [通法] / [本卡规则] 之一开头。
+CLAIM_STATUS_SEC_RE = re.compile(
+    r"(?m)^#{1,4}\s*(?:来源状态|声明溯源|claim[ _-]status).*?$([\s\S]*?)(?=^#{1,4}\s|\Z)")
+CLAIM_STATUS_TAG_RE = re.compile(r"^\s*[-*]\s*\[(?:原文|通法|本卡规则)\]\s*\S")
 
 # 这些是流水线自身的产物/文档，不是技能卡
 NON_CARD_DOCS = {"FIDELITY.md", "SOURCES.md", "BOOK_OVERVIEW.md", "README.md",
@@ -160,6 +165,25 @@ def check_card(path: Path, base: Path, known_slugs: set[str] | None = None) -> l
     if not SOURCE_KEYS.search(body) and not any(
             fm.get(k) for k in ("source_locator", "source_book", "source_chapter", "material", "material_type")):
         out.append(("warn", "缺少可溯源定位（source_locator / source_book / source_chapter / 素材来源）"))
+
+    # ── claim-level（#75）：关键论断的「来源状态」 ────────────────────────
+    # 为什么加这一层（缺陷 #72/#73 的同一个洞）：引语层（存在/段号/用字）已近完备，
+    # 但卡片**正文里的判断与声称**没有被系统化溯源——于是「凭空安一个核验者」
+    # （评分 Agent 核查确认）与「出处是被取代的文件」能混过 validate。
+    # 声明了区块就必须完整（error 拦截）；没声明则 warn 并进存量审计报告。
+    sec = CLAIM_STATUS_SEC_RE.search(body)
+    if not sec:
+        out.append(("warn", "未声明『来源状态』区块——关键论断无法区分"
+                            "（原文 / 通法 / 本卡规则），见 #72/#73 的病灶"))
+    else:
+        lines = [ln for ln in sec.group(1).splitlines()
+                 if re.match(r"^\s*[-*]\s+\S", ln) and not re.match(r"^\s*[-*]\s*$", ln)]
+        if not lines:
+            out.append(("error", "『来源状态』区块为空——声明了就要逐条标注（原文/通法/本卡规则）"))
+        bad = [ln.strip()[:40] for ln in lines if not CLAIM_STATUS_TAG_RE.match(ln)]
+        if bad:
+            out.append(("error", f"『来源状态』有 {len(bad)} 条论断未标状态：{bad[:3]}"
+                                "（每条须以 [原文] / [通法] / [本卡规则] 开头）"))
     return [(lvl, f"[{rel}] {msg}") for lvl, msg in out]
 
 

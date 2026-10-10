@@ -30,6 +30,7 @@ eval-kit 把这条闭环变成**一组有格式的 JSON 文件 + 一条命令**�
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from . import fidelity as fid
@@ -38,6 +39,9 @@ from .util import ToolError, ensure_dir, read_text
 KIT_SCHEMA = "rulai-distill/eval-kit@1"
 QUESTIONS_SCHEMA = "rulai-distill/eval-kit-questions@1"
 DIM_MAX = {k: mx for k, _pat, mx in fid.DIMS}
+# 模板占位指令（answers.template.json 里的话）。**只有这些**算「未作答」——
+# 不能凭「以【开头」一刀切：诚实声明（如「【无卡片·如实声明】…」）是有内容的答案。
+TEMPLATE_FILL_RE = re.compile(r"填写该题的回答|只能依据卡片|必填：|请填写")
 
 
 # --------------------------------------------------------------------------
@@ -174,7 +178,12 @@ def check_answers(answers: dict) -> tuple[str, list[str]]:
     if not items:
         errs.append("answers.answers 为空：空集不得判通过（0 题作答 = 没测，不是通过）")
     for i, a in enumerate(items):
-        if not str(a.get("answer") or "").strip() or str(a.get("answer", "")).startswith("【"):
+        txt = str(a.get("answer") or "").strip()
+        # 判据是「**模板占位指令**」，不是「以【开头」——
+        # 2026-10-10 实测：baseline 答题者（无卡片对照）如实写「【无卡片·如实声明】我没有拿到
+        # 本卡正文…」，却被旧判据整类判成「未作答」。**把诚实声明判成没作答**，
+        # 会让对照组要么被丢弃、要么被迫编造——两样都比假阳性更坏（#62/#65 同源纪律）。
+        if not txt or TEMPLATE_FILL_RE.search(txt):
             errs.append(f"answers[{i}]（{a.get('id')}）未作答")
     return who, errs
 
@@ -286,3 +295,124 @@ def check(answers_path: Path, score_paths: list[Path], subject: str | None = Non
     }
     return {"report": report, "cross": cross, "verdict": verdict, "errors": errors,
             "graders": graders, "unique_graders": uniq_graders, "answerer": answerer}
+
+
+# --------------------------------------------------------------------------
+# 效用实验：no-skill vs with-skill（同题库 · 同 rubric · 跨会话）
+# --------------------------------------------------------------------------
+# 为什么要有这一层（2026-10-10「精品分水岭」）：
+# 本项目能证明「这张卡的引语没造假、结构齐全、两个评分者都打 A」，
+# 却**证明不了「用了这张卡比不用强」**——A 分可能只来自卡片写得漂亮，
+# 与答题时有没有卡片无关。缺的是**同题对照**。
+#
+# 为什么用「机械信号」而不是让评分者打「有用/没用」（#72/#73 的同一条教训）：
+# 评分者打的主观效用分与卡片 FIDELITY 的 A 分**不独立**——同一批人看同一张卡，
+# 容易把「卡片质量」当成「这张卡有用」。所以这里只判**可机判的行为特征**：
+#
+#   M1 locator_citation   答案带段号/篇-章号定位引用（能被别人机器复核）
+#   M2 verbatim_quote     答案逐字复用了卡片 R 段的引语（专有内容，不是通用表述）
+#   M3 boundary_declared  答案对素材外问题明确声明「素材没讲/未覆盖」
+#   M4 card_term          答案复用了卡片自述的能力标签（frontmatter tags）
+#
+# **边界声明（必须随报告一起引用）**：这四道信号只覆盖「行为特征」，
+# **不覆盖结论正确性、说服力与专业判断**；且 with/without 由同一模型家族的不同会话产出，
+# **不构成跨模型因果证据**。增益等级描述的是「行为特征的差异」，不是「效果的因果」。
+
+LOCATOR_RE = re.compile(r"§\d+|【第\d+[段条]】|第\d+[段条]|[一二三四五六七八九十]+之[一二三四五六七八九十]+")
+BOUNDARY_RE = re.compile(r"未覆盖|没有覆盖|素材[^。；\n]{0,8}没讲|素材[^。；\n]{0,8}不覆盖|不适用|本卡不负责|超出本卡")
+UTILITY_SIGNALS = ("locator_citation", "verbatim_quote", "boundary_declared", "card_term")
+
+
+def card_signals(card_text: str) -> dict:
+    """从卡片正文抽取「专有元素」——用于机判答案是否真的用了这张卡。
+
+    专有元素取两处（都是卡片自述、**不靠人工指定关键词**）：
+    - frontmatter `tags`：卡片自己声明的能力标签；
+    - R 段引语的前 6 字：逐字锚在原文上的专有串（通用 AI 腔不会碰它）。
+    """
+    tags: set[str] = set()
+    m = re.search(r"^tags:\s*\[(.*?)\]", card_text, re.M | re.S)
+    if m:
+        tags = {t.strip().strip("\"'") for t in m.group(1).split(",") if t.strip()}
+    quote_keys = sorted({q.strip()[:6] for q in re.findall(r"[「“]([^」”\n]{6,})[」”]", card_text)})
+    return {"tags": sorted(t for t in tags if len(t) >= 2), "quote_keys": quote_keys}
+
+
+def answer_signals(answer_text: str, sig: dict) -> dict:
+    """对一份答案打四道机械信号（0/1）。"""
+    text = re.sub(r"\s+", "", answer_text)
+    return {
+        "locator_citation": bool(LOCATOR_RE.search(answer_text)),
+        "verbatim_quote": any(re.sub(r"\s+", "", k) in text for k in sig["quote_keys"]),
+        "boundary_declared": bool(BOUNDARY_RE.search(answer_text)),
+        "card_term": any(re.sub(r"\s+", "", t) in text for t in sig["tags"]),
+    }
+
+
+def _answers_blob(answers: dict) -> str:
+    return "\n".join(str(a.get("answer") or "") for a in (answers.get("answers") or []))
+
+
+def utility(card_path: Path, with_path: Path, without_path: Path,
+            subject: str | None = None, questions_path: Path | None = None) -> dict:
+    """同题对照：with-skill vs no-skill 的机械信号增益。
+
+    返回 {"subject", "signals", "with", "without", "delta", "gain", "boundary", "errors"}。
+    `gain` ∈ significant / moderate / none —— **none 是合法结论**（增益不显著就如实写 none，
+    不许虚报；这条由 t_evalkit_utility_baseline 的负向探针钉住）。
+
+    `questions_path` 给定时做**题面泄漏剔除**：题库 description 里往往已经写了卡片的能力标签，
+    答题者照抄题面就能"命中" card_term——那不是卡片的功劳。剔掉的词记进 `leaked_terms`，
+    报告里如实可见（**剔除本身也要留痕**，否则等于悄悄放宽判据）。
+    """
+    errors: list[str] = []
+    card_text = read_text(Path(card_path))
+    sig = card_signals(card_text)
+    if not sig["tags"] and not sig["quote_keys"]:
+        raise ToolError(f"卡片抽不出任何专有元素：{card_path}",
+                        "效用对照需要 frontmatter tags 或 R 段引语作为「专有元素」锚点")
+    leaked: list[str] = []
+    if questions_path:
+        qtext = re.sub(r"\s+", "", read_text(Path(questions_path)))
+        leaked = [t for t in sig["tags"] if re.sub(r"\s+", "", t) in qtext]
+        sig["tags"] = [t for t in sig["tags"] if t not in leaked]
+
+    with_a = _load(with_path)
+    without_a = _load(without_path)
+    for label, a in (("with", with_a), ("without", without_a)):
+        who, errs = check_answers(a)
+        if errs:
+            errors += [f"{label}: {e}" for e in errs]
+    if errors:
+        return {"subject": subject or "unnamed", "signals": list(UTILITY_SIGNALS),
+                "with": {}, "without": {}, "delta": {}, "gain": "invalid",
+                "boundary": [], "errors": errors}
+
+    w = answer_signals(_answers_blob(with_a), sig)
+    wo = answer_signals(_answers_blob(without_a), sig)
+    delta = {k: int(w[k]) - int(wo[k]) for k in UTILITY_SIGNALS}
+    n_delta = sum(max(0, d) for d in delta.values())
+    n_with = sum(1 for k in UTILITY_SIGNALS if w[k])
+    n_without = sum(1 for k in UTILITY_SIGNALS if wo[k])
+    if n_delta >= 2 and n_with >= 3 and n_without <= 1:
+        gain = "significant"
+    elif n_delta >= 1:
+        gain = "moderate"
+    else:
+        gain = "none"
+    return {
+        "subject": subject or "unnamed",
+        "card": str(card_path),
+        "signals": list(UTILITY_SIGNALS),
+        "with": w, "without": wo, "delta": delta,
+        "counts": {"with": n_with, "without": n_without, "delta": n_delta},
+        "leaked_terms": leaked,
+        "gain": gain,
+        "boundary": [
+            "只判机械可判的行为特征（定位引用/引语复用/边界声明/术语复用），不覆盖结论正确性与说服力",
+            "with/without 由同一模型家族的不同会话产出，不是跨模型因果证据",
+            "无增益（none）是合法结论，不得为凑效果虚报",
+            "题面已出现的 tags 已从判据剔除（leaked_terms），否则答题者照抄题面即算命中",
+        ],
+        "errors": [],
+    }

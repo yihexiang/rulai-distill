@@ -1,4 +1,4 @@
-# rulai-distill · The Distillation Factory v1.7.0
+# rulai-distill · The Distillation Factory v1.8.0
 
 [中文版](./README.md) · [Install & Usage Guide](./GUIDE.md) · [Capability inventory](./CAPABILITIES.md)
 
@@ -11,7 +11,7 @@ verifiable, traceable Agent Skill — not a summary, not a book report.
 [![Contract & vendor](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml/badge.svg)](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![python](https://img.shields.io/badge/python-%E2%89%A53.10-blue)
-![regression](https://img.shields.io/badge/regression-107%20passing-brightgreen)
+![regression](https://img.shields.io/badge/regression-109%20passing-brightgreen)
 
 > ### Most distillation tools solve *generation*. This one builds **proof**.
 > **No release without a passing gate — and an agent never grades itself.**
@@ -126,7 +126,7 @@ These are two claims with very different evidence, and we keep them apart on pur
 
 | Dimension | Status | Evidence |
 |---|---|---|
-| **Mechanical reliability** | ✅ trustworthy | 107 regression tests green; `gate` requires a cross-review record (verified live); `verify-quotes` / `anchor` / `lint-quotes` have each caught real problems on real material; the toolchain runs on **9 real cards** with zero crashes and zero false reds |
+| **Mechanical reliability** | ✅ trustworthy | 109 regression tests green; `gate` requires a cross-review record (verified live); `verify-quotes` / `anchor` / `lint-quotes` have each caught real problems on real material; the toolchain runs on **9 real cards** with zero crashes and zero false reds |
 | **Output correctness** | ⚠️ **closed loop proven, still material-dependent** | `eval-kit` has run a **real cross-review** on **6 cards** (independent answerer + 2 independent graders): sample card **93/A**, `musk-decisions` **90/A**, `bazi-paipan` **93/A**, `geju-yunshi` **95/A**, `quming-xue` **96/A**, `zhouyi-yili` **96/A**. ⚠️ All are **structurally** independent, not organizationally; the sample card is a showcase, **not** the average of open-ended material; the four guoxue cards share one corpus-prep style, so four passes is **not** four kinds of material validated. Per-claim evidence: [`docs/CLAIMS.md`](./docs/CLAIMS.md) |
 
 Concretely, what this project currently **cannot** do:
@@ -210,7 +210,7 @@ python3 scripts/td.py compile books/my-book --out ~/.workbuddy/skills/my-book --
 python3 scripts/td.py rollback ~/.workbuddy/skills/my-book --to latest
 ```
 
-**Regression suite**: `python3 tests/e2e.py` (107 tests, covering every command and the
+**Regression suite**: `python3 tests/e2e.py` (109 tests, covering every command and the
 vendored upstreams).
 
 ---
