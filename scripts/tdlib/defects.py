@@ -530,8 +530,21 @@ DEFECTS = [
      "論語卡 A1 写「评分 Agent 核查确认：叙事出现次数为 0」，但实际没有评分 Agent 做过这件事（只是建卡时全库检索）；SOURCES/scale-evidence 写「引语逐字锚定」暗示自动段级锚定，而当时 anchor 根本不认篇-章号",
      "改为「建卡时对 anchored 语料全库检索确认」；段级锚定改由 `td.py anchor` 真实跑出（32 候选 / 12 命中 / 0 挂错）并写明命令可复跑",
      "major", "structure_gap",
-     "进度研判（2026-10-10）点名：論語卡 A1 的「评分 Agent 核查确认」无法佐证；同模式还存在于 sample-bundle 的 five-affairs 卡（未在本轮改）",
+     "进度研判（2026-10-10）点名：論語卡 A1 的「评分 Agent 核查确认」无法佐证；同模式还存在于 sample-bundle 的 five-affairs 卡（已由 #73 收尾修正）",
      ["t_lunyu_card_no_overclaim"]),
+    ("examples/sample-bundle/skills/five-affairs-seven-questions",
+     "#72 同款：卡片 A1 用「评分 Agent 核查确认」当背书，而评分 Agent 并未在建卡环节核查过任何东西",
+     "措辞与論語卡（#72）同构。与論語卡的区别：这里的事实（第1段叙事关键词出现次数全为 0）"
+     "在第一轮质检历史报告（eval/fidelity-report.md 108-109 行）确有记录——**声称有据，但出处是被"
+     "标注 superseded 的历史文件**，读者按卡片措辞找不到可追溯的权威出处，且把建卡期事实核查"
+     "错记成了质检者的功劳",
+     "A1 改为「建卡时对 anchored 语料全库检索确认（可机械复算）」+ 显式引用历史报告并注明"
+     "「已被结构化 FIDELITY.json 取代，字段以 JSON 为准」；机制化收尾：新增成品卡扫描守卫"
+     "（评分者背书属质检环节，记录在 FIDELITY.json/报告，不进卡片正文），含负向探针",
+     "major", "structure_gap",
+     "真实水平评估（2026-10-10）杠杆 1：收尾 #72 同类。查证后确认与 #72 的差异——five-affairs "
+     "有历史报告背书，病灶是「出处是被取代的文件+角色错记」，不是凭空捏造",
+     ["t_cards_no_grader_backed_claims"]),
 ]
 
 

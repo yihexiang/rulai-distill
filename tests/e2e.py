@@ -3567,6 +3567,35 @@ def t_lunyu_card_no_overclaim():
         "scale-evidence 不得用「引语逐字锚定」过度声称"
 
 
+def t_cards_no_grader_backed_claims():
+    """#73：所有成品卡正文不得出现「评分 Agent 核查确认」措辞。
+
+    「评分 Agent 的核查」属于质检环节，其记录的唯一合法出处是 FIDELITY.json / 质检报告；
+    卡片正文（建卡产物）引用它当背书 = 把质检者拉来给建卡事实站台（#72 論語卡 / #73 five-affairs
+    同一病灶）。卡片要引用质检发现，必须像 five-affairs 现在的写法：写明出处文件与取代关系。
+    守卫含**负向探针**（#65：只跑正向等于检查器永远绿）。
+    """
+    offenders = []
+    for p in sorted((ROOT / "examples").rglob("SKILL.md")):
+        if "评分 Agent 核查确认" in p.read_text(encoding="utf-8"):
+            offenders.append(str(p.relative_to(ROOT)))
+    assert not offenders, (
+        "以下卡片正文仍含「评分 Agent 核查确认」（评分者背书属质检环节，"
+        f"记录在 FIDELITY.json/报告，不进卡片正文）：{offenders}")
+    # 负向探针：往 examples 塞一个含病灶措辞的临时卡，扫描必须能抓到（finally 保证清理）
+    probe_dir = ROOT / "examples" / "_guard_probe_tmp"
+    probe = probe_dir / "SKILL.md"     # rglob 按全名匹配 SKILL.md，探针必须放在子目录里
+    try:
+        probe_dir.mkdir(exist_ok=True)
+        probe.write_text("# 探针\n> 评分 Agent 核查确认：x=0\n", encoding="utf-8")
+        hit = [str(p.relative_to(ROOT)) for p in (ROOT / "examples").rglob("SKILL.md")
+               if "评分 Agent 核查确认" in p.read_text(encoding="utf-8")]
+        assert hit == ["examples/_guard_probe_tmp/SKILL.md"], f"负向探针未被扫到：{hit}"
+    finally:
+        if probe_dir.exists():
+            shutil.rmtree(probe_dir)
+
+
 def t_no_external_fixture_deps():
     """P0-1c：回归测试**不得静默依赖作者工作区**（`ROOT.parent` 之外的路径）。
 
@@ -3948,6 +3977,7 @@ def main() -> int:
         ("anchor 支持篇-章号定位（#71 正例/反例）", t_anchor_verse_locators),
         ("anchor 零核验收口为 UNVERIFIED（#71）", t_anchor_zero_anchor_is_na),
         ("論語卡无过度声称（#72）", t_lunyu_card_no_overclaim),
+        ("成品卡禁评分者背书措辞（#73）", t_cards_no_grader_backed_claims),
         ("回归不得依赖作者工作区（P0-1/#65）", t_no_external_fixture_deps),
         ("token 节省实测不产假数字（P0-3）", t_token_savings_benchmark),
         ("corpus-anchor 按结构切段（#70）", t_corpus_anchor_splits_by_structure),
