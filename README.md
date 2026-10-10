@@ -1,4 +1,4 @@
-# rulai-distill · 蒸馏工厂 v1.8.0
+# rulai-distill · 蒸馏工厂 v1.9.0
 
 把书籍 / 长视频 / 播客 / 访谈 / 人物素材，蒸馏成**可执行、可验证、可追溯**的 Agent Skills。
 
@@ -10,7 +10,7 @@
 [![Contract & vendor](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml/badge.svg)](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![python](https://img.shields.io/badge/python-%E2%89%A53.10-blue)
-![regression](https://img.shields.io/badge/regression-110%20passing-brightgreen)
+![regression](https://img.shields.io/badge/regression-112%20passing-brightgreen)
 
 > ### 别的蒸馏技能解决「生成」，这个解决「证明」。
 > **不打分不发版，而且不由自己打分。**
@@ -61,7 +61,7 @@ gate       →  默认要求 ≥2 个独立评分者交叉复核，否则**拒�
 
 ### 3️⃣ 缺陷有**台账**，而台账由测试强制相等
 
-本项目把自己的 74 个缺陷全部登记在 `CONSTRAINTS.md`，并逐条写成可机校验的 failure-case
+本项目把自己的 76 个缺陷全部登记在 `CONSTRAINTS.md`，并逐条写成可机校验的 failure-case
 （`td.py failure list`）：每条都带「当时怎么错的 / 应该是什么 / 严重级 / 对应回归测试」。
 **台账行数、分布数字、回归项数三者由测试强制相等——数字写错即 CI 红。**
 
@@ -80,8 +80,8 @@ gate       →  默认要求 ≥2 个独立评分者交叉复核，否则**拒�
 | `geju-yunshi` | 格局与运势（描述性） | **95 / A** | 同上（96 / 93，分差 3） |
 | `quming-xue` | 取名（依喜用神） | **96 / A** | 同上（96 / 95，分差 1） |
 | `zhouyi-yili` | 周易义理（处境分析） | **96 / A** | 同上（97 / 97，分差 0）——⚠️ 两个评分者**总分完全相同**，不构成两次独立证实 |
-| `lunyu-conduct` | 开放素材（論語·公版典籍） | **95 / A** | 同上（94 / 95，分差 1）；报告随包：`examples/open-bundle/skills/lunyu-conduct/FIDELITY.json`；R 段 12 条篇-章号引语另经 `td.py anchor` 全部 ANCHOR_HIT |
-| 9 张真实卡（八字 / 姓名学 / 周易 / 视频 / 人物 / 书 …） | 混合 | — | `validate` + `output-eval` + `lint-quotes` 实跑：**error 0、零崩溃、零假红** |
+| `lunyu-conduct` | 开放素材（論語·公版典籍） | **95 / A** | 同上（94 / 95，分差 1）；报告随包：`examples/open-bundle/skills/lunyu-conduct/FIDELITY.json` |
+| 13 张真实卡（含 5 张开放素材卡） | 混合 | — | `validate` + `output-eval` + `lint-quotes` 实跑：**error 0、零崩溃、零假红** |
 
 **这些数字的边界，写在明处**：独立性是**结构独立**（子 Agent 隔离）而非组织独立（没有第二个人复评）；
 `musk-decisions` 只测了 3 道人工题；样本卡是精修展示件，**不能代表开放素材的普遍水平**；
@@ -90,18 +90,24 @@ guoxue 那四张同属国学、同一套语料规整方式，**四张通过不�
 
 ### 开放素材臂（P0-2 · 2026-10-10 新增）
 
-上面 9 张卡覆盖**封闭 / 半封闭素材**（节选书、人物访谈、TED 视频）。P0-2 补齐了
-"**大规模公有领域文本**"这一类，证明工具链不只吃小样本，也能吃 25 万字节级的公版典籍：
+上面 13 张卡中，有 8 张覆盖**封闭 / 半封闭素材**（节选书、人物访谈、TED 视频）。
+另有 5 张是开放素材卡（见下表），证明工具链不只吃小样本，也能吃 25 万字节级的公版典籍：
 
-| 角色 | 内容 | 状态 |
-|---|---|---|
-| 抓取—规整—切片 | 4 套公版典籍：資治通鑑（魏紀）/ 孟子 / 韓非子 / 論語，合计 **252,492 字节原始 / 90,288 净字符 / 226 抓取段** | `fetch_wikisource` → `corpus-anchor` 实跑，无崩溃 |
-| 端到端建卡 | `lunyu-conduct`（論語 → 言行识人框架） | `validate` + `lint-quotes` 通过；R 段 12 条篇-章号引语 `td.py anchor` 全部 ANCHOR_HIT（0 挂错） |
-| 独立交叉复核 | `lunyu-conduct` | ✅ **95 / A**（独立答题 + 2 个独立评分 Agent：94 / 95，分差 1） |
-| 其余 3 套语料 | 通鉴 / 孟子 / 韓非子 | 抓取—规整—切片就绪，建卡为下一增量 |
+| 卡片 | 素材形态 | anchor 实跑 | 交叉复核 |
+|---|---|---|---|
+| `lunyu-conduct` | 論語 · 语录体 | 13 条 ANCHOR_HIT / 0 挂错 | ✅ **95 / A**（94/95，分差 1） |
+| `tongjian-decision-trace` | 資治通鑑 · 编年叙事史（5.9 万字） | 69 条 ANCHOR_HIT / 0 挂错 | **未跑**（仅机器核验） |
+| `mengzi-refutation` | 孟子 · 对话体辩说 | 34 条 ANCHOR_HIT / 0 挂错 | **未跑**（仅机器核验） |
+| `hanfei-upward-advice` | 韓非子 · 论说体 | 86 条 ANCHOR_HIT / 0 挂错 | **未跑**（仅机器核验） |
+| `xunzi-learning-order` | 荀子·勸學篇 · 论说体短篇 | 94 条 ANCHOR_HIT / 0 挂错 | **未跑**（仅机器核验） |
 
-逐条规模证据与已知边界见 [`docs/scale-evidence-open-material-2026-10-10.md`](./docs/scale-evidence-open-material-2026-10-10.md)
-（与本仓库同工作区）。
+**5 张卡覆盖 4 类文本形态、合计 239 段 / 91,338 字、296 条带段号引语全部锚定成功且 0 挂错**
+（逐张命令可复跑，`t_open_material_distribution` 会把报告表格里的数字与实跑**逐张对账**）。
+⚠️ 其中只有 `lunyu-conduct` 走过独立交叉复核，其余 4 张**只有机器核验**——
+它们证明的是"管线跑得通、句句可核"，**不是"卡片质量已被独立证实"**。
+
+分布明细、复跑命令与边界见 [`docs/open-material-distribution-2026-10-10.md`](./docs/open-material-distribution-2026-10-10.md)；
+规模证据见 [`docs/scale-evidence-open-material-2026-10-10.md`](./docs/scale-evidence-open-material-2026-10-10.md)。
 
 **开放素材臂的边界（同样写在明处）**：
 
@@ -170,7 +176,7 @@ python3 scripts/td.py eval-kit utility \
 
 | 维度 | 状态 | 证据 |
 |---|---|---|
-| **机械可靠性** | ✅ 可信 | 110 项回归全绿；`gate` 默认要求交叉复核记录（实测生效）；`verify-quotes`/`anchor`/`lint-quotes` 均在真实素材上抓到过真问题；工具链在 **9 张真实卡**上实跑零崩溃、零假红 |
+| **机械可靠性** | ✅ 可信 | 112 项回归全绿；`gate` 默认要求交叉复核记录（实测生效）；`verify-quotes`/`anchor`/`lint-quotes` 均在真实素材上抓到过真问题；工具链在 **13 张真实卡**上实跑零崩溃、零假红 |
 | **产出正确性** | ⚠️ **已跑通闭环，仍强依赖素材** | `eval-kit` 已在 **7 张卡**上跑通**真实交叉复核**（独立答题 Agent + 2 个独立评分 Agent）：样本卡 `five-affairs` **93/A**、`musk-decisions` **90/A**，guoxue 四张 **93/95/96/96（A）**，开放素材 `lunyu-conduct` **95/A**。⚠️ 这些是**结构独立**而非组织独立；样本卡是精修展示件，**不能代表开放素材的普遍水平** |
 
 具体地说，这个项目目前**做不到**的事：
@@ -181,11 +187,11 @@ python3 scripts/td.py eval-kit utility \
 2. **独立性只在「结构」层面成立，不是「组织」层面。** 这条已被真实跑通（`eval-kit`：独立答题子 Agent +
    2 个独立评分子 Agent），但它仍是同一台机器上的子 Agent —— **没有第二个人复评**，
    且子 Agent 落盘在长任务下仍不稳定（历史实测派 4 次仅 1 次可靠落盘）。
-3. **开放素材上只有 1 张卡交叉复核，且为结构独立。** `eval-kit` 已在 **7 张**卡上跑通交叉复核
-   （6 张封闭 / 半封闭 + 1 张开放公版卡 `lunyu-conduct` 95/A；其中 `musk-decisions` 仅测 3 道人工题）；
-   但开放素材臂的整体分布（≥5 例、≥4 类素材）尚未建立——通鉴 / 孟子 / 韓非子三套语料就绪待建卡。
-   **9 张真实卡**（封闭 / 半封闭）+ 1 张开放素材卡跑工具链零崩溃，但那证明的是「工具能跑」，
-   **不是「卡片都好」**。
+3. **开放素材已有 5 张卡，但只有 1 张过了交叉复核。** 分布（≥5 例、4 类文本形态）
+   已建立（見上表），`anchor` 合计 **296 条引语 0 挂错**；但交叉复核仍只有
+   **7 张**（6 张封闭 / 半封闭 + 1 张开放公版卡 `lunyu-conduct` 95/A），
+   其余 4 张开放素材卡**只有机器核验，没有 FIDELITY、没有独立评分、没有效用对照**。
+   **13 张真实卡**跑工具链零崩溃，但那证明的是「工具能跑」，**不是「卡片都好」**。
 
 **它现在适合当什么用**：流程骨架与门禁参考 —— 校验、门禁、快照、回滚、契约化产物这一层是扎实的，可以直接复用。
 **不适合当什么用**：「喂素材就得到高质量卡片」的自动机。
@@ -249,7 +255,7 @@ python3 scripts/td.py compile books/my-book --out ~/.workbuddy/skills/my-book --
 python3 scripts/td.py rollback ~/.workbuddy/skills/my-book --to latest
 ```
 
-**回归测试**：`python3 tests/e2e.py`（110 项，覆盖全部命令与 vendored 上游实跑）
+**回归测试**：`python3 tests/e2e.py`（112 项，覆盖全部命令与 vendored 上游实跑）
 
 > 📖 命令速查见 [`references/command-cheatsheet.md`](./references/command-cheatsheet.md)（37 个子命令）；
 > 第一次用请看 [`GUIDE.md`](./GUIDE.md) —— 完整流程 + 真实输出 + 故障排查表。
@@ -260,7 +266,7 @@ python3 scripts/td.py rollback ~/.workbuddy/skills/my-book --to latest
 
 `rulai-distill` 融合了三个开源项目的长处，并把它们的**契约**升格为权威标准。
 
-| 能力 | 来源 | rulai-distill v1.8.0 |
+| 能力 | 来源 | rulai-distill v1.9.0 |
 |---|---|---|
 | 结构感知分块 + 缓存 | cangjie `build_chunks` | **上游内置** `td.py upstream run chunk`；本包 `td.py chunk` 兜底 |
 | SQLite FTS5 词法索引 + 邻接块 | cangjie `build_index` | **上游内置** `td.py upstream run lexindex` |
@@ -307,7 +313,7 @@ rulai-distill/
 ├── SKILL.md                  ← Agent 加载的入口（渐进式披露）
 ├── GUIDE.md                  ← 安装与完整流程（第一次用看这个）
 ├── CAPABILITIES.md           ← 16 类上游能力逐项归属 + 自研清单 + 声明不做
-├── CONSTRAINTS.md            ← 74 条自身缺陷台账（每条对应回归测试）
+├── CONSTRAINTS.md            ← 76 条自身缺陷台账（每条对应回归测试）
 ├── methodology/              ← 00 全景 / 01 提取 / 02 三重验证 / 03 晋级门 / 04 压力测试 / 05 FIDELITY
 ├── extractors/               ← framework / principle / case / counter-example / glossary / persona
 ├── templates/                ← CAPABILITY / PERSONA / FIDELITY / TEST-SUITE / BOOK_OVERVIEW
@@ -323,7 +329,7 @@ rulai-distill/
 │   │                            / fidelity / evalkit / anchor / lintquotes / strategy / publish
 │   │                            / evals / evolve / promptc / upstream
 │   └── vendor/cangjie/       ← 上游 MIT 原件 + PROVENANCE.md（不改）
-└── tests/e2e.py              ← 端到端回归（110 项，双解释器各跑一遍）
+└── tests/e2e.py              ← 端到端回归（112 项，双解释器各跑一遍）
 ```
 
 ---

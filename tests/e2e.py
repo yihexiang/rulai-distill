@@ -3687,6 +3687,144 @@ def t_anchor_verse_locators():
     run(["anchor", str(fx / "card-bad.md"), "--corpus", str(fx / "corpus.md")], expect=1)
 
 
+def t_open_material_distribution():
+    """开放素材分布 ≥5 例：md 表格里的数字必须与 `anchor` **实跑结果逐张对账**。
+
+    为什么要写成回归而不是"写进文档就算"：这张分布表是本项目的一个核心对外声称
+    （"能消化多种开放素材"），而它的数字极易腐烂——改一次卡片、或者改一次 anchor 口径
+    （#77/#78 正是这么发生的：lunyu 卡从"12 条"变成"13 条"，文档若不跟着改就变成假声称）。
+    这里做双向锁定：①每张卡 `anchor` 必须 PASS 且 0 挂错；②报告表格里的 ANCHOR_HIT /
+    UNANCHORED 两列必须等于实跑值；③claim-level 来源状态区块必须在场且逐条带标签。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import anchor as A
+
+    report = ROOT / "docs" / "open-material-distribution-2026-10-10.md"
+    assert report.exists(), f"分布报告缺失：{report}"
+    cards = {
+        "lunyu-conduct": "src-06-lunyu.md",
+        "tongjian-decision-trace": "src-01-tongjian-wei.md",
+        "mengzi-refutation": "src-02-mengzi.md",
+        "hanfei-upward-advice": "src-04-hanfeizi.md",
+        "xunzi-learning-order": "src-07-xunzi.md",
+    }
+    assert len(cards) >= 5, f"开放素材卡不足 5 例：{len(cards)}"
+
+    md = report.read_text(encoding="utf-8")
+    # 只取「二、机械核验实跑结果」这一节的表格——第五节也有同形 4 列表（claim-level 分布），
+    # 按整份文件解析会把两张表串在一起（实测第一次就报出 (2,3) 这种错值）。
+    sec = md.split("## 二、")[1].split("## 三、")[0]
+    claimed = {}
+    for ln in sec.splitlines():
+        cells = [c.strip() for c in ln.strip().strip("|").split("|")]
+        if len(cells) == 4 and cells[0].startswith("`") and cells[0].endswith("`"):
+            slug = cells[0].strip("`")
+            if slug in cards and cells[1].isdigit() and cells[2].isdigit():
+                claimed[slug] = (int(cells[1]), int(cells[2]))
+    assert len(claimed) == len(cards), \
+        f"报告缺少某些卡的数字行（解析到 {sorted(claimed)}，应有 {sorted(cards)}）"
+
+    total_hit = 0
+    for slug, corpus in cards.items():
+        card = ROOT / "examples" / "open-bundle" / "skills" / slug / "SKILL.md"
+        # 语料随本仓库分发（`corpus/anchored/`），与卡片 source_locator 的路径完全一致——
+        # 回归不得依赖作者私有的 scale-run/ 工作区（P0-1/#65），外部用户 clone 后必须能原样复算
+        corpora_path = ROOT / "corpus" / "anchored" / corpus
+        assert card.exists(), f"卡片缺失：{card}"
+        assert corpora_path.exists(), f"语料缺失：{corpora_path}"
+        rep = A.verify_file(card, A.load_corpora([corpora_path]))
+        assert rep["verdict"] == "PASS", f"{slug} 必须 PASS：{rep['tally']} {rep['failures'][:2]}"
+        assert rep["failures"] == [], f"{slug} 不得有挂错段号：{rep['failures'][:2]}"
+        hit = rep["tally"].get("ANCHOR_HIT", 0)
+        unanchored = len(rep["unanchored_quotes"])
+        total_hit += hit
+        assert (hit, unanchored) == claimed[slug], \
+            (f"{slug} 报告数字与实跑不符：报告 {claimed[slug]}，实跑 ({hit}, {unanchored})。"
+             "改卡或改 anchor 口径后请同步 docs/open-material-distribution-2026-10-10.md")
+        # claim-level：声明了区块就必须逐条标注（缺标签由 t_validate_claim_status 守 error）
+        body = card.read_text(encoding="utf-8")
+        assert "## 来源状态" in body, f"{slug} 缺来源状态区块"
+        m = re.search(r"^##\s*来源状态.*?$([\s\S]*?)(?=^##\s|\Z)", body, re.M)
+        rows = [ln for ln in (m.group(1) if m else "").splitlines()
+                if re.match(r"^\s*[-*]\s+\S", ln)]
+        assert rows and all(re.match(r"^\s*[-*]\s*\[(?:原文|通法|本卡规则)\]", ln) for ln in rows), \
+            f"{slug} 来源状态有未标注的论断：{[r[:40] for r in rows if not re.match(r'^\\s*[-*]\\s*\\[(?:原文|通法|本卡规则)\\]', r)]}"
+    assert total_hit >= 250, f"ANCHOR_HIT 总数偏低（{total_hit}），分布样本可能不足"
+
+
+def t_anchor_inline_attribution():
+    """#77/#78：同行引号的**归属范围**——段号只绑定作者真的给了出处的那几句。
+
+    #77（假 FAIL 方向）：一行里出现 §N 时，旧实现把**这一行所有引号串**都当成
+    "声明在该段的引语"。作者写在解释语里的强调引号、自造术语、占位词于是被拽进核验器：
+    语料里没有 → NOT_IN_CORPUS **假 FAIL**（xunzi 卡初稿死在这条上）；
+    恰好也在语料里 → 假 ANCHOR_HIT，把没出处的词伪装成核实过的。
+    现在：只有**紧邻段号标记**（或并列引语链）的引号串才归属该段，其余归 UNANCHORED。
+
+    #78（漏检方向）：反过来不许漏。`第N段「…」` `「…」§N` 都是合法的给出处写法，
+    不认它们就等于让整批真引语逃脱核验（引用数 ≠ 核验数，C10）。
+
+    负向探针：真挂错段号仍必须 FAIL——不许把"放宽"做成"放过"。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import anchor as A
+
+    with tempfile.TemporaryDirectory() as d:
+        base = Path(d)
+        corpus = base / "corpus.md"
+        corpus.write_text(
+            "【第2段】\n士不可以不弘毅，任重而道遠。\n\n"
+            "【第3段】\n學而不思則罔，思而不學則殆。\n",
+            encoding="utf-8")
+        corpora = A.load_corpora([corpus])
+
+        def card(name: str, text: str) -> dict:
+            p = base / name
+            p.write_text(f"# 探针\n\n{text}\n", encoding="utf-8")
+            return A.verify_file(p, corpora)
+
+        # —— 1. #77：解释语里的自造术语不得被当成引语（不得 FAIL）——
+        rep = card("p1.md",
+                   "§2「士不可以不弘毅，任重而道遠。」）：办法是把材料排成"
+                   "「自造術語不需要也不應該被核驗」两级")
+        assert rep["verdict"] == "PASS", \
+            f"自造术语不得判 FAIL（#77）：{rep['tally']} {rep['failures']}"
+        assert rep["anchored_checked"] == 1, \
+            f"只应核验紧跟 §2 的那一条：anchored_checked={rep['anchored_checked']}"
+        assert len(rep["unanchored_quotes"]) == 1, \
+            f"自造术语应归 UNANCHORED：{rep['unanchored_quotes']}"
+
+        # —— 2. #78：`第N段「…」` 书类惯用写法必须识别并核验 ——
+        rep = card("p2.md", "第2段「士不可以不弘毅，任重而道遠。」")
+        assert rep["anchored_checked"] == 1 and rep["tally"].get("ANCHOR_HIT") == 1, \
+            f"「第N段」写法必须被核验（#78）：{rep['tally']} {rep['anchored_checked']}"
+
+        # —— 3. #78：后置段号 `「…」§N` 同样给出了出处 ——
+        rep = card("p3.md", "方法论是「士不可以不弘毅，任重而道遠。」§2 的延伸")
+        assert rep["anchored_checked"] == 1 and rep["tally"].get("ANCHOR_HIT") == 1, \
+            f"后置段号必须被核验（#78）：{rep['tally']} {rep['anchored_checked']}"
+
+        # —— 4. #78：并列引语共享同一个段号 ——
+        rep = card("p4.md",
+                   "§2「士不可以不弘毅」／「任重而道遠。」")
+        assert rep["anchored_checked"] >= 1, \
+            f"并列引语不得整条逃脱：anchored_checked={rep['anchored_checked']}"
+
+        # —— 5. 负向探针：真挂错段号必须仍 FAIL（不许把放宽做成放过）——
+        rep = card("p5.md", "§3「士不可以不弘毅，任重而道遠。」")
+        assert rep["verdict"] == "FAIL", f"挂错段号仍必须判 FAIL（防止误放宽）：{rep['tally']}"
+        assert rep["failures"][0]["verdict"] == "SPAN_HIT", rep["failures"]
+
+    # CLI 端到端：#77 探针卡 exit 0
+    with tempfile.TemporaryDirectory() as d:
+        c = Path(d) / "card.md"
+        c.write_text("§2「士不可以不弘毅，任重而道遠。」：另有一句「自造術語別來亂」\n",
+                     encoding="utf-8")
+        corp = Path(d) / "corpus.md"
+        corp.write_text("【第2段】\n士不可以不弘毅，任重而道遠。\n", encoding="utf-8")
+        run(["anchor", str(c), "--corpus", str(corp)], expect=0)
+
+
 def t_anchor_zero_anchor_is_na():
     """#71：三态收口——卡片有引语但**零条可核验**（无任何 §N/段号/篇-章号/时间戳），
     必须判 UNVERIFIED 而非 PASS（软 PASS 假绿），且 CLI 必须 die（exit≠0）。
@@ -4168,6 +4306,8 @@ def main() -> int:
         ("anchor 无 §N 引语不计失败（复审 #1）", t_anchor_unanchored_not_fail),
         ("anchor 中文短引语不被丢（#61）", t_anchor_cjk_short_quotes),
         ("anchor 支持篇-章号定位（#71 正例/反例）", t_anchor_verse_locators),
+        ("anchor 同行引号归属 + 段号写法覆盖（#77/#78）", t_anchor_inline_attribution),
+        ("开放素材分布 ≥5 例 · 报告数字与实跑对账", t_open_material_distribution),
         ("anchor 零核验收口为 UNVERIFIED（#71）", t_anchor_zero_anchor_is_na),
         ("論語卡无过度声称（#72）", t_lunyu_card_no_overclaim),
         ("成品卡禁评分者背书措辞（#73）", t_cards_no_grader_backed_claims),

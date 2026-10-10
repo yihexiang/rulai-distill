@@ -30,8 +30,8 @@ verification:
 
 > 注：引语一律**逐字抄自底稿原字形**（繁体），以保证可机械核验；释文用简体。
 > 底稿取自维基文库公有领域原文，一手来源占比 1.0（见 SOURCES.md）。
-> 注2：frontmatter 的 `source_locator` 指向**蒸馏工作区**的语料路径（`corpus/anchored/src-06-lunyu.md`），
-> 语料本身不随技能发布；取源页面、清洗方式与完整性自检见同目录 SOURCES.md。
+> 注2：frontmatter 的 `source_locator` 指向本仓库随包分发的语料（`corpus/anchored/src-06-lunyu.md`），
+> 语料随本仓库分发（clone 后即可按下面命令原样复算）；取源页面、清洗方式与完整性自检见同目录 SOURCES.md。
 
 ## R — Reading（原文锚点）
 

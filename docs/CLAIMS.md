@@ -14,17 +14,17 @@
 
 <!-- facts:begin -->
 ```text
-tests = 110
+tests = 112
 subcommands = 37
-defects = 74
+defects = 76
 ```
 <!-- facts:end -->
 
 | 量 | 值 | 怎么数的 |
 |---|---|---|
-| 回归项 | **110** | `tests/e2e.py` 的注册表条目数 |
+| 回归项 | **112** | `tests/e2e.py` 的注册表条目数 |
 | 子命令 | **37** | `td.py --help` 里 argparse 打印的 choices |
-| 缺陷台账 | **74** | `tdlib/defects.py` 的 `DEFECTS` 长度 |
+| 缺陷台账 | **76** | `tdlib/defects.py` 的 `DEFECTS` 长度 |
 
 正文里的数字由 `docs/verify_claims.py --sync` 从上面那段的实测值统一改写，
 **人手填的数字一律腐烂**。默认（不加 `--sync`）只校验、不改写，所以 CI 里是纯检查。
@@ -36,7 +36,7 @@ defects = 74
 | 端到端回归全绿，且**新机器 clone 后也全绿**（不靠跳过） | `t_no_external_fixture_deps` · `t_no_unregistered_tests` | 2026-10-10 |
 | `gate` 默认要求交叉复核记录，单评分一律不判通过 | `t_gate_requires_cross_review` · `t_ci_artifact_gate` | 2026-10-10 |
 | `verify-quotes` / `anchor` / `lint-quotes` 在**真实素材**上抓到过真问题 | `t_verify_quotes_misplaced_vs_fabricated` · `t_anchor_cjk_short_quotes` · `t_lint_quotes_technical_and_sectional` | 2026-10-10 |
-| 工具链在**9 张真实卡**上实跑 `validate`，**error 0** | `t_real_sample_artifacts` · 逐卡 `td.py validate <发布根>`（见下表） | 2026-10-10 |
+| 工具链在**13 张真实卡**上实跑 `validate`，**error 0** | `t_real_sample_artifacts` · 逐卡 `td.py validate <发布根>`（见下表） | 2026-10-10 |
 | 交叉复核已在 **7 张卡**上跑通（独立答题 Agent + 2 个独立评分 Agent） | `t_gate_requires_cross_review` · 逐张 `FIDELITY.json`（见下表） | 2026-10-10 |
 | 独立性的边界是「**结构独立 ≠ 组织独立**」 | `t_gate_requires_cross_review` | 2026-10-10 |
 | 引语核验只能证明「它检查过的那一面」 | `t_verify_quotes_lang_filter_not_silent` · `t_anchor_unanchored_not_fail` | 2026-10-10 |
@@ -47,8 +47,9 @@ defects = 74
 | 回归测试**不得静默依赖作者工作区** | `t_no_external_fixture_deps` | 2026-10-10 |
 | CI 的每一步都能在本地跑通（不必等CI 才发现） | `t_self_validate_clean_and_doc_structure` · `tests/ci_local.sh` | 2026-10-10 |
 | 开放素材端到端已闭环：論語卡（公版典籍）随包分发，通过 `validate` + `lint-quotes` + **独立交叉复核（95/A，gap 1）**，印证工具链能消化 25 万字节级公版语料（不止小样本） | `t_real_sample_artifacts` · `t_corpus_anchor_splits_by_structure` · `t_gate_requires_cross_review` · `scale-evidence-open-material-2026-10-10.md` | 2026-10-10 |
+| 开放素材**分布已达 5 例**：5 张卡覆盖 4 类文本形态（语录 / 编年叙事 / 对话辩说 / 论说×2），合计 239 段 / 91,338 字；**296 条带段号引语全部锚定成功、0 挂错**（逐张命令可复跑）。⚠️ 其余 4 张**只过机器核验，未交叉复核**（不是"已被证实"的证据） | `t_open_material_distribution`（报告表格数字与 `anchor` 实跑**逐张对账**） · `docs/open-material-distribution-2026-10-10.md` | 2026-10-10 |
 
-## 逐卡证据（不是"12 张"，实测 9 张）
+## 逐卡证据（不是"12 张"，实测 13 张）
 
 `validate` 必须在**发布根**上跑，不是单个技能目录——
 单技能目录里那些 `../../README.md`、`../geju-yunshi/` 是合法的兄弟链接，
@@ -66,6 +67,10 @@ defects = 74
 | `quming-xue` | `guoxue-skills` | error 0 | **96 / A**（96/95，gap 1） |
 | `zhouyi-yili` | `guoxue-skills` | error 0 | **96 / A**（97/97，gap 0） |
 | `lunyu-conduct`（开放·論語） | `examples/open-bundle` | error 0 | **95 / A**（94/95，gap 1；2026-10-10 跑通，开放素材首张） |
+| `tongjian-decision-trace`（开放·資治通鑑） | `examples/open-bundle` | error 0 | **未跑**（仅机器核验：anchor 69 / 挂错 0） |
+| `mengzi-refutation`（开放·孟子） | `examples/open-bundle` | error 0 | **未跑**（仅机器核验：anchor 34 / 挂错 0） |
+| `hanfei-upward-advice`（开放·韓非子） | `examples/open-bundle` | error 0 | **未跑**（仅机器核验：anchor 86 / 挂错 0） |
+| `xunzi-learning-order`（开放·荀子） | `examples/open-bundle` | error 0 | **未跑**（仅机器核验：anchor 94 / 挂错 0） |
 
 **交叉复核 7 张里有两处要单独说**：`zhouyi-yili` 两个评分者给出**完全相同**的总分，
 那不构成两次独立证实——`eval-kit check` 会就"多个评分给相同分数"发提醒，

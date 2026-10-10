@@ -102,6 +102,80 @@ def _verse_outro(text: str) -> tuple[str | None, str] | None:
     return (vm.group(1), vm.group(2))
 
 
+# --------------------------------------------------------------------------
+# #77：同行段号的**归属范围**——段号只绑定紧跟其后的那句
+# --------------------------------------------------------------------------
+# 旧实现：一行里只要出现 §N，**这一行所有引号串**都被当成"声明在该段的引语"。
+# 于是作者写在解释语里的强调引号、自造术语、占位词（它们同样是「…」/"…" 形状）
+# 会被拽进核验器，产生两个方向的错：
+#   (a) 语料里没有 → NOT_IN_CORPUS **假 FAIL**（xunzi 卡初稿有 2 条死在这上：
+#       `§8「其義則始乎爲士，終乎爲聖人。」：把材料排成「入口材料 → 框架／规范」`，
+#       后半句中的「入口材料 → 框架／规范」是作者自造术语，却被当成"声明在 §8 的引语"）；
+#   (b) 恰好也在语料里 → **假 ANCHOR_HIT**，把本来没有出处的词伪装成核实过的；
+# 更隐蔽的是：命令打印的仍是一份"看起来很严"的核验清单，**数量看起来更多**，
+# 反而显得更可信——这与 #61 那种"静默丢弃"是同一枚硬币的反面：**静默塞入**。
+#
+# 正确的语义：**作者紧跟在段号标记后面写的那句，才是他给出出处的那句**。
+# 一行里更靠后的引号串属于作者的措辞，<｜hy_place▁holder▁no▁813｜>它们没有段号 → 归 UNANCHORED（不计失败）。
+INLINE_GAP_MAX = 3                       # 段号标记与引语之间允许的非空白字符数
+INLINE_GAP_OK = re.compile(r"^[\s（）()：:，,、＋+—*]*$")
+# 并列引语共享同一个段号：`§48「是子厚幣事吾左右以求譽也。」／「是日，烹阿大夫…。」`
+# 第二句前面隔着的是**前一条引语本身 + 分隔符**，语义同样属于这一段。
+# 只认"紧贴着上一条引语结尾"的形状，作者的解释性文字（`…。」：把材料排成「…」`）不匹配。
+GAP_CHAIN_RE = re.compile(r"^[^\n]{0,600}[」”\"』]\s*[／/、,，]?\s*$")
+_QUOTE_SPAN_RE = re.compile(r'"([^"\n]{4,600})"|[「“]([^」”\n]{4,600})[」”]')
+# #78：书类卡常把出处写成「第N段「…」」，而不写 §N。旧实现只认 §N，
+# 于是这类写法里的**真引语整批逃脱核验**——工具明明在 UNANCHORED 提示里
+# 报得出"在语料 §4 命中"，却因为标记形状不同而不把它算作已核验（引用数 ≠ 核验数，C10）。
+# 收取条件从紧：后随引号 且 前一个字符不是汉字（`最重要的是第4段` 这类叙述不算标记）。
+SEG_INLINE_RE = re.compile(r"第\s*(\d+)\s*[段条]")
+
+
+def cite_marks(line: str) -> list[tuple[int, int, str, str | None, int]]:
+    """本行所有**候选定位标记**。返回 [(start, end, kind, src, num)]，kind ∈ {para, seg}。"""
+    marks: list[tuple[int, int, str, str | None, int]] = []
+    for m in CITE_RE.finditer(line):
+        marks.append((m.start(), m.end(), "para", m.group(1), int(m.group(2))))
+    for m in SEG_INLINE_RE.finditer(line):
+        prev = line[m.start() - 1] if m.start() > 0 else ""
+        if prev and CJK_CHAR_RE.match(prev):
+            continue                      # 夹在汉字中间的"第4段"多半是叙述
+        if not re.match(r"\s*[「“\"『]", line[m.end():]):
+            continue                      # 后面没有引号，不像"给这句标出处"
+        marks.append((m.start(), m.end(), "seg", None, int(m.group(1))))
+    return marks
+
+
+def inline_owned_quotes(line: str) -> set[str]:
+    """返回本行中**紧跟在定位标记之后**的引号串内容（其余 quote 不归属任何段号）。"""
+    owned: set[str] = set()
+    marks = cite_marks(line)
+    if not marks:
+        return owned
+    cite_ends = [e for _s, e, *_ in marks]
+    cite_starts = [s for s, *_ in marks]
+
+    def _ok(gap: str | None) -> bool:
+        if gap is None:
+            return False
+        if len(gap.strip()) <= INLINE_GAP_MAX and INLINE_GAP_OK.match(gap):
+            return True
+        # 并列引语：隔着"上一条引语 + 分隔符"，同样归属本段
+        return bool(GAP_CHAIN_RE.match(gap))
+
+    for qm in _QUOTE_SPAN_RE.finditer(line):
+        text = qm.group(1) or qm.group(2) or ""
+        prior = [e for e in cite_ends if e <= qm.start()]
+        # 前缀式：`§4「…」`
+        gap_before = line[max(prior):qm.start()] if prior else None
+        # 后缀式：`「…」§4`（作者习惯把出的段号写在引语之后，同样给出了出处）
+        after = [s for s in cite_starts if s >= qm.end()]
+        gap_after = line[qm.end():min(after)] if after else None
+        if _ok(gap_before) or _ok(gap_after):
+            owned.add(text)
+    return owned
+
+
 class Corpus(dict):
     """`{int: str}` 的子类：**现有"当 dict 用"的代码零改动**，只额外挂定位索引。
 
@@ -507,15 +581,18 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str] | Corpus],
                 last_target = int(mseg.group(1))
         # 一行里可能有多个 §N（并列时间戳），也可能有多个引语
         cits: list[tuple[str | None, int, None]] = []
-        for m in CITE_RE.finditer(line):
-            stem = _resolve_src(m.group(1), corpora)
-            group = [int(m.group(2))]
-            # 吃掉并列锚点：§60/§74、§143/§144
-            tail = line[m.end():]
-            jm = re.match(r"((?:\s*/\s*§\d+)+)", tail)
-            if jm:
-                group += [int(x) for x in JOIN_RE.findall(jm.group(1))]
-            cits += [(stem, g, None) for g in group]
+        for _ms, me, kind, msrc, mnum in cite_marks(line):
+            stem = _resolve_src(msrc, corpora)
+            if kind == "para":
+                group = [mnum]
+                # 吃掉并列锚点：§60/§74、§143/§144
+                jm = re.match(r"((?:\s*/\s*§\d+)+)", line[me:])
+                if jm:
+                    group += [int(x) for x in JOIN_RE.findall(jm.group(1))]
+                cits += [(stem, g, None) for g in group]
+            else:
+                # 「第N段「…」」：书类卡的惯用写法（#78）
+                cits += [(stem, mnum, None)]
         # 篇-章号定位（如 一之三）：#71。《論語》类卡片用独占一行的篇-章号作细粒度段号。
         # 卡片侧三种形状（见 _verse_locator）：行首标签+引号 / 出处行 —— 标签 / 同行紧邻引号。
         vloc: tuple[str | None, int, str] | None = None
@@ -649,6 +726,8 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str] | Corpus],
                 entry["status"] = "unattributed" if not cits else "not_promoted"
             short_samples.append(entry)
         noise += len(_cands) - len(quotes) - len(skipped_here)
+        # #77：本行哪些引号串是真正"紧跟 §N"的（作者给了出处的那几句）
+        owned = inline_owned_quotes(line) if cits else set()
         for q in quotes:
             seen_quotes += 1
             is_short = q in short_cited
@@ -656,7 +735,10 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str] | Corpus],
             best_local = None
             # 书类块无内联 §N/篇-章号时，用块携带的段号（向后看取到的）作为目标
             if cits:
-                targets = cits
+                # 只认紧跟 §N 的那句；同行更靠后的引号串是作者措辞（强调/自造术语/占位词），
+                # 它们没有段号 → 归 UNANCHORED（不计失败），而不是被当成"声明在 §N 的引语"。
+                # owned 为空说明本行段号与任何引号串都不紧邻（罕见），退回旧口径避免漏核。
+                targets = cits if (q in owned or not owned) else [(default_src, None, None)]
             elif vloc:
                 targets = [vloc]
             elif block_target is not None:
@@ -690,7 +772,8 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str] | Corpus],
                                "candidates": [], "words": 0}
             r["line"] = lineno
             r["quote"] = q[:160]
-            r["anchored"] = bool(cits) or bool(vloc) or block_target is not None
+            r["anchored"] = (bool(cits) and (not owned or q in owned)) \
+                or bool(vloc) or block_target is not None
             r["short"] = is_short      # 短引语（<8 汉字但逐字见于语料）——见下方非对称规则
             r.setdefault("claimed_label", None)
             r.setdefault("found_label", None)
