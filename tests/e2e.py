@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import os
 import re
@@ -26,6 +27,53 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TD = ROOT / "scripts" / "td.py"
+
+# --------------------------------------------------------------------------
+# 外部工作区依赖登记册（P0-1c）
+# --------------------------------------------------------------------------
+# 规则（#65 的教训）：
+#   1. **默认不依赖仓库外任何路径** —— git clone 后必须直接全绿。
+#   2. 确实需要真实素材的测试，必须整段包在 `external_ws()` 守卫里：
+#      它只在显式设 `RULAI_WORKSPACE=1` **且**路径存在时才跑，否则整条测试
+#      报「未运行」而不是「通过」。
+#   3. 每一条都登记在这里，`t_no_external_fixture_deps` 强制
+#      「登记了就必须真的被守卫，守卫了才允许引用 ROOT.parent」。
+# 允许引用：真实素材只在作者本机跑（CI 拿不到，也不该去抓）。
+EXTERNAL_DEPS_WHITELIST = {
+    "video-run/sources/arj7oStGLkU.en.srt": "t_verify_quotes_real_transcript",
+    "video-run/skills/two-kinds-of-procrastination/SKILL.md":
+        "t_no_unqualified_absence_claims / t_disclosure_completeness / "
+        "t_disclosure_covers_uncovered",
+    "video-run/eval/FROZEN.snapshot.json": "t_eval_freeze_integrity",
+    "video-run/eval/style-decoys.md": "t_style_decoy_anonymity",
+    "video-run/sources/arj7oStGLkU.en.transcript.md":
+        "t_audit_coverage_runs / t_disclosure_covers_uncovered",
+    "video-run/（整目录，t_real_sample_artifacts）": "t_real_sample_artifacts",
+}
+
+_ENV_HINT = ("未运行：需要作者工作区的真实素材（设 RULAI_WORKSPACE=1 且存在 ../video-run/）"
+             "——这不是「通过」")
+
+
+def external_ws(rel: str) -> Path | None:
+    """返回仓库外素材路径；**不可用时返回 None**（调用方须如实报"未运行"）。
+
+    这是唯一允许的外部依赖入口。用它替换裸的 `ROOT.parent / ...`，
+    好处是「跳过」不再伪装成「通过」：调用方拿不到路径时会把该测试记为
+    `SKIPPED` 并在结尾打印清单。
+    """
+    base = ROOT.parent if os.environ.get("RULAI_WORKSPACE") == "1" else None
+    if base is None or not (base / rel).exists():
+        return None
+    return base / rel
+
+
+SKIPPED: list[tuple[str, str]] = []
+
+
+def skip_ws(test: str, what: str) -> None:
+    """把「因缺外部素材而未运行」如实登记，结尾会打印，绝不冒充通过。"""
+    SKIPPED.append((test, what))
 
 PASS, FAIL = [], []
 
@@ -1853,9 +1901,10 @@ def t_verify_quotes_real_transcript():
       3. cue 级引用与段落级引用都要支持
     语料为本地已抓取的 .srt 副本（video-run/sources），测试不联网。
     """
-    src = ROOT.parent / "video-run" / "sources" / "arj7oStGLkU.en.srt"
-    if not src.exists():
-        return  # 素材未随包分发时跳过（CI 里不联网抓取）
+    src = external_ws("video-run/sources/arj7oStGLkU.en.srt")
+    if src is None:
+        skip_ws("t_verify_quotes_real_transcript", "video-run 的 .srt 副本")
+        return
     sys.path.insert(0, str(ROOT / "scripts"))
     from tdlib import evals
     with tempfile.TemporaryDirectory() as d:
@@ -2117,8 +2166,9 @@ def t_no_unqualified_absence_claims():
     并要求它要么带了范围限定（就该处/本处/此处/该句），要么位于元描述框内。
     """
     import re
-    card = ROOT.parent / "video-run" / "skills" / "two-kinds-of-procrastination" / "SKILL.md"
-    if not card.exists():
+    card = external_ws("video-run/skills/two-kinds-of-procrastination/SKILL.md")
+    if card is None:
+        skip_ws("t_no_unqualified_absence_claims", "video-run 的 TED 卡")
         return
     _ABSENCE = re.compile(r"(找不到|查无)[^。；\n]{0,16}(支持|依据|文本|证据)")
     _SCOPED = ("就该处", "本处", "此处", "该句", "这一处", "在本处")
@@ -2145,8 +2195,9 @@ def t_eval_freeze_integrity():
     素材不在包内时跳过。
     """
     import hashlib
-    snap = ROOT.parent / "video-run" / "eval" / "FROZEN.snapshot.json"
-    if not snap.exists():
+    snap = external_ws("video-run/eval/FROZEN.snapshot.json")
+    if snap is None:
+        skip_ws("t_eval_freeze_integrity", "video-run 的冻结快照")
         return
     data = json.loads(snap.read_text(encoding="utf-8"))
     for key in ("card", "corpus"):
@@ -2163,24 +2214,28 @@ def t_eval_freeze_integrity():
 def t_real_sample_artifacts():
     """真实样本（书籍 / 人物 / 视频）三处产物必须齐备且可核验。"""
     import json as _json
-    base = ROOT.parent                       # run 已被 helper 占用，这里用 base
+    # 孙子样本卡随包分发 → **在干净 clone 上也必须真跑**，不得因外部素材缺失而跳过。
     sunzi = ROOT / "examples" / "sample-bundle" / "skills" / "five-affairs-seven-questions" / "SKILL.md"
-    musk = base / "musk-run" / "skills" / "musk-thinking" / "SKILL.md"
-    ted = base / "video-run" / "skills" / "two-kinds-of-procrastination" / "SKILL.md"
-    for name, pth in (("书籍(孙子)", sunzi), ("人物(马斯克)", musk), ("视频(TED)", ted)):
-        if not pth.exists():
+    assert sunzi.exists(), "样本卡应随包分发，缺失属打包事故"
+    externals = [("人物(马斯克)", external_ws("musk-run/skills/musk-thinking/SKILL.md")),
+                 ("视频(TED)", external_ws("video-run/skills/two-kinds-of-procrastination/SKILL.md"))]
+    ok: dict[str, Path] = {}
+    for name, pth in externals:
+        if pth is None:
+            skip_ws("t_real_sample_artifacts", f"{name} 卡片")
             continue
         r = run(["validate", str(pth)])
         assert "error 0" in r.stdout, f"{name} 卡片未通过静态校验：{r.stdout}"
+        ok[name] = Path(pth)
     # 视频素材必须是真实抓取（声明里有 URL 与抓取日期）
-    ted_srt = base / "video-run" / "sources" / "arj7oStGLkU.en.srt"
-    if ted_srt.exists() and ted.exists():
+    ted = ok.get("视频(TED)")
+    if ted is not None:
         head = ted.read_text(encoding="utf-8")[:1200]
         assert "youtube.com/watch" in head, "视频卡缺来源 URL"
         assert "2026-10-04 抓取" in head, "视频卡缺抓取日期"
-        qv = base / "video-run" / "eval" / "quote-verification.json"
-        if qv.exists():
-            d = _json.loads(qv.read_text(encoding="utf-8"))
+        qv = external_ws("video-run/eval/quote-verification.json")
+        if qv is not None:
+            d = _json.loads(Path(qv).read_text(encoding="utf-8"))
             assert d["verified"] > 0 and not d["unverified"], f"视频卡引语未全部核到：{d}"
 
 
@@ -2190,8 +2245,9 @@ def t_style_decoy_anonymity():
     第二轮评分员指出：`style-decoys.md` 顶部写着"候选 B 由出题方撰写"，
     等于把答案告诉评分者——维度 2 的盲测因此不可信。
     """
-    f = ROOT.parent / "video-run" / "eval" / "style-decoys.md"
-    if not f.exists():
+    f = external_ws("video-run/eval/style-decoys.md")
+    if f is None:
+        skip_ws("t_style_decoy_anonymity", "video-run 的盲测材料")
         return
     text = f.read_text(encoding="utf-8")
     leak = [w for w in ("由出题方", "出题人", "主 Agent", "刻意写成", "不是**被测",
@@ -2206,8 +2262,9 @@ def t_disclosure_completeness():
     上一轮我写「逐条列明」却漏了 6 项——承诺不兑现等于虚假。
     这里做最低限度检查：小节存在、且列出 ≥5 条、且每条带出处或理由。
     """
-    card = ROOT.parent / "video-run" / "skills" / "two-kinds-of-procrastination" / "SKILL.md"
-    if not card.exists():
+    card = external_ws("video-run/skills/two-kinds-of-procrastination/SKILL.md")
+    if card is None:
+        skip_ws("t_disclosure_completeness", "video-run 的 TED 卡")
         return
     text = card.read_text(encoding="utf-8")
     assert "素材未涉及 / 本卡自加" in text, "缺少披露小节"
@@ -2240,9 +2297,10 @@ def t_audit_coverage_runs():
     """
     sys.path.insert(0, str(ROOT / "scripts"))
     from tdlib import evals
-    card = ROOT.parent / "video-run" / "skills" / "two-kinds-of-procrastination" / "SKILL.md"
-    corpus = ROOT.parent / "video-run" / "sources" / "arj7oStGLkU.en.transcript.md"
-    if not (card.exists() and corpus.exists()):
+    card = external_ws("video-run/skills/two-kinds-of-procrastination/SKILL.md")
+    corpus = external_ws("video-run/sources/arj7oStGLkU.en.transcript.md")
+    if card is None or corpus is None:
+        skip_ws("t_audit_coverage_runs", "video-run 的 TED 卡与逐字稿")
         return
     loose = evals.audit_coverage(card, corpus, threshold=0.30)
     strict = evals.audit_coverage(card, corpus, threshold=0.60)
@@ -2281,9 +2339,10 @@ def t_disclosure_covers_uncovered():
     """披露清单必须登记 audit-coverage 报出的未覆盖段落（穷举维护的闭环检查）。"""
     sys.path.insert(0, str(ROOT / "scripts"))
     from tdlib import evals
-    card = ROOT.parent / "video-run" / "skills" / "two-kinds-of-procrastination" / "SKILL.md"
-    corpus = ROOT.parent / "video-run" / "sources" / "arj7oStGLkU.en.transcript.md"
-    if not (card.exists() and corpus.exists()):
+    card = external_ws("video-run/skills/two-kinds-of-procrastination/SKILL.md")
+    corpus = external_ws("video-run/sources/arj7oStGLkU.en.transcript.md")
+    if card is None or corpus is None:
+        skip_ws("t_disclosure_covers_uncovered", "video-run 的 TED 卡与逐字稿")
         return
     text = card.read_text(encoding="utf-8")
     res = evals.audit_coverage(card, corpus, threshold=0.60)
@@ -2793,6 +2852,190 @@ def t_schema_and_help():
         assert cmd in h, f"--help 缺 {cmd}"
 
 
+def t_token_savings_benchmark():
+    """P0-3：token 节省实测脚本必须**不产假数字**。
+
+    这个脚本的第一版量错了东西（读了 `document.json` 的 elements、字段名也不存在），
+    算出的"省了 0.56 倍"（比整本还贵）却毫无报错——**量具坏了比没有量具更坏**。
+    本条守住它最容易再次坏掉的几处：
+
+    ① **没装 tiktoken 必须报"未运行"并以退出码 2 结束**，不许用字数估算顶替；
+    ② **邻块必须去重**（命中块已在窗口里，相邻的命中块不能重复加）；
+    ③ **退化样本要被标出来**：关键词只命中一个只有标题的块时，倍数会飙到四位数，
+       那是"没读到正文"而不是"省得多"，必须置为退化、不进区间；
+    ④ 命中 0 块不给倍数（0/0 写不成数字）；
+    ⑤ **重复 --corpus 不能只保留最后一本**（argparse 的 `nargs='+'` 默认后者覆盖前者，
+       曾导致报告里少一本书却零报错）。
+    """
+    sys.path.insert(0, str(ROOT / "benchmarks" / "token-savings"))
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "tk_save", ROOT / "benchmarks" / "token-savings" / "measure.py")
+    M = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(M)
+
+    # ① 没装 tiktoken → 明确未运行，退出码 2（用零依赖解释器模拟）
+    proc = subprocess.run(
+        [sys.executable, "-S", str(ROOT / "benchmarks" / "token-savings" / "measure.py"),
+         "--corpus", str(ROOT / "README.md")],
+        capture_output=True, text=True)
+    # 有 tiktoken 时会正常跑完；没有时必须是 rc=2 且明说未运行。两者都不许给数字。
+    if proc.returncode == 2:
+        assert "未运行" in proc.stdout, f"必须明说未运行：{proc.stdout[-300:]}"
+    else:
+        assert proc.returncode == 0, f"装了 tiktoken 就该跑通：{proc.stderr[-500:]}"
+
+    # ② 邻块去重：5 块里第 1、2 块连续命中 → 窗口 = 2×TOK，
+    #    邻块是 0 与 3（1、2 互相是邻居但已在命中集合里，**不能再加一次**）
+    #块大小必须 ≥200 token，否则会被「退化命中」判据接管（那是另一条守卫）
+    TOK = 300
+    rows = [{"id": f"ck-{i:04d}", "title": "t", "chars": TOK, "tokens": TOK,
+             "text": "关键词命中" if i in (1, 2) else "无关正文"} for i in range(5)]
+    r = M.measure(rows, lambda s: len(s), ["关键词"], 5 * TOK)
+    assert r["tokens"]["window_hit_only"] == 2 * TOK, r["tokens"]
+    assert r["tokens"]["window_with_neighbours"] == 4 * TOK, \
+        f"邻块计数不对：{r['tokens']}（命中块被当邻块再加一次 = 6×TOK）"
+
+    # 反向：全部命中时，邻块**不得**再加一遍（首版就错在这里，
+    # 算出「窗口比整本还贵」的 0.56×）
+    allhit = [{"id": f"ck-{i:04d}", "title": "t", "chars": TOK, "tokens": TOK,
+               "text": "关键词命中"} for i in range(5)]
+    r_all = M.measure(allhit, lambda s: len(s), ["关键词"], 5 * TOK)
+    assert r_all["tokens"]["window_with_neighbours"] == 5 * TOK, \
+        f"邻块重复计数了：{r_all['tokens']}"
+    assert r_all["saving_vs_whole"]["window_with_neighbours"] == 1.0, \
+        "全命中时窗口=整本，倍数必须是 1.0（不是 0.56 那种「越读越贵」）"
+
+    # ③ 退化样本：命中块全是 7 token 的标题块 → 窗口倍数必须是 None 而非四位数
+    tiny = [{"id": "ck-0000", "title": "五行元理消息赋", "text": "五行元理消息赋",
+             "chars": 7, "tokens": 7}]
+    r2 = M.measure(tiny, lambda s: len(s), ["五行元理消息"], 89614)
+    assert r2["degenerate_hit_blocks"], "只有标题的命中块必须被标为退化"
+    assert r2["saving_vs_whole"]["window_hit_only"] is None, \
+        f"退化样本不该给倍数：{r2['saving_vs_whole']}"
+
+    # ④ 一个都不命中 → hits_none，不许出现 0 或 None 混进区间
+    r3 = M.measure(rows, lambda s: len(s), ["不存在的词"], 500)
+    assert r3.get("hits_none") and r3["saving_vs_whole"] == {}, r3
+
+    # ⑤ 重复 --corpus 必须都保留
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--corpus", required=True, nargs="+", action="extend")
+    got = ap.parse_args(["--corpus", "A", "B", "--corpus", "C"]).corpus
+    assert got == ["A", "B", "C"], f"重复 --corpus 丢了参数：{got}"
+
+
+def t_shell_scripts_safe():
+    """shell 脚本里三类「看起来正常、实际会静默出错」的写法（bash 实测判据）。
+
+    本项目在同一个文件上栽了两次：`echo "…（$rc）"` 里全角括号紧跟变量名，
+    bash 把多字节字符当成变量名的一部分 → 变量取空、**打印乱码、退出码仍是 0**。
+    这比报错危险得多：**报错会停下，乱码会继续**。
+
+    判据不是猜的，每条都跑过 bash：
+    · `$VENV）` → 变量内容丢失（真错）
+    · `$dest 是` → **后面有空格，安全**（首版把这两种混为一谈，一次报 8 处、
+      其中 6 处假阳性——**误报的守卫等于没有守卫**）
+    """
+    proc = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "shell_safety.py")],
+        capture_output=True, text=True)
+    assert proc.returncode == 0, f"shell 脚本有不安全写法：\n{proc.stdout[-900:]}"
+    assert "个 shell 脚本" in proc.stdout, proc.stdout[-300:]
+
+    # 负向探针：造一个真的会静默出错的片段，扫描器必须抓到。
+    #（只跑正向等于"检查器永远绿"——本项目吃过这个亏，#65）
+    with tempfile.TemporaryDirectory() as d:
+        bad = Path(d) / "bad.sh"
+        bad.write_text('#!/bin/bash\nVENV=/x/y\necho "找到（$VENV）"\n',
+                       encoding="utf-8")
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "ss", ROOT / "scripts" / "shell_safety.py")
+        S = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(S)
+        found = S.scan(bad)
+        assert found, "扫描器没抓到 `$VENV）` —— 它对真错是瞎的"
+        # 而 `$dest 是`（有空格）必须**不报**
+        ok = Path(d) / "ok.sh"
+        ok.write_text('#!/bin/bash\ndest=/x\necho "  $dest 是目录"\n',
+                      encoding="utf-8")
+        assert not S.scan(ok), \
+            f"误报了安全的写法：{S.scan(ok)}——误报的守卫等于没有守卫"
+
+
+def t_claims_have_evidence():
+    """P0-4：每条对外声称必须有**真实存在**的证据，数字不许腐烂。
+
+    本项目最高频的病是「声称 ≠ 实际」：文档里写「12 张卡」而实际只有 9 张、
+    写「2 张卡跑过交叉复核」而实际已经有 6 份报告——**都没有任何东西会红**。
+    本条把「文档一致性」从自律变成门禁。
+
+    关键在于**校验器自己也必须被校验**：
+    首版把「数字腐烂」写成找 `{tests} = N`，而文档里根本没有这种写法，
+    于是那条检查**永远匹配不到**——看上去有这一项，实际从不触发（#54 同一个病）。
+    所以下面第③段用负向探针证明它真的会红。
+    """
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "vc", ROOT / "docs" / "verify_claims.py")
+    V = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(V)
+
+    claims_md = ROOT / "docs" / "CLAIMS.md"
+    assert claims_md.exists(), "缺少 docs/CLAIMS.md——对外声称没有台账"
+    text = claims_md.read_text(encoding="utf-8")
+
+    # ① 正常状态必须全绿
+    proc = subprocess.run([sys.executable, str(ROOT / "docs" / "verify_claims.py")],
+                          capture_output=True, text=True)
+    assert proc.returncode == 0, f"声称台账核验未通过：\n{proc.stdout[-800:]}"
+    claims = V.parse_claims()
+    assert len(claims) >= 10, f"声称台账只有 {len(claims)} 条，太少等于没有"
+
+    # ② 每条声称都必须有证据，且引用的测试名真实存在
+    tests = V.registered_tests()
+    for c in claims:
+        assert c["evidence"] not in ("", "—", "-", "无"), \
+            f"声称「{c['claim'][:30]}」没有证据"
+        for t in re.findall(r"\bt_\w+", c["evidence"]):
+            assert t in tests, f"声称引用了不存在的测试 `{t}`"
+
+    # ③ 负向探针：篡改一个数字 → 必须报错。**这条守卫自己必须是红的**，
+    #    否则"数字校验"又是一段永不触发的代码。
+    with tempfile.TemporaryDirectory() as d:
+        bak = Path(d) / "CLAIMS.md"
+        bak.write_text(text, encoding="utf-8")
+        try:
+            broken = text.replace("tests = ", "tests = 9", 1)
+            broken = re.sub(r"^tests = \d+", "tests = 999999", broken, count=1, flags=re.M)
+            claims_md.write_text(broken, encoding="utf-8")
+            bad = subprocess.run(
+                [sys.executable, str(ROOT / "docs" / "verify_claims.py")],
+                capture_output=True, text=True)
+            assert bad.returncode != 0, \
+                "篡改 facts 数字后校验器仍然通过——数字校验是死代码"
+            assert "数字腐烂" in bad.stdout or "实际" in bad.stdout, \
+                f"报错要说清是数字对不上：{bad.stdout[-300:]}"
+        finally:
+            claims_md.write_text(bak.read_text(encoding="utf-8"), encoding="utf-8")
+
+    # ④ 事实数字只由 facts 段承载，并已同步到其他文档
+    facts = V.read_facts()
+    for k in ("tests", "subcommands", "defects"):
+        assert k in facts, f"facts 段缺 {k}"
+    m = re.search(r"<!-- facts:begin -->(.*?)<!-- facts:end -->", text, re.S)
+    assert m, "缺少 <!-- facts:begin --> 段"
+    # facts 段的数字必须与其他文档一致（不一致时 verify_claims 已会报，
+    # 这里再钉一道，防止有人绕过脚本只手改某一份文档）
+    for f in ("README.md", "SKILL.md", "GUIDE.md", "CAPABILITIES.md"):
+        body = (ROOT / f).read_text(encoding="utf-8")
+        for n in set(re.findall(r"(\d+)\s*项回归", body)):
+            assert int(n) == facts["tests"], \
+                f"{f} 写「{n} 项回归」，实际 {facts['tests']}（跑 verify_claims.py --sync）"
+
+
 def t_guide_walkthrough():
     """GUIDE.md 写的黄金路径必须**端到端真的能跑通**，且每步都有实质产出。
 
@@ -3053,59 +3296,154 @@ def t_anchor_unanchored_not_fail():
     run(["anchor", str(card), "--corpus", str(src)], expect=0)
 
 
+def t_sample_report_consistent():
+    """被取代的历史报告不得与权威 FIDELITY.json 在同一字段上互相矛盾（复审 5）。
+
+    实测：`eval/fidelity-report.md` 的 frontmatter 写 `cross_grader_gap: 8`（指向**第二**轮），
+    正文却写「cross_grader_gap 为空」（**第一**轮确为单评分）——**同一字段在同一文件里两种说法**。
+    历史文件要保留历史真相（字段不回填新数字），指针放正文。
+    """
+    sb = ROOT / "examples/sample-bundle"
+    hist = sb / "eval" / "fidelity-report.md"
+    auth = sb / "skills" / "five-affairs-seven-questions" / "FIDELITY.json"
+    assert hist.exists() and auth.exists(), "样例 bundle 的历史报告或权威报告缺失"
+
+    text = hist.read_text(encoding="utf-8")
+    m = re.search(r"(?m)^cross_grader_gap:\s*(.+?)\s*$", text)
+    assert m, "历史报告应保留 cross_grader_gap 字段（说明性的）"
+    val = m.group(1)
+    assert not re.match(r"^\d", val), (
+        f"历史报告的 cross_grader_gap 不得回填分数：{val!r}"
+        "——第一轮是单评分，8 分属于第二轮交叉复核，应放在正文指针里")
+    assert "已被" in text or "superseded" in text.lower(), \
+        "历史报告必须显式标注已被取代，否则读者会把它当现状"
+    # 数字的唯一真源是权威报告
+    auth_d = json.loads(auth.read_text(encoding="utf-8"))
+    assert auth_d.get("cross_grader_gap") == 8.0, auth_d
+    assert len(auth_d.get("graders") or []) >= 2, auth_d
+
+
 def t_anchor_cjk_short_quotes():
-    """#61：`anchor` 的引语长度门槛必须**语言自适应**——中文按汉字数，不套 ASCII 的 12 字符。
+    """#61 + 复审 5 建议：中文短引语必须被认出、可定位，且**带 §N 的短候选可核验**。
 
     旧实现两道闸门都卡在英文尺度上：抽取正则 `{12,600}` 的下限、`_is_quote` 的 `len(q) < 12`。
     于是「天行健，君子以自強不息」(11 字)、「不可為典要，唯變所適」(10 字)、
     「窮理盡性以至於命」(8 字) 这些最经典的引语**从未进入核验**，还被计入 noise 静默消失。
-    实测 zhouyi-yili 卡 25 条候选引语只认出 9 条（16 条被丢，其中 8 条为 8~11 字）。
 
-    本条同时守住三件不许放宽的事：挂错段号仍判 FAIL、短术语不得被当引语、抽取层对账必须平。
+    ⚠️ 复审 5（测试环境耦合）：本测试此前跑的是作者工作区里的真实卡片（`../guoxue-skills` +
+    `../yijing-run/corpus`），只在两个目录都存在时才断言——**本机缺语料就假红，CI 两个都没有就静默跳过**
+    （绿是"跳过"而非"跑过"）。现已改为 **fixture 驱动**（`tests/fixtures/cjk-short-quotes/`），
+    与任何外部工作区无关。
+
+    非对称规则（复审 5 建议）也要守住：短引语**命中计入核验数**，**失配只报警不判失败**
+    （≤7 字短语在多引用行上归属含糊，硬判会假阳性）；而 ≥8 字的引语失配照旧硬判 FAIL。
     """
     sys.path.insert(0, str(ROOT / "scripts"))
     from tdlib import anchor as A
+
+    fx = ROOT / "tests" / "fixtures" / "cjk-short-quotes"
+    assert fx.exists(), f"fixture 缺失：{fx}"
+    corpora = A.load_corpora([fx / "corpus.md"])
+    rep = A.verify_file(fx / "card.md", corpora)
+
+    # ① 短引语必须被认出来（旧实现在这里只认出 3 条长引语）
+    assert rep["quotes_seen"] == 6, f"引语数不对：{rep['quotes_seen']}（期望 6）"
+    # ② 「厚德載物」（4 汉字）逐字见于语料且挂了 §2 → 计入核验并命中
+    assert rep["anchored_checked"] == 4, f"锚定命中数不对：{rep['anchored_checked']}（期望 4）"
+    sq = rep["short_quotes"]
+    assert sq["verified"] == 1, f"短引语命中应计入核验：{sq}"
+    # ③ 短引语挂错段号（§1 而实际 §2）：只报警，**不进 failures、不判 FAIL**
+    assert len(sq["misplaced"]) == 1, f"短引语失配应单列报警：{sq}"
+    assert sq["misplaced"][0]["claimed_at"] == 1 and sq["misplaced"][0]["found_at"] == 2, sq
+    assert rep["failures"] == [], f"短引语失配不得进硬失败：{rep['failures']}"
+    assert rep["verdict"] == "PASS", f"短引语失配不应判 FAIL：{rep['tally']}"
+
+    # ④ 抽取层对账必须平：候选 = 认出 + 噪声 + 中文太短跳过
+    er = rep["extraction_reconciliation"]
+    assert er["balanced"], f"抽取层对账不平：{er}"
+    # ⑤ 判定层对账也必须平
+    rec = rep["reconciliation"]
+    assert sum(v for kk, v in rec.items() if kk != "seen") == rec["seen"], f"对账不平：{rec}"
+
+    # ⑥ 短术语（语料里没有）仍不得被当引语
+    assert "缺啥补啥" not in [r["quote"] for r in []] + \
+        [s["quote"] for s in rep["short_but_in_corpus"]], "短术语不该被算作引语"
+    assert rep["skipped_cjk_short"] == 1, f"短术语应记入 skipped：{rep['skipped_cjk_short']}"
+
+    # ⑦ 反方向：≥8 汉字的引语挂错段号，仍必须硬判 FAIL（放宽短引语不得连坐长引语）
     with tempfile.TemporaryDirectory() as d:
-        base = Path(d)
-        corpus = base / "c.md"
-        corpus.write_text(
-            "[00:00:00.000]\n天行健，君子以自強不息。\n\n"
-            "[00:00:10.000]\n地勢坤，君子以厚德載物。\n", encoding="utf-8")
-        corpora = A.load_corpora([corpus])
-
-        # ① 11 字中文引语必须被认出来并锚定命中（旧实现在这里报 0 条）
-        short = base / "short.md"
-        short.write_text("> 「天行健，君子以自強不息」——§0\n", encoding="utf-8")
-        rep = A.verify_file(short, corpora)
-        assert rep["quotes_seen"] == 1, f"11 字中文引语被丢掉：{rep['quotes_seen']}"
-        assert rep["anchored_checked"] == 1, f"应锚定命中：{rep['tally']}"
-        assert rep["verdict"] == "PASS", rep["failures"]
-
-        # ② 挂错段号仍必须判 FAIL（放宽长度门槛不得连带放宽段号门槛）
-        bad = base / "bad.md"
+        bad = Path(d) / "bad.md"
         bad.write_text("> 「天行健，君子以自強不息」——§1\n", encoding="utf-8")
-        assert A.verify_file(bad, corpora)["verdict"] == "FAIL", "挂错段号被放过了"
+        r2 = A.verify_file(bad, corpora)
+        assert r2["verdict"] == "FAIL", f"长引语挂错段号必须 FAIL：{r2['tally']}"
+        assert r2["failures"], "FAIL 但没给失配明细"
 
-        # ③ 抽取层对账必须平：候选 = 认出 + 噪声 + 中文太短跳过
-        er = rep["extraction_reconciliation"]
-        assert er["balanced"], f"抽取层对账不平：{er}"
-        assert er["candidates"] == er["quotes_seen"] + er["noise_filtered"] \
-            + er["skipped_cjk_short"], er
+    # ⑧ CLI 端到端：fixture 卡 exit 0（短引语失配不阻断）
+    run(["anchor", str(fx / "card.md"), "--corpus", str(fx / "corpus.md")], expect=0)
 
-        # ④ 短术语（汉字数 <8）不得被当成引语
-        term = base / "term.md"
-        term.write_text("> 这里说的是「用神」这个术语，不是引语。\n", encoding="utf-8")
-        assert A.verify_file(term, corpora)["quotes_seen"] == 0, "术语被误当引语"
 
-        # ⑤ CLI 端到端：真实中文卡（zhouyi-yili）不得再报「引语 0 条」
-        zy = ROOT.parent / "guoxue-skills/skills/zhouyi-yili/SKILL.md"
-        if zy.exists():
-            corpora2 = A.load_corpora(sorted(
-                (ROOT.parent / "yijing-run/corpus/anchored").glob("src-*.md")))
-            rep2 = A.verify_file(zy, corpora2)
-            assert rep2["quotes_seen"] >= 16, \
-                f"zhouyi-yili 应认出 ≥16 条引语（旧实现 9 条）：{rep2['quotes_seen']}"
-            assert rep2["verdict"] == "PASS", f"应仍判 PASS：{rep2['failures']}"
+def t_no_external_fixture_deps():
+    """P0-1c：回归测试**不得静默依赖作者工作区**（`ROOT.parent` 之外的路径）。
+
+    #65 的教训：`if notxxx.exists(): return` 让测试在缺素材时"跳过"，
+    跳过的数量还会随机器而变——本机有 sibling 仓库时跑、CI 里整体跳过，
+    **绿是"跳过"而非"跑过"**。本条把这条纪律变成可机校验的：
+
+    ① **仓库外路径只能经 `external_ws()` 这一个入口取得**，且该入口必须同时
+       检查 `RULAI_WORKSPACE=1` 与路径存在——裸的 `ROOT.parent` 只允许出现在
+       `external_ws()` 函数体内（多处出现 = 有人绕过守卫）；
+    ② 白名单非空，且每条声明都在代码里真的被引用
+       （防止「登记了但没这依赖」或反之）；
+    ③ **自足性**：把仓库复制到临时目录（**没有任何 sibling 仓库**）后，
+       关键测试仍须全绿——这才是「新机器 clone 后全绿」的可判定义。
+    """
+    src = (ROOT / "tests" / "e2e.py").read_text(encoding="utf-8")
+    fn_start = src.index("def external_ws(")
+    fn_end = src.index("SKIPPED: list", fn_start)
+    fn_start_line = src[:fn_start].count("\n") + 1
+    fn_end_line = src[:fn_end].count("\n") + 1
+
+    # ① ROOT.parent 只允许出现在 external_ws() 函数体内。
+    # 用 AST 而不是文本扫描：**注释与文档字符串里提到 ROOT.parent 不算引用**
+    # （否则这条守卫会被自己的说明文字触发——#64 的同一个坑）。
+    tree = ast.parse(src)
+    stray = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Attribute) and node.attr == "parent" \
+                and isinstance(node.value, ast.Name) and node.value.id == "ROOT":
+            if not (fn_start_line <= node.lineno <= fn_end_line):
+                stray.append(node.lineno)
+    assert not stray, \
+        f"仓库外路径只能经 external_ws() 取得；这些行绕过了守卫：{sorted(stray)}"
+    fn = src[fn_start:fn_end]
+    assert "RULAI_WORKSPACE" in fn, \
+        "external_ws() 必须检查 RULAI_WORKSPACE —— 否则它不再是守卫"
+    assert ".exists()" in fn, \
+        "external_ws() 必须检查路径存在 —— 否则缺素材时硬失败而非如实报未运行"
+
+    # ② 白名单：每条登记都必须在代码里真的被引用
+    assert EXTERNAL_DEPS_WHITELIST, "白名单为空——真有外部依赖时应登记，不该悄悄删掉"
+    code = src[fn_end:]
+    unused = [k for k in EXTERNAL_DEPS_WHITELIST
+              if not any(seg in code for seg in k.split("/")[-2:] if len(seg) > 6)]
+    assert not unused, f"白名单登记了但代码里找不到对应引用：{unused}"
+
+    # ③ 自足性：干净副本（无任何 sibling 仓库）里关键测试仍须全绿
+    with tempfile.TemporaryDirectory() as d:
+        clean = Path(d) / "clean"
+        shutil.copytree(ROOT, clean, ignore=shutil.ignore_patterns(
+            ".git", "__pycache__", "*.pyc"))
+        assert (clean / "scripts" / "td.py").exists(), "复制后 td.py 缺失"
+        env = dict(os.environ)
+        env.pop("RULAI_WORKSPACE", None)
+        proc = subprocess.run(
+            [sys.executable, str(clean / "tests" / "e2e.py"), "--only",
+             "t_anchor_cjk_short_quotes,t_validate_bundle,t_lint_quotes"],
+            capture_output=True, text=True, env=env)
+        assert proc.returncode == 0, \
+            f"干净副本里fixture 测试未全绿：\n{proc.stdout[-1500:]}"
+        assert "需要作者工作区" not in proc.stdout, \
+            f"干净副本仍在靠外部素材：\n{proc.stdout[-800:]}"
 
 
 def t_verify_quotes_misplaced_vs_fabricated():
@@ -3422,6 +3760,11 @@ def main() -> int:
         ("引语段号锚定（#46）", t_anchor_verifier),
         ("anchor 无 §N 引语不计失败（复审 #1）", t_anchor_unanchored_not_fail),
         ("anchor 中文短引语不被丢（#61）", t_anchor_cjk_short_quotes),
+        ("回归不得依赖作者工作区（P0-1/#65）", t_no_external_fixture_deps),
+        ("token 节省实测不产假数字（P0-3）", t_token_savings_benchmark),
+        ("对外声称有据且数字不腐烂（P0-4）", t_claims_have_evidence),
+        ("shell 脚本无静默出错写法", t_shell_scripts_safe),
+        ("样例历史报告与权威报告不矛盾（复审 5）", t_sample_report_consistent),
         ("anchor 支持书类【第N段】语料（复审#1）", t_anchor_book_corpus),
         ("corpus-anchor 书类语料规整（复审#1）", t_corpus_anchor_command),
         ("素材零重叠检测（8-gram 包含率）", t_overlap_detector),
@@ -3450,6 +3793,13 @@ def main() -> int:
 
     print(f"\n{'─' * 60}")
     print(f"通过 {len(PASS)} / {len(PASS) + len(FAIL)}")
+    if SKIPPED:
+        # #65：跳过必须**如实打印**，不能混进「通过」里冒充跑过。
+        print(f"\n⚠️未运行 {len(SKIPPED)} 项（需要作者工作区的真实素材，"
+              f"设 RULAI_WORKSPACE=1 才会跑）：")
+        for name, what in SKIPPED:
+            print(f"  · {name} —— 缺 {what}")
+        print("  这一栏**不是失败**，但也不等于「这些检查通过了」。")
     if FAIL:
         print("\n失败明细：")
         for n, e in FAIL:

@@ -5,17 +5,21 @@ date: 2026-10-04
 eval_mode: dual-agent
 answerer: fidelity-answerer
 graders: [fidelity-grader]
-cross_grader_gap: 8（第二轮交叉复核：见 ../skills/five-affairs-seven-questions/FIDELITY.json）
+cross_grader_gap: 未做第二评分者交叉校验
 material: 《孙子兵法·計篇》 sources/sunzi-ji.txt 第1段
 excluded_examples: true
 ---
 
 # FIDELITY 评分报告 · five-affairs-seven-questions
 
-> ⚠️ **本文是第一轮的叙事记录（单评分者）**，针对**修改前**的卡片。
+> ⚠️ **本文是第一轮的叙事记录（单评分者），已被第二轮交叉复核取代**，针对**修改前**的卡片。
 > 修改后由 `eval-kit` 跑了**交叉复核**（2 个独立评分者 90/98，分差 8 → 合并 93/A），
 > 机器可读版本在 `skills/five-affairs-seven-questions/FIDELITY.json`，**那才是当前门禁依据**。
 > 两轮同为 93 分但依据不同：本轮扣在已修的 A1 段，交叉复核轮扣在一致性与来源透明度。
+>
+> 📌 **frontmatter 的 `cross_grader_gap` 保留历史真相（第一轮确为单评分，故为"未做"）**，
+> 不回填第二轮的 8 分——历史文件写历史，指针放在这里。（复审 5：此前该字段被回填成 8，
+> 与正文「cross_grader_gap 为空」自相矛盾。）
 
 > **评分者**：`fidelity-grader`（独立 Agent）。未参与能力卡撰写、未参与出题，
 > 只读四份材料：原始素材 / 被测卡片 / 答题记录 / 匿名三候选。

@@ -52,7 +52,7 @@ while [ $# -gt 0 ]; do
 " ;;
     --project)   shift; PROJECT_DIR="$1" ;;
     -h|--help)   sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
-    *) echo "未知参数：$1（用 --help 看用法）" >&2; exit 2 ;;
+    *) echo "未知参数：${1}（用 --help 看用法）" >&2; exit 2 ;;
   esac
   shift
 done
@@ -87,7 +87,9 @@ TARGETS=$(printf '%s\n%s' "$AGENT_TARGETS" "$PROJECT_TARGETS" | sed '/^$/d')
 [ -n "$CUSTOM_DIRS" ] && TARGETS=$(printf '%s\n%s' "$TARGETS" "$CUSTOM_DIRS" | sed '/^$/d')
 
 place_one() {
-    dir=$1
+    #必须加引号：安装路径常带空格（"~/Desktop/all skills/…"），
+    # 未加引号时 bash 会把它拆成两个参数——**且不报错**，只是装错位置
+    dir="$1"
     dest="$dir/$SKILL_NAME"
 
     if [ "$ACTION" = "list" ]; then

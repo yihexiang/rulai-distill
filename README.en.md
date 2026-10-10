@@ -11,7 +11,7 @@ verifiable, traceable Agent Skill — not a summary, not a book report.
 [![Contract & vendor](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml/badge.svg)](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![python](https://img.shields.io/badge/python-%E2%89%A53.10-blue)
-![regression](https://img.shields.io/badge/regression-97%20passing-brightgreen)
+![regression](https://img.shields.io/badge/regression-102%20passing-brightgreen)
 
 > ### Most distillation tools solve *generation*. This one builds **proof**.
 > **No release without a passing gate — and an agent never grades itself.**
@@ -64,13 +64,13 @@ gate           →  requires ≥2 independent graders by default; otherwise REFU
 
 ### 3️⃣ Defects live in a **ledger**, and the ledger is enforced by tests
 
-All **62** self-found defects are published in `CONSTRAINTS.md` and mirrored as
+All **69** self-found defects are published in `CONSTRAINTS.md` and mirrored as
 machine-checkable failure cases (`td.py failure list`) — each with *what went wrong /
 what it should have been / severity / the regression test that pins it*.
 **Ledger rows, category counts and the regression count are asserted equal by tests —
 a wrong number turns CI red.**
 
-48 of the 62 are defects **in our own verification and measurement tools** (77%).
+69 of the 69 are defects **in our own verification and measurement tools** (78%).
 That ratio is itself the finding: **what is most often wrong is not the thing — it's the ruler.**
 
 ---
@@ -81,7 +81,7 @@ That ratio is itself the finding: **what is most often wrong is not the thing �
 |---|---|---|---|
 | `five-affairs-seven-questions` | Book (*The Art of War*, 計篇) | **93 / A** | independent answerer agent + 2 independent grader agents (90 / 98, spread 8); the report ships with the sample: `examples/sample-bundle/skills/five-affairs-seven-questions/FIDELITY.json` |
 | `musk-decisions` | Person (three long interviews, 44,630 words) | **90 / A** | same protocol (92 / 89, spread 3); **replaces the old 60/C single-grader result** |
-| 12 real cards (bazi / name-study / I-Ching / video / persona …) | mixed | — | `validate` + `output-eval` + `lint-quotes` actually run: **0 errors, no crashes, no false reds** |
+| 9 real cards (bazi / name-study / I-Ching / video / persona / book …) | mixed | — | `validate` + `output-eval` + `lint-quotes` actually run: **0 errors, no crashes, no false reds** |
 
 **The boundaries of those numbers, stated up front**: independence is **structural**
 (separate sub-agents), *not* organizational (no second human reviewer); `musk-decisions`
@@ -97,8 +97,8 @@ These are two claims with very different evidence, and we keep them apart on pur
 
 | Dimension | Status | Evidence |
 |---|---|---|
-| **Mechanical reliability** | ✅ trustworthy | 97 regression tests green; `gate` requires a cross-review record (verified live); `verify-quotes` / `anchor` / `lint-quotes` have each caught real problems on real material; the toolchain runs on **12 real cards** with zero crashes and zero false reds |
-| **Output correctness** | ⚠️ **closed loop proven, still material-dependent** | `eval-kit` has run a **real cross-review** on two cards (independent answerer + 2 independent graders): sample card **93/A**, `musk-decisions` **90/A**. ⚠️ Both are **structurally** independent, not organizationally; the sample card is a showcase, **not** the average of open-ended material |
+| **Mechanical reliability** | ✅ trustworthy | 102 regression tests green; `gate` requires a cross-review record (verified live); `verify-quotes` / `anchor` / `lint-quotes` have each caught real problems on real material; the toolchain runs on **9 real cards** with zero crashes and zero false reds |
+| **Output correctness** | ⚠️ **closed loop proven, still material-dependent** | `eval-kit` has run a **real cross-review** on **6 cards** (independent answerer + 2 independent graders): sample card **93/A**, `musk-decisions` **90/A**, `bazi-paipan` **93/A**, `geju-yunshi` **95/A**, `quming-xue` **96/A**, `zhouyi-yili` **96/A**. ⚠️ All are **structurally** independent, not organizationally; the sample card is a showcase, **not** the average of open-ended material; the four guoxue cards share one corpus-prep style, so four passes is **not** four kinds of material validated. Per-claim evidence: [`docs/CLAIMS.md`](./docs/CLAIMS.md) |
 
 Concretely, what this project currently **cannot** do:
 
@@ -111,7 +111,7 @@ Concretely, what this project currently **cannot** do:
    (`eval-kit`: separate answerer sub-agent + 2 separate grader sub-agents), but they are still
    sub-agents on the same machine — **no second human has reviewed them**, and sub-agent
    file-writes remain unreliable on long tasks (historically, 1 of 4 dispatches landed reliably).
-3. **The open-ended sample is still small.** Only **2 cards** have been through cross-review
+3. **The open-ended sample is still small.** Only **6 cards** have been through cross-review
    (`musk-decisions` with just 3 questions). The 12-card run proves *the tools run* — **not**
    that the cards are good.
 
@@ -178,7 +178,7 @@ python3 scripts/td.py compile books/my-book --out ~/.workbuddy/skills/my-book --
 python3 scripts/td.py rollback ~/.workbuddy/skills/my-book --to latest
 ```
 
-**Regression suite**: `python3 tests/e2e.py` (97 tests, covering every command and the
+**Regression suite**: `python3 tests/e2e.py` (102 tests, covering every command and the
 vendored upstreams).
 
 ---

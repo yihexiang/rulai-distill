@@ -10,7 +10,7 @@
 [![Contract & vendor](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml/badge.svg)](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![python](https://img.shields.io/badge/python-%E2%89%A53.10-blue)
-![regression](https://img.shields.io/badge/regression-97%20passing-brightgreen)
+![regression](https://img.shields.io/badge/regression-102%20passing-brightgreen)
 
 > ### 别的蒸馏技能解决「生成」，这个解决「证明」。
 > **不打分不发版，而且不由自己打分。**
@@ -61,11 +61,11 @@ gate       →  默认要求 ≥2 个独立评分者交叉复核，否则**拒�
 
 ### 3️⃣ 缺陷有**台账**，而台账由测试强制相等
 
-本项目把自己的 64 个缺陷全部登记在 `CONSTRAINTS.md`，并逐条写成可机校验的 failure-case
+本项目把自己的 69 个缺陷全部登记在 `CONSTRAINTS.md`，并逐条写成可机校验的 failure-case
 （`td.py failure list`）：每条都带「当时怎么错的 / 应该是什么 / 严重级 / 对应回归测试」。
 **台账行数、分布数字、回归项数三者由测试强制相等——数字写错即 CI 红。**
 
-其中 50 条是**验证/度量工具自身**的错（占 78%）——这个比例本身就是结论：
+其中 54 条是**验证/度量工具自身**的错（占 78%）——这个比例本身就是结论：
 **错得最多的往往不是东西，是尺子。**
 
 ---
@@ -76,10 +76,16 @@ gate       →  默认要求 ≥2 个独立评分者交叉复核，否则**拒�
 |---|---|---|---|
 | `five-affairs-seven-questions` | 书籍（《孙子兵法·計篇》） | **93 / A** | 独立答题 Agent + 2 个独立评分 Agent（90 / 98，分差 8）；报告随包：`examples/sample-bundle/skills/five-affairs-seven-questions/FIDELITY.json` |
 | `musk-decisions` | 人物（三份长访谈 44,630 词） | **90 / A** | 同上（92 / 89，分差 3）；**替代旧的 60/C 单评分结论** |
-| 12 张真实卡（八字 / 姓名学 / 周易 / 视频 / 人物 …） | 混合 | — | `validate` + `output-eval` + `lint-quotes` 实跑：**error 0、零崩溃、零假红** |
+| `bazi-paipan` | 排盘（八字四柱） | **93 / A** | 同上（92 / 93，分差 1） |
+| `geju-yunshi` | 格局与运势（描述性） | **95 / A** | 同上（96 / 93，分差 3） |
+| `quming-xue` | 取名（依喜用神） | **96 / A** | 同上（96 / 95，分差 1） |
+| `zhouyi-yili` | 周易义理（处境分析） | **96 / A** | 同上（97 / 97，分差 0）——⚠️ 两个评分者**总分完全相同**，不构成两次独立证实 |
+| 9 张真实卡（八字 / 姓名学 / 周易 / 视频 / 人物 / 书 …） | 混合 | — | `validate` + `output-eval` + `lint-quotes` 实跑：**error 0、零崩溃、零假红** |
 
 **这些数字的边界，写在明处**：独立性是**结构独立**（子 Agent 隔离）而非组织独立（没有第二个人复评）；
-`musk-decisions` 只测了 3 道人工题；样本卡是精修展示件，**不能代表开放素材的普遍水平**。
+`musk-decisions` 只测了 3 道人工题；样本卡是精修展示件，**不能代表开放素材的普遍水平**；
+guoxue 那四张同属国学、同一套语料规整方式，**四张通过不等于四类素材被验证过**。
+逐条证据与最近核验日期见 [`docs/CLAIMS.md`](./docs/CLAIMS.md)（机器核验：`python3 docs/verify_claims.py`）。
 
 ---
 
@@ -89,7 +95,7 @@ gate       →  默认要求 ≥2 个独立评分者交叉复核，否则**拒�
 
 | 维度 | 状态 | 证据 |
 |---|---|---|
-| **机械可靠性** | ✅ 可信 | 97 项回归全绿；`gate` 默认要求交叉复核记录（实测生效）；`verify-quotes`/`anchor`/`lint-quotes` 均在真实素材上抓到过真问题；工具链在 **12 张真实卡**上实跑零崩溃、零假红 |
+| **机械可靠性** | ✅ 可信 | 102 项回归全绿；`gate` 默认要求交叉复核记录（实测生效）；`verify-quotes`/`anchor`/`lint-quotes` 均在真实素材上抓到过真问题；工具链在 **9 张真实卡**上实跑零崩溃、零假红 |
 | **产出正确性** | ⚠️ **已跑通闭环，仍强依赖素材** | `eval-kit` 已对两张卡跑通**真实交叉复核**（独立答题 Agent + 2 个独立评分 Agent）：样本卡 **93/A**、`musk-decisions` **90/A**。⚠️ 两者是**结构独立**而非组织独立；样本卡是精修展示件，**不能代表开放素材的普遍水平** |
 
 具体地说，这个项目目前**做不到**的事：
@@ -100,8 +106,8 @@ gate       →  默认要求 ≥2 个独立评分者交叉复核，否则**拒�
 2. **独立性只在「结构」层面成立，不是「组织」层面。** 这条已被真实跑通（`eval-kit`：独立答题子 Agent +
    2 个独立评分子 Agent），但它仍是同一台机器上的子 Agent —— **没有第二个人复评**，
    且子 Agent 落盘在长任务下仍不稳定（历史实测派 4 次仅 1 次可靠落盘）。
-3. **开放素材上的样本仍然小。** `eval-kit` 只对 **2 张卡**跑通交叉复核（其中 `musk-decisions` 仅测 3 道人工题）；
-   **12 张真实卡**跑工具链零崩溃，但那证明的是「工具能跑」，**不是「卡片都好」**。
+3. **开放素材上的样本仍然小。** `eval-kit` 只对 **6 张卡**跑通交叉复核（其中 `musk-decisions` 仅测 3 道人工题）；
+   **9 张真实卡**跑工具链零崩溃，但那证明的是「工具能跑」，**不是「卡片都好」**。
 
 **它现在适合当什么用**：流程骨架与门禁参考 —— 校验、门禁、快照、回滚、契约化产物这一层是扎实的，可以直接复用。
 **不适合当什么用**：「喂素材就得到高质量卡片」的自动机。
@@ -165,7 +171,7 @@ python3 scripts/td.py compile books/my-book --out ~/.workbuddy/skills/my-book --
 python3 scripts/td.py rollback ~/.workbuddy/skills/my-book --to latest
 ```
 
-**回归测试**：`python3 tests/e2e.py`（97 项，覆盖全部命令与 vendored 上游实跑）
+**回归测试**：`python3 tests/e2e.py`（102 项，覆盖全部命令与 vendored 上游实跑）
 
 > 📖 命令速查见 [`references/command-cheatsheet.md`](./references/command-cheatsheet.md)（37 个子命令）；
 > 第一次用请看 [`GUIDE.md`](./GUIDE.md) —— 完整流程 + 真实输出 + 故障排查表。
@@ -223,7 +229,7 @@ rulai-distill/
 ├── SKILL.md                  ← Agent 加载的入口（渐进式披露）
 ├── GUIDE.md                  ← 安装与完整流程（第一次用看这个）
 ├── CAPABILITIES.md           ← 16 类上游能力逐项归属 + 自研清单 + 声明不做
-├── CONSTRAINTS.md            ← 64 条自身缺陷台账（每条对应回归测试）
+├── CONSTRAINTS.md            ← 69 条自身缺陷台账（每条对应回归测试）
 ├── methodology/              ← 00 全景 / 01 提取 / 02 三重验证 / 03 晋级门 / 04 压力测试 / 05 FIDELITY
 ├── extractors/               ← framework / principle / case / counter-example / glossary / persona
 ├── templates/                ← CAPABILITY / PERSONA / FIDELITY / TEST-SUITE / BOOK_OVERVIEW
@@ -239,7 +245,7 @@ rulai-distill/
 │   │                            / fidelity / evalkit / anchor / lintquotes / strategy / publish
 │   │                            / evals / evolve / promptc / upstream
 │   └── vendor/cangjie/       ← 上游 MIT 原件 + PROVENANCE.md（不改）
-└── tests/e2e.py              ← 端到端回归（97 项，双解释器各跑一遍）
+└── tests/e2e.py              ← 端到端回归（102 项，双解释器各跑一遍）
 ```
 
 ---
@@ -253,8 +259,15 @@ rulai-distill/
    已有本地字幕时完全不需要联网。
 4. **`--force` 发布是技术债**。manifest 会留 `forced: true`，事后可审计。
 5. **触发评测不做 LLM 调用**（本包零网络）：Agent 作答、脚本判分，容错 0。
-6. **已测规模、未测节省**。长书场景实测的是**语料规模**（能处理 113 万字符的推文合集、
-   5 万字的《渊海子平》）与分块行为；**「分块检索 vs 整本灌入」实际省了多少 token 尚未量化**。
+6. **token 节省已量化，但**是**区间而不是倍数**。实测（tiktoken `cl100k_base`，
+   3 本素材，见 [`benchmarks/token-savings/report-2026-10-10.md`](./benchmarks/token-savings/report-2026-10-10.md)）：
+   分块检索相对整本灌入省 **1/1.0 ～ 1/34**。
+   **下端 1.0× 不是噪声**：书短（5 块）或关键词宽（命中 4/5 块）时，
+   「检索」退化成「通读」，一点也省不下。**「用分块处理长书」的前提是
+   「书足够长 ∧ 你知道自己在找什么」，两条缺一不可。**
+   另外「省 token」与「读对内容」是两件事——关键词定位错块，省下的会以读错的形式还回去。
+   复跑：`python3 benchmarks/token-savings/measure.py --corpus <书> --sweep`
+   （未装 `tiktoken` 时它明确报"未运行"并退出码 2，不用字数估算顶替）。
 7. **不把「核验过」说成「没问题」**。工具只能证明它检查过的那一面：
    `verify-quotes` 验存在、`anchor` 验段号、`lint-quotes` 验用字，
    三者都过 ≠ 卡片正确，只等于**这三类错没被检出**。

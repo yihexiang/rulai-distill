@@ -43,6 +43,13 @@ jobs:
       - name: 约束表无静默缺口
         run: python tests/e2e.py --only t_contract_ledger_no_silent_gap
 
+      # P0-4：对外声称台账。README 里每个数字都要能指到真实存在的证据
+      # （测试名 / 可复跑命令），且回归项数与仓库实际一致。
+      # 这不是"再写一份检查"——它挡住的是本项目最高频的病：声称 ≠ 实际
+      # （曾写「12 张卡」实际 9 张、「2 张卡跑过交叉复核」实际 6 张，都没人红）。
+      - name: 对外声称有据且数字不腐烂
+        run: python docs/verify_claims.py
+
       # Markdown 结构自检：死链与重复章节（纯文本层，无需构建）
       # #64（2026-10-10）：这段逻辑原先内联在本文件里 → **本地回归跑不到它**，
       # 于是「本地 96 项全绿、CI 两处红」成为可能。现已搬进 tests/doc_structure_check.py

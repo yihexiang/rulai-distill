@@ -394,6 +394,23 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
             + re.findall(r"[「“]([^」”\n]{4,600})[」”]", line)
         quotes = [q for q in _cands if _is_quote(q)]
         quote_candidates += len(_cands)
+        # 复审 5（建议）：**带 §N 标注的短候选升级为可核验**。
+        # <8 汉字的候选里，「柔乘剛也」「窮理盡性以至於命」这类经典引语与「缺啥补啥」
+        # 这类卡片自造短语用长度分不开——但**是否逐字见于语料**能干净分开。
+        # 规则（非对称，故意如此）：
+        #   * 逐字见于语料 + 同行有 §N  → 进入核验；**命中即计入核验数**（正向证据）。
+        #   * 不命中 → 记为 short_misplaced **只报警不判失败**：≤7 字的短语在多引用行上
+        #     归属本就含糊，硬判会制造假阳性（本项目「假阳性比漏报更坏」的纪律）。
+        short_cited: set[str] = set()
+        if cits:
+            for q in _cands:
+                if q in quotes or q in short_cited:
+                    continue
+                if not (4 <= len(CJK_CHAR_RE.findall(q)) < 8):
+                    continue
+                if _find_in_corpus(q):
+                    short_cited.add(q)
+        quotes = quotes + sorted(short_cited)
         # 抽取层对账（C10）：候选 = 认出 + 噪声 + 因太短跳过的中文候选。
         # 旧实现把"太短的中文候选"混进 noise，于是**看不见自己漏了什么**。
         skipped_here = [q for q in _cands
@@ -403,19 +420,13 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
             loc = _find_in_corpus(q)
             entry = {"line": lineno, "quote": q.strip()[:60], "in_corpus": loc}
             if loc:
-                # 短候选**逐字见于语料** → 多半是真引语。若同行声明了 §N，就顺手对照一下
-                # 声明位置与语料实际位置（**只提示，不判失败**——短词恰好出现在语料里
-                # 是常态，据此判失败会制造假阳性；但完全不报就是又一个静默盲区）。
-                if cits:
-                    entry["declared"] = [{"src": s, "para": t} for s, t in cits]
-                    entry["status"] = "hit" if any(
-                        s == loc["src"] and t == loc["para"] for s, t in cits) else "mismatch"
-                else:
-                    entry["status"] = "unattributed"
+                # 短候选**逐字见于语料**但同行没有 §N（有 §N 的已升级为可核验）→ 提示补段号
+                entry["status"] = "unattributed" if not cits else "not_promoted"
             short_samples.append(entry)
         noise += len(_cands) - len(quotes) - len(skipped_here)
         for q in quotes:
             seen_quotes += 1
+            is_short = q in short_cited
             # 该行所有段号里，任一命中即算锚定成功（并列锚点是合法用法）
             best_local = None
             # 书类块无内联 §N 时，用块携带的第N段（向后看取到的）作为目标
@@ -447,6 +458,7 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
             r["line"] = lineno
             r["quote"] = q[:160]
             r["anchored"] = bool(cits) or block_target is not None
+            r["short"] = is_short      # 短引语（<8 汉字但逐字见于语料）——见下方非对称规则
             results.append(r)
 
     tally: dict[str, int] = {}
@@ -459,8 +471,14 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
     partial = [r for r in results if r["verdict"] == "ANCHOR_PARTIAL"]
     # 复审 #1：失败只统计**带段号标注**的失配。无 §N 的引语归 UNANCHORED（不可定位），
     # 单列出来、如实计数，但不判失败——它不是"挂错段号"，是"没段号可锚"。
+    # 复审 5（建议）：**短引语不参与硬失败**（非对称）——命中已计入 anchored（正向证据），
+    # 失配只进 short_misplaced 报警。理由：≤7 字的短语在多引用行上归属含糊，硬判会假阳性。
     miss = [r for r in results
-            if r["anchored"] and r["verdict"] in ("ANCHOR_MISS", "NOT_IN_CORPUS", "SPAN_HIT")]
+            if not r["short"] and r["anchored"]
+            and r["verdict"] in ("ANCHOR_MISS", "NOT_IN_CORPUS", "SPAN_HIT")]
+    short_hits = [r for r in results if r["short"] and r["verdict"] == "ANCHOR_HIT"]
+    short_bad = [r for r in results
+                 if r["short"] and r["verdict"] in ("ANCHOR_MISS", "NOT_IN_CORPUS", "SPAN_HIT")]
     unanchored_list = [r for r in results if r["verdict"] == "UNANCHORED"]
     unanchored = len(unanchored_list)
 
@@ -481,6 +499,14 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
         "unanchored_quotes": [{"line": r["line"], "quote": r["quote"],
                                "in_corpus_at": r.get("hit_at"),
                                "best_rate": r.get("rate")} for r in unanchored_list],
+        # 复审 5（建议）：短引语（<8 汉字、逐字见于语料、同行带 §N）已**升级为可核验**。
+        # 命中计入 anchored；失配单列在此，**只报警不判失败**（理由见抽取段注释）。
+        "short_quotes": {
+            "verified": len(short_hits),
+            "misplaced": [{"line": r["line"], "claimed_at": r.get("claimed_at"),
+                           "verdict": r["verdict"], "found_at": r.get("hit_at"),
+                           "quote": r["quote"]} for r in short_bad],
+        },
         "unresolved_sources": unresolved,
         "noise_filtered": noise,
         # #61 抽取层对账：候选 = 认出（seen）+ 噪声 + 因太短跳过的中文候选。

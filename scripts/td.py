@@ -495,21 +495,30 @@ def cmd_anchor(args) -> int:
         print(f"   抽取：候选 {_er.get('candidates')} = 认出 {_er.get('quotes_seen')}"
               f" + 噪声 {_er.get('noise_filtered')} + 中文太短跳过 {_er.get('skipped_cjk_short')}"
               f"（自检 {_er.get('balanced')}）")
+    # 复审 5：短引语已升级为可核验——命中计入上方"锚定命中"，失配在此报警（不判失败）
+    _sq = rep.get("short_quotes") or {}
+    if _sq.get("verified"):
+        info(f"   其中短引语（<8 汉字、逐字见于语料、同行带 §N）已纳入核验并命中 "
+             f"{_sq['verified']} 条 —— 它们以前只被当'太短'跳过")
+    if _sq.get("misplaced"):
+        warn(f"短引语失配 {len(_sq['misplaced'])} 条：**不判失败**（短句在多引用行上归属含糊），"
+             "但请人工核对段号")
+        for f in _sq["misplaced"][:5]:
+            info(f"      第 {f['line']} 行 声明 §{f['claimed_at']}，实际在 §{f['found_at']}"
+                 f"（{f['verdict']}）「{f['quote'][:60]}」")
     if rep.get("skipped_cjk_short"):
         in_corp = rep.get("short_but_in_corpus") or []
-        mismatch = [s for s in in_corp if s.get("status") == "mismatch"]
         warn(f"{rep['skipped_cjk_short']} 条中文候选因「汉字数 <8」被判为术语/短语、未纳入裁决"
-             f"（**不判失败**）；其中 {len(in_corp)} 条**逐字见于语料**，多半是真引语"
-             + (f"，且 {len(mismatch)} 条声明段号与语料实际位置**对不上**：" if mismatch else "："))
-        for s in (mismatch or in_corp)[:8]:
+             f"（**不判失败**）；其中 {len(in_corp)} 条**逐字见于语料**"
+             "（同行没有 §N 标注，所以无可锚定的段号）：")
+        for s in in_corp[:8]:
             ic = s.get("in_corpus") or {}
-            dec = "、".join(f"{d['src']} §{d['para']}" for d in (s.get("declared") or [])) or "无"
-            tail = f"声明 {dec} ≠ 实际" if s.get("status") == "mismatch" else "建议补 §N"
             info(f"      第 {s['line']} 行「{s['quote']}」（语料 {ic.get('src')} §{ic.get('para')}）"
-                 f"—— {tail}")
+                 f"—— 建议补 §N 标注，补了就会自动纳入核验")
     if args.json_out:
         write_json(Path(args.json_out).expanduser(), rep)
         ok(f"已写出 {args.json_out}")
+    # 复审 5：短引语失配的报警（见上）
     for f in rep["failures"]:
         cands = "、".join(f"§{c['para']}({c['rate']})" for c in f["candidates"]) or "无候选"
         warn(f"第 {f['line']} 行 声明 §{f['claimed_at']}，实际在 §{f['found_at']}"

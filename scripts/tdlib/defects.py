@@ -441,6 +441,69 @@ DEFECTS = [
      "又一次「新写的文档成了扫描器的第一个真实用户」——"
      "**同一个模式当天连犯两次（#63/#64），说明缺的不是细心而是本地可跑的检查**",
      ["t_self_validate_clean_and_doc_structure"]),
+    ("tests/e2e.py", "回归测试**耦合作者工作区**：本机假红 / CI 静默跳过（**「空集假绿」在测试层的变体**）",
+     "`t_anchor_cjk_short_quotes` 第⑤步只检查 `../guoxue-skills` 存在，没检查 `../yijing-run/corpus` "
+     "是否存在：**本机（有 guoxue 克隆、无工作区语料）94/95 假红**；"
+     "**CI（两个目录都没有）整体跳过——绿是\"跳过\"而非\"跑过\"**。"
+     "断言外部卡片 `quotes_seen≥16` 还构成跨仓库耦合（那张卡一改测试就红）。",
+     "改为 **fixture 驱动**：`tests/fixtures/cjk-short-quotes/{card,corpus}.md` 把 #61 的缺陷"
+     "固化成自足样本；断言 quotes_seen=6 / 命中 4 / 短引语失配只报警 / 双向对账平衡 / 长引语挂错仍 FAIL。"
+     "**与任何外部工作区无关，本机与 CI 跑的是同一条。**",
+     "critical", "tool_gap",
+     "复审 5 实测指出：\"本机 94/95 的差 1 项已定位为测试对作者工作区的耦合\"，"
+     "而这恰恰是本项目最忌讳的模式——**跳过伪装成通过**",
+     ["t_anchor_cjk_short_quotes"]),
+    ("examples/sample-bundle", "样例历史报告的 frontmatter 与正文**自相矛盾**：同一字段两种说法",
+     "`eval/fidelity-report.md` 的 `cross_grader_gap` 被回填成 `8`（那是**第二**轮交叉复核的结果），"
+     "而正文写着「cross_grader_gap 为空」（**第一**轮确为单评分）。"
+     "文件虽标了 superseded，读者看到的却是两个互相矛盾的数。",
+     "历史文件写历史：字段恢复为 `未做第二评分者交叉校验`，指针（第二轮 8 分）只放正文标注；"
+     "新增 `t_sample_report_consistent`：历史字段**不得以数字开头**、必须显式标注已被取代，"
+     "数字唯一真源在权威 `FIDELITY.json`（gap=8、≥2 评分者）",
+     "major", "structure_gap",
+     "复审 5 检出——为了让新报告「可被发现」而回填历史字段，结果制造了新的自相矛盾",
+     ["t_sample_report_consistent"]),
+    ("tests/ci_local.sh",
+     "bash 把紧跟变量名的多字节字符读进变量名，打印 `（��`",
+     "脚本照常往下跑，最后打印「✅ 全部通过」",
+     "bash 把「紧跟 `$var` 的多字节字符」读进变量名 → 变量内容**静默丢失**、"
+     "打印乱码，**而退出码仍是 0**。`ci_local.sh` 写 `echo \"…（rc=$rc）\"`，"
+     "全角括号紧跟 `$rc`。**报错会停下，乱码会继续**——所以它比报错更危险。\n"
+     "同一文件同一写法栽了两次（第二次是 `$VENV）`），肉眼完全看不出问题",
+     "critical", "tool_gap",
+     "新增 `scripts/shell_safety.py`（判据全部跑过 bash 验证：紧跟非空白 = 真错，"
+     "后面有空格 = 安全；首版把两者混为一谈报出 6 处假阳性，已收紧）；"
+     "修 install.sh 两处真 bug（`dir=$1` 未加引号 → 带空格路径被拆成两段；"
+     "`未知参数：$1（…` 截断）。P0 批次做本地 CI 预演脚本时踩到；"
+     "同一坑在同一文件栽两次，说明缺的是能跑 bash 的守卫而不是细心",
+     ["t_shell_scripts_safe"]),
+    ("README.md / GUIDE.md",
+     "README 写「12 张真实卡」，逐卡数只有 9 张；写「只对 2 张卡跑通交叉复核」，"
+     "磁盘上已有 6 份 FIDELITY.json",
+     "声称与实际不符时必须有东西变红",
+     "对外声称（卡片数、交叉复核卡数、回归项数…）完全没有台账。"
+     "两处都不是笔误，是做完事没回头改声称——而这正是本项目最高频的一类缺陷。"
+     "本条是 P0-4 建台账时**逐条实测数出来的**，不是推测",
+     "critical", "structure_gap",
+     "新增 `docs/CLAIMS.md` + `docs/verify_claims.py`：每条声称给真实存在的"
+     "测试名/命令 + 核验日期；事实数字集中在 facts 段，`--sync` 一条命令同步全部文档。"
+     "**校验器自己也被校验**：首版「数字腐烂」检查写成找 `{tests} = N`（文档里没这种写法）"
+     "→ 永远匹配不到，看着有、实际从不触发（#54 同一个病）",
+     ["t_claims_have_evidence"]),
+    ("benchmarks/token-savings/measure.py",
+     "输出「窗口比整本还贵：0.56×」",
+     "省 token 的数字必须 ≥1，且脚本在字段不存在时必须报错而不是静默算错",
+     "量具本身是坏的却毫无报错：读 `document.json` 的 `elements`"
+     "（而 `index --grep` 真正返回的是 `chunks.jsonl` 的 `ck-*` 块）、"
+     "字段名写成根本不存在的 `id`/`title` → 命中块 id 全空、邻块去重失效。\n"
+     "**一个看起来像数字的错结果比不测更坏**",
+     "major", "tool_gap",
+     "计量单元改回 chunks.jsonl；邻块去重；退化样本（只命中标题块→倍数四位数）"
+     "标为「退化」不进区间；命中 0 块不给倍数；`--corpus` 用 `action='extend'`"
+     "（argparse `nargs='+'` 重复传时后者覆盖前者，实测少一本书却零报错）；"
+     "没装 tiktoken 时报「未运行」退出码 2。P0-3 第一版就错，"
+     "靠实跑并逐条核对 schema 字段才抓到",
+     ["t_token_savings_benchmark"]),
 ]
 
 
