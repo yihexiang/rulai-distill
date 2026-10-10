@@ -14,17 +14,17 @@
 
 <!-- facts:begin -->
 ```text
-tests = 102
+tests = 103
 subcommands = 37
-defects = 69
+defects = 70
 ```
 <!-- facts:end -->
 
 | 量 | 值 | 怎么数的 |
 |---|---|---|
-| 回归项 | **102** | `tests/e2e.py` 的注册表条目数 |
+| 回归项 | **103** | `tests/e2e.py` 的注册表条目数 |
 | 子命令 | **37** | `td.py --help` 里 argparse 打印的 choices |
-| 缺陷台账 | **69** | `tdlib/defects.py` 的 `DEFECTS` 长度 |
+| 缺陷台账 | **70** | `tdlib/defects.py` 的 `DEFECTS` 长度 |
 
 正文里的数字由 `docs/verify_claims.py --sync` 从上面那段的实测值统一改写，
 **人手填的数字一律腐烂**。默认（不加 `--sync`）只校验、不改写，所以 CI 里是纯检查。
@@ -45,6 +45,7 @@ defects = 69
 | 缺陷数 / 分布 / 回归项数三者由测试强制相等 | `t_defect_ledger_stats` · `t_defect_regression_ledger` · `t_docs_no_drift` | 2026-10-10 |
 | 回归测试**不得静默依赖作者工作区** | `t_no_external_fixture_deps` | 2026-10-10 |
 | CI 的每一步都能在本地跑通（不必等CI 才发现） | `t_self_validate_clean_and_doc_structure` · `tests/ci_local.sh` | 2026-10-10 |
+| 开放素材端到端建卡已闭环：論語卡（公版典籍）随包分发并通过 `validate` + `lint-quotes`，印证工具链能消化 25 万字节级公版语料（不止小样本） | `t_real_sample_artifacts` · `t_corpus_anchor_splits_by_structure` · `scale-evidence-open-material-2026-10-10.md` | 2026-10-10 |
 
 ## 逐卡证据（不是"12 张"，实测 9 张）
 
@@ -63,6 +64,7 @@ defects = 69
 | `geju-yunshi` | `guoxue-skills` | error 0 | **95 / A**（96/93，gap 3） |
 | `quming-xue` | `guoxue-skills` | error 0 | **96 / A**（96/95，gap 1） |
 | `zhouyi-yili` | `guoxue-skills` | error 0 | **96 / A**（97/97，gap 0） |
+| `lunyu-conduct`（开放·論語） | `examples/open-bundle` | error 0 | 待补（建卡完成、`eval-kit init` 已出套件；独立交叉复核未跑） |
 
 **交叉复核 6 张里有一处要单独说**：`zhouyi-yili` 两个评分者给出**完全相同**的总分。
 那不构成两次独立证实——`eval-kit check` 会就"多个评分给相同分数"发提醒，

@@ -1,0 +1,38 @@
+{
+  "schema": "rulai-distill/eval-kit-answers@1",
+  "answerer": "【必填：独立答题 Agent 的标识，不得与卡片作者相同】",
+  "answers": [
+    {
+      "id": "consistency-1",
+      "answer": "【填写该题的回答；只能依据卡片，不得凭作者记忆】"
+    },
+    {
+      "id": "consistency-2",
+      "answer": "【填写该题的回答；只能依据卡片，不得凭作者记忆】"
+    },
+    {
+      "id": "consistency-3",
+      "answer": "【填写该题的回答；只能依据卡片，不得凭作者记忆】"
+    },
+    {
+      "id": "consistency-4",
+      "answer": "【填写该题的回答；只能依据卡片，不得凭作者记忆】"
+    },
+    {
+      "id": "consistency-x",
+      "answer": "【填写该题的回答；只能依据卡片，不得凭作者记忆】"
+    },
+    {
+      "id": "style-1",
+      "answer": "【填写该题的回答；只能依据卡片，不得凭作者记忆】"
+    },
+    {
+      "id": "edge-1",
+      "answer": "【填写该题的回答；只能依据卡片，不得凭作者记忆】"
+    },
+    {
+      "id": "source-1",
+      "answer": "【填写该题的回答；只能依据卡片，不得凭作者记忆】"
+    }
+  ]
+}

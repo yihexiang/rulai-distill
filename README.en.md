@@ -11,7 +11,7 @@ verifiable, traceable Agent Skill — not a summary, not a book report.
 [![Contract & vendor](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml/badge.svg)](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![python](https://img.shields.io/badge/python-%E2%89%A53.10-blue)
-![regression](https://img.shields.io/badge/regression-102%20passing-brightgreen)
+![regression](https://img.shields.io/badge/regression-103%20passing-brightgreen)
 
 > ### Most distillation tools solve *generation*. This one builds **proof**.
 > **No release without a passing gate — and an agent never grades itself.**
@@ -64,13 +64,13 @@ gate           →  requires ≥2 independent graders by default; otherwise REFU
 
 ### 3️⃣ Defects live in a **ledger**, and the ledger is enforced by tests
 
-All **69** self-found defects are published in `CONSTRAINTS.md` and mirrored as
+All **70** self-found defects are published in `CONSTRAINTS.md` and mirrored as
 machine-checkable failure cases (`td.py failure list`) — each with *what went wrong /
 what it should have been / severity / the regression test that pins it*.
 **Ledger rows, category counts and the regression count are asserted equal by tests —
 a wrong number turns CI red.**
 
-69 of the 69 are defects **in our own verification and measurement tools** (78%).
+70 of the 70 are defects **in our own verification and measurement tools** (78%).
 That ratio is itself the finding: **what is most often wrong is not the thing — it's the ruler.**
 
 ---
@@ -88,6 +88,35 @@ That ratio is itself the finding: **what is most often wrong is not the thing �
 was probed with only 3 human-written questions; the sample card is a polished showcase and
 **does not represent open-ended material in general**.
 
+### Open-material arm (P0-2 · added 2026-10-10)
+
+The 9 cards above cover **closed / semi-closed material** (book excerpts, interviews, TED video).
+P0-2 adds the "**large public-domain corpus**" category, proving the toolchain is not limited to
+small samples — it also ingests ~252 KB of public-domain classics:
+
+| Role | Content | Status |
+|---|---|---|
+| Fetch — normalize — chunk | 4 public-domain classics: *Zizhi Tongjian* (Wei), *Mencius*, *Hanfeizi*, *Analects* — **252,492 raw bytes / 90,288 clean chars / 226 fetch segments** total | `fetch_wikisource` → `corpus-anchor` ran, no crashes |
+| End-to-end card | `lunyu-conduct` (Analects → conduct & reading-people framework) | `validate` + `lint-quotes` pass; `eval-kit init` produced the grading kit |
+| Independent cross-review | `lunyu-conduct` | **pending** (independent answerer sub-agent file-write reliability, see below) |
+| Remaining 3 corpora | Tongjian / Mencius / Hanfeizi | fetch—normalize—chunk ready; carding is the next increment |
+
+Per-corpus evidence and known boundaries:
+[`docs/scale-evidence-open-material-2026-10-10.md`](./docs/scale-evidence-open-material-2026-10-10.md)
+(same workspace as this repo).
+
+**Boundaries of the open-material arm (also stated up front)**:
+
+- **Chunk granularity depends on headings.** `corpus-anchor` splits on markdown headings;
+  *Hanfeizi* / *Analects* bodies use traditional numbering (chapter / `一之一`) instead of headings,
+  so they collapse to 3 chunks. This **does not block carding** (carding reads the fine-grained
+  segment markers after anchoring), but it means the P0-3 token-savings baseline (from
+  headed corpora) understates savings for heading-less long prose.
+- **Open material is not yet independently cross-reviewed.** `lunyu-conduct` is built but the
+  independent answerer + dual grader run has not happened — so "the toolchain can eat large
+  corpora" **does not equal** "cards on large corpora are independently verified". This is the
+  same boundary as above ("6 cross-reviews ≠ 6 material kinds") extended to open material.
+
 ---
 
 ## 🚦 Status: beta — read this first
@@ -97,7 +126,7 @@ These are two claims with very different evidence, and we keep them apart on pur
 
 | Dimension | Status | Evidence |
 |---|---|---|
-| **Mechanical reliability** | ✅ trustworthy | 102 regression tests green; `gate` requires a cross-review record (verified live); `verify-quotes` / `anchor` / `lint-quotes` have each caught real problems on real material; the toolchain runs on **9 real cards** with zero crashes and zero false reds |
+| **Mechanical reliability** | ✅ trustworthy | 103 regression tests green; `gate` requires a cross-review record (verified live); `verify-quotes` / `anchor` / `lint-quotes` have each caught real problems on real material; the toolchain runs on **9 real cards** with zero crashes and zero false reds |
 | **Output correctness** | ⚠️ **closed loop proven, still material-dependent** | `eval-kit` has run a **real cross-review** on **6 cards** (independent answerer + 2 independent graders): sample card **93/A**, `musk-decisions` **90/A**, `bazi-paipan` **93/A**, `geju-yunshi` **95/A**, `quming-xue` **96/A**, `zhouyi-yili` **96/A**. ⚠️ All are **structurally** independent, not organizationally; the sample card is a showcase, **not** the average of open-ended material; the four guoxue cards share one corpus-prep style, so four passes is **not** four kinds of material validated. Per-claim evidence: [`docs/CLAIMS.md`](./docs/CLAIMS.md) |
 
 Concretely, what this project currently **cannot** do:
@@ -111,8 +140,11 @@ Concretely, what this project currently **cannot** do:
    (`eval-kit`: separate answerer sub-agent + 2 separate grader sub-agents), but they are still
    sub-agents on the same machine — **no second human has reviewed them**, and sub-agent
    file-writes remain unreliable on long tasks (historically, 1 of 4 dispatches landed reliably).
-3. **The open-ended sample is still small.** Only **6 cards** have been through cross-review
-   (`musk-decisions` with just 3 questions). The 12-card run proves *the tools run* — **not**
+3. **The open-material card is not yet independently cross-reviewed.** Cross-review has only run
+   on **6** closed / semi-closed cards (`musk-decisions` with just 3 questions). The open public-domain
+   card (`lunyu-conduct`, Analects) is built and passes `validate` / `lint-quotes`, but the independent
+   answerer + dual grader run has not happened (sub-agent file-write reliability).
+   The 9 real cards (closed / semi-closed) + 1 open-material card prove *the tools run* — **not**
    that the cards are good.
 
 **Good for**: the pipeline skeleton and the gate design — validation, gating, snapshots,
@@ -178,7 +210,7 @@ python3 scripts/td.py compile books/my-book --out ~/.workbuddy/skills/my-book --
 python3 scripts/td.py rollback ~/.workbuddy/skills/my-book --to latest
 ```
 
-**Regression suite**: `python3 tests/e2e.py` (102 tests, covering every command and the
+**Regression suite**: `python3 tests/e2e.py` (103 tests, covering every command and the
 vendored upstreams).
 
 ---

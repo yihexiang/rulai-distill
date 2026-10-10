@@ -1,0 +1,33 @@
+{
+  "schema": "rulai-distill/eval-kit-scores@1",
+  "grader": "【必填：独立评分 Agent 的标识，不得看到答题者身份】",
+  "dimensions": {
+    "consistency": {
+      "score": 0,
+      "max": 30,
+      "note": "【扣分必须引用卡片原话】"
+    },
+    "style": {
+      "score": 0,
+      "max": 20,
+      "note": "【扣分必须引用卡片原话】"
+    },
+    "edge_honesty": {
+      "score": 0,
+      "max": 20,
+      "note": "【扣分必须引用卡片原话】"
+    },
+    "source_transparency": {
+      "score": 0,
+      "max": 15,
+      "note": "【扣分必须引用卡片原话】"
+    },
+    "structure": {
+      "score": 0,
+      "max": 15,
+      "note": "【扣分必须引用卡片原话】"
+    }
+  },
+  "total": 0,
+  "notes": "总分 = 各维度之和（≤100）。给 0 分或满分，慎用中间分。"
+}

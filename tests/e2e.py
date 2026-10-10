@@ -2217,6 +2217,16 @@ def t_real_sample_artifacts():
     # 孙子样本卡随包分发 → **在干净 clone 上也必须真跑**，不得因外部素材缺失而跳过。
     sunzi = ROOT / "examples" / "sample-bundle" / "skills" / "five-affairs-seven-questions" / "SKILL.md"
     assert sunzi.exists(), "样本卡应随包分发，缺失属打包事故"
+    # 开放素材臂（P0-2）：論語卡随包分发（examples/open-bundle），干净 clone 上也必须真跑。
+    # 它证明工具链不只吃小样本，也能吃 25 万字节级的公有领域典籍并产出可核验卡。
+    lunyu = ROOT / "examples" / "open-bundle" / "skills" / "lunyu-conduct" / "SKILL.md"
+    assert lunyu.exists(), "开放素材样本卡应随包分发，缺失属打包事故"
+    r = run(["validate", str(lunyu.parent)])
+    assert "error 0" in r.stdout, f"論語卡未通过静态校验：{r.stdout}"
+    sources = lunyu.parent / "SOURCES.md"
+    assert sources.exists(), "論語卡缺 SOURCES.md 来源声明"
+    stext = sources.read_text(encoding="utf-8")
+    assert "公有领域" in stext, "SOURCES.md 未声明公有领域来源"
     externals = [("人物(马斯克)", external_ws("musk-run/skills/musk-thinking/SKILL.md")),
                  ("视频(TED)", external_ws("video-run/skills/two-kinds-of-procrastination/SKILL.md"))]
     ok: dict[str, Path] = {}
@@ -2963,6 +2973,62 @@ def t_shell_scripts_safe():
                       encoding="utf-8")
         assert not S.scan(ok), \
             f"误报了安全的写法：{S.scan(ok)}——误报的守卫等于没有守卫"
+
+
+def t_corpus_anchor_splits_by_structure():
+    """#70：`corpus-anchor` 必须**按结构**切段，不能只按空行。
+
+    真实公版典籍（维基文库导出）是「一行一段、无空行」格式。旧实现按空行切，
+    628 行只切出 6 段（每段近万字）——而 CLI 照常打印「✅ 规整完成」。
+    **这是比"切错"更隐蔽的失效**：它给出的是一个看起来合法的段号体系，
+    没有异常、没有报错，可段号已经失去定位意义。
+
+    本条守三件事：①按 markdown 标题切；②过长的段会被再切且**不丢内容**；
+    ③段数过少时 CLI 必须警告。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib.anchor import normalize_book_corpus
+
+    # 一行一段、无空行、每节一个标题——真实公版典籍的形状
+    lines = ["---", "source_id: src-01", "---", ""]
+    for vol in range(1, 31):
+        lines += [f"## 卷{vol}", f"起著雍攝提格，盡玄黓困敦。凡三十五年。{'說' * 200}。"]
+    text = "\n".join(lines)
+
+    out, stats = normalize_book_corpus(text)
+    assert stats["split_by"] == "headings", stats
+    assert stats["segments"] >= 30, \
+        f"31 个标题只切出 {stats['segments']} 段——又退回按空行了"
+    assert out.startswith("【第1段】"), out[:40]
+    # 段号连续、无跳号
+    nums = [int(x) for x in re.findall(r"【第(\d+)段】", out)]
+    assert nums == list(range(1, len(nums) + 1)), f"段号不连续：{nums[:10]}…"
+
+    # ② --max-chars：超长段再切，且**一个字符都不许丢**。
+    #    上限取 150（每节约 226 字）→ 必须触发再切。
+    #    首版这里写 300，结果每节 226 字根本没超限，测试"通过"了却没测到东西
+    #    ——**测试自身也要先确认它在测**。
+    out2, st2 = normalize_book_corpus(text, max_chars=150)
+    assert st2["segments"] > stats["segments"], \
+        f"过长的段没有被再切（{stats['segments']} → {st2['segments']}）"
+    def strip_marks(s):
+        return re.sub(r"【第\d+段】\n?", "", s)
+    # 比较时**忽略空白**：再切必然在切点补换行，正文一个字都不该变。
+    # 直接比原文会因换行差异失败——那不是内容丢失，是切段留下的接缝。
+    assert re.sub(r"\s+", "", strip_marks(out2)) == \
+           re.sub(r"\s+", "", strip_marks(out)), \
+        "再切之后正文变了——切段必须只拆不丢（忽略切点换行后应完全相同）"
+    longest = max(len(b) for b in out2.split("【第")[1:])
+    assert longest < 1000, f"仍有 {longest} 字的段（再切后应远小于 226）"
+
+    # ③ CLI：段数过少必须警告（不警告 = 又一次静默失效）
+    import tempfile as _tf
+    with _tf.TemporaryDirectory() as d:
+        f = Path(d) / "flat.md"
+        f.write_text("一行一段。\n" * 900, encoding="utf-8")   # 无标题无空行
+        proc = run(["corpus-anchor", str(f)], expect=0)
+        assert "段号已失去定位意义" in proc.stdout, \
+            f"段数过少时必须警告：{proc.stdout[-400:]}"
 
 
 def t_claims_have_evidence():
@@ -3762,6 +3828,7 @@ def main() -> int:
         ("anchor 中文短引语不被丢（#61）", t_anchor_cjk_short_quotes),
         ("回归不得依赖作者工作区（P0-1/#65）", t_no_external_fixture_deps),
         ("token 节省实测不产假数字（P0-3）", t_token_savings_benchmark),
+        ("corpus-anchor 按结构切段（#70）", t_corpus_anchor_splits_by_structure),
         ("对外声称有据且数字不腐烂（P0-4）", t_claims_have_evidence),
         ("shell 脚本无静默出错写法", t_shell_scripts_safe),
         ("样例历史报告与权威报告不矛盾（复审 5）", t_sample_report_consistent),

@@ -119,13 +119,23 @@ def split_paragraphs(text: str) -> dict[int, str]:
 CJK_CHAR_RE = re.compile(r"[\u4e00-\u9fff]")
 
 
-def normalize_book_corpus(text: str) -> tuple[str, dict]:
+def normalize_book_corpus(text: str, max_chars: int = 0) -> tuple[str, dict]:
     """把书类原文规整成 anchor 可读的 `【第N段】` 形式（复审 #1 的"内置转换器"）。
 
     * 已有 `【第N段】` 标记：按标记切段、重新顺序编号（去掉跳号/重复）。
-    * 无标记：按空行切段、逐段编号。
+    * 无标记：**按结构切段** —— 先按 markdown 标题（`#`～`######`）切，
+      标题以下到下一个标题之间为一段；没有标题时退回按空行切。
+    * `max_chars > 0` 时把过长的段再切一刀（不截断内容，只拆段），
+      否则一段近万字时，引语挂到「第N 段」等于挂到整本书。
+
     anchor 原生读 `【第N段】`，所以规整后即可直接 `td.py anchor <卡> --corpus <规整后>`。
     返回 (规整后文本, 统计)。
+
+    ⚠️ 2026-10-10（#70）：原实现只按**空行**切段。真实公版典籍
+    （维基文库导出的《資治通鑑》等）是「**一行一段、无空行**」的格式，
+    628 行只切出 **6 段**（每段近万字）——段号失去定位意义，
+    而工具**照常输出「✅ 规整完成」**，没有任何异常。
+    「切段失败」比「切错」更隐蔽：它给出的是一个看起来合法的段号体系。
     """
     if BOOK_RE.search(text):
         parts = BOOK_RE.split(text)
@@ -136,12 +146,59 @@ def normalize_book_corpus(text: str) -> tuple[str, dict]:
                 blocks.append(body)
         resequenced = True
         had = True
+        by = "markers"
     else:
-        blocks = [b.strip() for b in re.split(r"\n\s*\n", text.strip()) if b.strip()]
+        blocks = _split_by_structure(text)
         resequenced = False
         had = False
+        by = "headings" if any(b.startswith("#") for b in blocks) else "blank_lines"
+    if max_chars > 0:
+        blocks = _oversized(blocks, max_chars)
     out = "\n\n".join(f"【第{i}段】\n{b}" for i, b in enumerate(blocks, 1))
-    return out, {"segments": len(blocks), "had_markers": had, "resequenced": resequenced}
+    return out, {"segments": len(blocks), "had_markers": had,
+                 "resequenced": resequenced, "split_by": by,
+                 "max_chars": max_chars}
+
+
+def _split_by_structure(text: str) -> list[str]:
+    """按 markdown 标题切段；标题之前的前言单独成段。"""
+    lines = text.splitlines()
+    blocks: list[str] = []
+    cur: list[str] = []
+    for ln in lines:
+        if re.match(r"^#{1,6}\s", ln):
+            if any(x.strip() for x in cur):
+                blocks.append("\n".join(cur).strip())
+            cur = [ln]
+        else:
+            cur.append(ln)
+    if any(x.strip() for x in cur):
+        blocks.append("\n".join(cur).strip())
+    if len(blocks) <= 1:                      # 完全没有标题 → 退回按空行
+        return [b.strip() for b in re.split(r"\n\s*\n", text.strip()) if b.strip()]
+    return [b for b in blocks if b.strip()]
+
+
+def _oversized(blocks: list[str], max_chars: int) -> list[str]:
+    """把超过 max_chars 的段按空行/句子边界再切，**不丢内容**。"""
+    out: list[str] = []
+    for b in blocks:
+        if len(b) <= max_chars:
+            out.append(b)
+            continue
+        cur: list[str] = []
+        n = 0
+        for piece in re.split(r"(?<=[。！？；])|\n\s*\n", b):
+            if not piece:
+                continue
+            if cur and n + len(piece) > max_chars:
+                out.append("\n".join(cur).strip())
+                cur, n = [], 0
+            cur.append(piece)
+            n += len(piece)
+        if cur:
+            out.append("\n".join(cur).strip())
+    return [x for x in out if x.strip()]
 
 
 def norm_words(text: str) -> list[str]:

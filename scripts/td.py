@@ -555,7 +555,8 @@ def cmd_corpus_anchor(args) -> int:
     from tdlib.anchor import normalize_book_corpus
     src = Path(args.infile).expanduser()
     text = src.read_text(encoding="utf-8", errors="replace")
-    out_text, stats = normalize_book_corpus(text)
+    max_chars = int(getattr(args, "max_chars", 0) or 0)
+    out_text, stats = normalize_book_corpus(text, max_chars=max_chars)
     if args.out:
         dst = Path(args.out).expanduser()
         dst.write_text(out_text + "\n", encoding="utf-8")
@@ -564,6 +565,14 @@ def cmd_corpus_anchor(args) -> int:
     else:
         print(out_text)
     info(f"段数 {stats['segments']}；原文件含【第N段】标记：{stats['had_markers']}")
+    info(f"切段依据：{stats['split_by']}"
+         + (f"；超长段按 {max_chars} 字再切" if max_chars else ""))
+    # #70：段数少到离谱时**必须说清风险**。段号是给引语定位用的，
+    # 一段近万字时「第12段」约等于「第12 段 = 一整卷」，定位等于没有——
+    # 而工具此前照常打印「✅ 规整完成」。
+    if stats["segments"] <= 3 and len(text) > 4000:
+        warn(f"只切出 {stats['segments']} 段而原文有 {len(text):,} 字——"
+             f"段号已失去定位意义。建议加 --max-chars 3000 让它按句边界再切。")
     return EXIT_OK
 
 
@@ -1219,6 +1228,9 @@ def build_parser() -> argparse.ArgumentParser:
                        help="书类语料规整：把书类原文产出成 anchor 可读的【第N段】形式")
     q.add_argument("infile", help="书类原文（可带或不含【第N段】标记）")
     q.add_argument("-o", "--out", help="输出文件（不指定则打印到 stdout）")
+    q.add_argument("--max-chars", type=int, default=0,
+                   help="单段超过此字数则按句边界再切（0 = 不切）。"
+                        "不加时，一行一段的公版典籍会被切成整卷一「段」")
     q.set_defaults(func=cmd_corpus_anchor)
 
     q = sub.add_parser("lint-quotes",

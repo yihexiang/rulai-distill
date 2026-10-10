@@ -10,7 +10,7 @@
 [![Contract & vendor](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml/badge.svg)](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![python](https://img.shields.io/badge/python-%E2%89%A53.10-blue)
-![regression](https://img.shields.io/badge/regression-102%20passing-brightgreen)
+![regression](https://img.shields.io/badge/regression-103%20passing-brightgreen)
 
 > ### 别的蒸馏技能解决「生成」，这个解决「证明」。
 > **不打分不发版，而且不由自己打分。**
@@ -61,7 +61,7 @@ gate       →  默认要求 ≥2 个独立评分者交叉复核，否则**拒�
 
 ### 3️⃣ 缺陷有**台账**，而台账由测试强制相等
 
-本项目把自己的 69 个缺陷全部登记在 `CONSTRAINTS.md`，并逐条写成可机校验的 failure-case
+本项目把自己的 70 个缺陷全部登记在 `CONSTRAINTS.md`，并逐条写成可机校验的 failure-case
 （`td.py failure list`）：每条都带「当时怎么错的 / 应该是什么 / 严重级 / 对应回归测试」。
 **台账行数、分布数字、回归项数三者由测试强制相等——数字写错即 CI 红。**
 
@@ -87,6 +87,30 @@ gate       →  默认要求 ≥2 个独立评分者交叉复核，否则**拒�
 guoxue 那四张同属国学、同一套语料规整方式，**四张通过不等于四类素材被验证过**。
 逐条证据与最近核验日期见 [`docs/CLAIMS.md`](./docs/CLAIMS.md)（机器核验：`python3 docs/verify_claims.py`）。
 
+### 开放素材臂（P0-2 · 2026-10-10 新增）
+
+上面 9 张卡覆盖**封闭 / 半封闭素材**（节选书、人物访谈、TED 视频）。P0-2 补齐了
+"**大规模公有领域文本**"这一类，证明工具链不只吃小样本，也能吃 25 万字节级的公版典籍：
+
+| 角色 | 内容 | 状态 |
+|---|---|---|
+| 抓取—规整—切片 | 4 套公版典籍：資治通鑑（魏紀）/ 孟子 / 韓非子 / 論語，合计 **252,492 字节原始 / 90,288 净字符 / 226 抓取段** | `fetch_wikisource` → `corpus-anchor` 实跑，无崩溃 |
+| 端到端建卡 | `lunyu-conduct`（論語 → 言行识人框架） | `validate` + `lint-quotes` 通过；`eval-kit init` 已出质检套件 |
+| 独立交叉复核 | `lunyu-conduct` | **待补**（独立答题 Agent 落盘可靠性问题，见下） |
+| 其余 3 套语料 | 通鉴 / 孟子 / 韓非子 | 抓取—规整—切片就绪，建卡为下一增量 |
+
+逐条规模证据与已知边界见 [`docs/scale-evidence-open-material-2026-10-10.md`](./docs/scale-evidence-open-material-2026-10-10.md)
+（与本仓库同工作区）。
+
+**开放素材臂的边界（同样写在明处）**：
+
+- **切片粒度依赖标题**：`corpus-anchor` 按 markdown 标题切，韓非子 / 論語正文用传统编号
+  （章 / `一之一`）而非标题，切片退化为 3 块。这**不影响建卡**（建卡读锚定后的细粒度段号），
+  但意味着 P0-3 的 token 节省基准（取自有标题语料）对"无标题长正文"偏低。
+- **开放素材尚未独立交叉复核**：`lunyu-conduct` 已建卡但独立答题 + 双评分未跑——
+  所以"工具链能吃大语料"**不等于**"大语料上的卡片质量已被独立证实"。这正是上面
+  "6 张交叉复核 ≠ 6 类素材"的同一条边界在开放素材上的延伸。
+
 ---
 
 ## 🚦 项目状态：beta，请先读这一段
@@ -95,8 +119,8 @@ guoxue 那四张同属国学、同一套语料规整方式，**四张通过不�
 
 | 维度 | 状态 | 证据 |
 |---|---|---|
-| **机械可靠性** | ✅ 可信 | 102 项回归全绿；`gate` 默认要求交叉复核记录（实测生效）；`verify-quotes`/`anchor`/`lint-quotes` 均在真实素材上抓到过真问题；工具链在 **9 张真实卡**上实跑零崩溃、零假红 |
-| **产出正确性** | ⚠️ **已跑通闭环，仍强依赖素材** | `eval-kit` 已对两张卡跑通**真实交叉复核**（独立答题 Agent + 2 个独立评分 Agent）：样本卡 **93/A**、`musk-decisions` **90/A**。⚠️ 两者是**结构独立**而非组织独立；样本卡是精修展示件，**不能代表开放素材的普遍水平** |
+| **机械可靠性** | ✅ 可信 | 103 项回归全绿；`gate` 默认要求交叉复核记录（实测生效）；`verify-quotes`/`anchor`/`lint-quotes` 均在真实素材上抓到过真问题；工具链在 **9 张真实卡**上实跑零崩溃、零假红 |
+| **产出正确性** | ⚠️ **已跑通闭环，仍强依赖素材** | `eval-kit` 已在 **6 张卡**上跑通**真实交叉复核**（独立答题 Agent + 2 个独立评分 Agent）：样本卡 `five-affairs` **93/A**、`musk-decisions` **90/A**，guoxue 四张 **93/95/96/96（A）**。⚠️ 这些是**结构独立**而非组织独立；样本卡是精修展示件，**不能代表开放素材的普遍水平** |
 
 具体地说，这个项目目前**做不到**的事：
 
@@ -106,8 +130,11 @@ guoxue 那四张同属国学、同一套语料规整方式，**四张通过不�
 2. **独立性只在「结构」层面成立，不是「组织」层面。** 这条已被真实跑通（`eval-kit`：独立答题子 Agent +
    2 个独立评分子 Agent），但它仍是同一台机器上的子 Agent —— **没有第二个人复评**，
    且子 Agent 落盘在长任务下仍不稳定（历史实测派 4 次仅 1 次可靠落盘）。
-3. **开放素材上的样本仍然小。** `eval-kit` 只对 **6 张卡**跑通交叉复核（其中 `musk-decisions` 仅测 3 道人工题）；
-   **9 张真实卡**跑工具链零崩溃，但那证明的是「工具能跑」，**不是「卡片都好」**。
+3. **开放素材上的卡片尚未独立交叉复核。** `eval-kit` 只在 **6 张**封闭 / 半封闭卡上跑通交叉复核
+   （其中 `musk-decisions` 仅测 3 道人工题）；开放公版素材（`lunyu-conduct` 論語）已端到端建卡并通过
+   `validate` / `lint-quotes`，但独立答题 + 双评分**尚未跑**（子 Agent 落盘可靠性问题）。
+   **9 张真实卡**（封闭 / 半封闭）+ 1 张开放素材卡跑工具链零崩溃，但那证明的是「工具能跑」，
+   **不是「卡片都好」**。
 
 **它现在适合当什么用**：流程骨架与门禁参考 —— 校验、门禁、快照、回滚、契约化产物这一层是扎实的，可以直接复用。
 **不适合当什么用**：「喂素材就得到高质量卡片」的自动机。
@@ -171,7 +198,7 @@ python3 scripts/td.py compile books/my-book --out ~/.workbuddy/skills/my-book --
 python3 scripts/td.py rollback ~/.workbuddy/skills/my-book --to latest
 ```
 
-**回归测试**：`python3 tests/e2e.py`（102 项，覆盖全部命令与 vendored 上游实跑）
+**回归测试**：`python3 tests/e2e.py`（103 项，覆盖全部命令与 vendored 上游实跑）
 
 > 📖 命令速查见 [`references/command-cheatsheet.md`](./references/command-cheatsheet.md)（37 个子命令）；
 > 第一次用请看 [`GUIDE.md`](./GUIDE.md) —— 完整流程 + 真实输出 + 故障排查表。
@@ -229,7 +256,7 @@ rulai-distill/
 ├── SKILL.md                  ← Agent 加载的入口（渐进式披露）
 ├── GUIDE.md                  ← 安装与完整流程（第一次用看这个）
 ├── CAPABILITIES.md           ← 16 类上游能力逐项归属 + 自研清单 + 声明不做
-├── CONSTRAINTS.md            ← 69 条自身缺陷台账（每条对应回归测试）
+├── CONSTRAINTS.md            ← 70 条自身缺陷台账（每条对应回归测试）
 ├── methodology/              ← 00 全景 / 01 提取 / 02 三重验证 / 03 晋级门 / 04 压力测试 / 05 FIDELITY
 ├── extractors/               ← framework / principle / case / counter-example / glossary / persona
 ├── templates/                ← CAPABILITY / PERSONA / FIDELITY / TEST-SUITE / BOOK_OVERVIEW
@@ -245,7 +272,7 @@ rulai-distill/
 │   │                            / fidelity / evalkit / anchor / lintquotes / strategy / publish
 │   │                            / evals / evolve / promptc / upstream
 │   └── vendor/cangjie/       ← 上游 MIT 原件 + PROVENANCE.md（不改）
-└── tests/e2e.py              ← 端到端回归（102 项，双解释器各跑一遍）
+└── tests/e2e.py              ← 端到端回归（103 项，双解释器各跑一遍）
 ```
 
 ---
