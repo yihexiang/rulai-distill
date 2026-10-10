@@ -521,13 +521,20 @@ def cmd_anchor(args) -> int:
     # 复审 5：短引语失配的报警（见上）
     for f in rep["failures"]:
         cands = "、".join(f"§{c['para']}({c['rate']})" for c in f["candidates"]) or "无候选"
-        warn(f"第 {f['line']} 行 声明 §{f['claimed_at']}，实际在 §{f['found_at']}"
-             f"（{f['verdict']}）｜最可能段号：{cands}")
+        decl = f.get("claimed_label") or f"§{f['claimed_at']}"
+        found = f.get("found_label") or (f"§{f['found_at']}"
+                                         if f.get("found_at") is not None else "—")
+        warn(f"第 {f['line']} 行 声明 {decl}，实际在 {found}（{f['verdict']}）｜最可能段号：{cands}")
         warn(f"         「{f['quote'][:90]}」")
     if rep["verdict"] == "FAIL":
         die("判定 FAIL：存在挂错段号的引语",
             "按提示的实际段号改正，或若引语确实跨段则改写为可定位的形式；"
             "不要因为「引语本身存在」就放过——那正是本命令要防的")
+    if rep["verdict"] == "UNVERIFIED":
+        die("⚠️ 未核验（N/A）——不是通过：卡片里的引语均无可识别定位标记"
+            "（§N / 【第N段】 / 篇-章号 / [时间戳]）",
+            "本命令无从核验它们。请给引语补上定位标记，"
+            "或改用 verify-quotes 只确认引语是否存在于语料")
     if rep["unanchored"]:
         warn(f"{rep['unanchored']} 条引语没有 §N 标注，属不可定位——本命令无法核验它们"
              "（**不判失败**，与 verify-quotes / lint-quotes「无出处即跳过」同口径），"

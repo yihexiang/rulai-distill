@@ -11,7 +11,7 @@ verifiable, traceable Agent Skill — not a summary, not a book report.
 [![Contract & vendor](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml/badge.svg)](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![python](https://img.shields.io/badge/python-%E2%89%A53.10-blue)
-![regression](https://img.shields.io/badge/regression-103%20passing-brightgreen)
+![regression](https://img.shields.io/badge/regression-106%20passing-brightgreen)
 
 > ### Most distillation tools solve *generation*. This one builds **proof**.
 > **No release without a passing gate — and an agent never grades itself.**
@@ -64,13 +64,13 @@ gate           →  requires ≥2 independent graders by default; otherwise REFU
 
 ### 3️⃣ Defects live in a **ledger**, and the ledger is enforced by tests
 
-All **70** self-found defects are published in `CONSTRAINTS.md` and mirrored as
+All **72** self-found defects are published in `CONSTRAINTS.md` and mirrored as
 machine-checkable failure cases (`td.py failure list`) — each with *what went wrong /
 what it should have been / severity / the regression test that pins it*.
 **Ledger rows, category counts and the regression count are asserted equal by tests —
 a wrong number turns CI red.**
 
-70 of the 70 are defects **in our own verification and measurement tools** (78%).
+**56** of the **72** defects are **in our own verification and measurement tools** (78%).
 That ratio is itself the finding: **what is most often wrong is not the thing — it's the ruler.**
 
 ---
@@ -126,7 +126,7 @@ These are two claims with very different evidence, and we keep them apart on pur
 
 | Dimension | Status | Evidence |
 |---|---|---|
-| **Mechanical reliability** | ✅ trustworthy | 103 regression tests green; `gate` requires a cross-review record (verified live); `verify-quotes` / `anchor` / `lint-quotes` have each caught real problems on real material; the toolchain runs on **9 real cards** with zero crashes and zero false reds |
+| **Mechanical reliability** | ✅ trustworthy | 106 regression tests green; `gate` requires a cross-review record (verified live); `verify-quotes` / `anchor` / `lint-quotes` have each caught real problems on real material; the toolchain runs on **9 real cards** with zero crashes and zero false reds |
 | **Output correctness** | ⚠️ **closed loop proven, still material-dependent** | `eval-kit` has run a **real cross-review** on **6 cards** (independent answerer + 2 independent graders): sample card **93/A**, `musk-decisions` **90/A**, `bazi-paipan` **93/A**, `geju-yunshi` **95/A**, `quming-xue` **96/A**, `zhouyi-yili` **96/A**. ⚠️ All are **structurally** independent, not organizationally; the sample card is a showcase, **not** the average of open-ended material; the four guoxue cards share one corpus-prep style, so four passes is **not** four kinds of material validated. Per-claim evidence: [`docs/CLAIMS.md`](./docs/CLAIMS.md) |
 
 Concretely, what this project currently **cannot** do:
@@ -210,7 +210,7 @@ python3 scripts/td.py compile books/my-book --out ~/.workbuddy/skills/my-book --
 python3 scripts/td.py rollback ~/.workbuddy/skills/my-book --to latest
 ```
 
-**Regression suite**: `python3 tests/e2e.py` (103 tests, covering every command and the
+**Regression suite**: `python3 tests/e2e.py` (106 tests, covering every command and the
 vendored upstreams).
 
 ---

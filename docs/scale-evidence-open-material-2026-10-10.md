@@ -28,7 +28,7 @@
 ## 三、端到端闭合证据（已落地）
 
 1. **抓取→规整→切片** 在 4 套、合计 25 万字节 / 9 万字符的公版语料上实跑，无崩溃。
-2. **建卡**：`論語` 已蒸馏为可执行技能卡 `rulai-distill/examples/open-bundle/skills/lunyu-conduct/`，引语逐字锚定 `corpus/anchored/src-06-lunyu.md` 的 `一之一`/`四之五` 等段，R/A/E/B 五段齐全，`td.py lint-quotes` 与 `validate` 通过。
+2. **建卡**：`論語` 已蒸馏为可执行技能卡 `rulai-distill/examples/open-bundle/skills/lunyu-conduct/`，R/A/E/B 五段齐全；`td.py anchor` 对卡片实跑——**32 条引语候选、12 条带篇-章号段号且全部 ANCHOR_HIT（逐字落在声明的 `一之三`/`四之十六` 等段）、20 条无标注不可定位、0 挂错段号**（命令可复跑：`td.py anchor <卡.md> --corpus <scale-run>/corpus/anchored/src-06-lunyu.md`）；`td.py lint-quotes` 与 `validate` 通过。
 3. **质检套件接入**：对该卡跑了 `td.py eval-kit init`，产出 `questions.json` + 答题/评分模板 + 工作流说明，证明开放素材卡与 FIDELITY 双 Agent 质检闭环可对接。
 4. **交叉复核状态**：論語卡的独立答题+双评分**尚未跑**（独立答题 Agent 落盘可靠性问题见项目记忆；本卡当前为"建卡完成、交叉复核待补"）。其余 3 套语料（通鉴/孟子/韓非子）处于"抓取—规整—切片就绪"，建卡为下一增量。
 

@@ -52,6 +52,111 @@ CITE_RE = re.compile(r"(?:(src-[A-Za-z0-9_.-]+)\s*)?§(\d+)"
 # 并列锚点 "§60/§74"：CITE_RE 只吃到 §60，§74 被吞掉 → 明明锚在 §74 却报 SPAN_HIT。
 # 修法：抓到第一个之后，把紧随其后的 "/§N" 也收进同一组。
 JOIN_RE = re.compile(r"/\s*§(\d+)")
+# 篇-章号（如 一之三、四之十六）：《論語》等经典的细粒度定位体例（缺陷 #71）。
+# 卡片与语料都用"独占一行"的标签（如 `一之三` 单独成行），两个标签之间即一段。
+# **不做汉数字换算**——标签按不透明字符串处理（只做映射，不解析成数字），
+# 既避免换算错误，也让同一套机制能推广到《史記》「卷X·传Y」等别的编号体例。
+VERSE_LABEL_LINE_RE = re.compile(
+    r"^\s*([一二三四五六七八九十百]+之[一二三四五六七八九十百]+)\s*$", re.M)
+VLABEL_RE = re.compile(
+    r"(?:(src-[A-Za-z0-9_.-]+)\s*)?([一二三四五六七八九十百]+之[一二三四五六七八九十百]+)"
+    r"(?![\u4e00-\u9fff])")  # 负向前瞻：避免把"一之三十五"当成"一之三"+尾随数字
+VERSE_KEY_BASE = 1_000_000  # 与 ts(0..N) / 书类(显式N) 的键空间无碰撞
+
+
+def _verse_locator(text: str) -> tuple[str | None, str] | None:
+    """从一行里找篇-章号定位（卡片侧三种形状）。返回 (来源前缀, 标签) 或 None。
+
+    形状（其余一律不算，防正文误报）：
+      (a) 块引用行首：`> 一之三 「…」`（本次論語卡的形状）；
+      (b) 出处行：行首 `——` 后紧跟标签；
+      (c) 同行紧邻引号：`一之三「…」` 且标签前一字符不是汉字（负向后顾）。
+    """
+    m = VLABEL_RE.search(text)
+    if not m:
+        return None
+    prefix, label = m.group(1), m.group(2)
+    after = text[m.end():]
+    prev = text[m.start() - 1] if m.start() > 0 else ""
+    prev_not_cjk = not (prev and CJK_CHAR_RE.match(prev))
+    is_quoted = bool(re.match(r"\s*[「“\"]", after))
+    is_outro = bool(re.match(r"^\s*>?\s*——", text))  # 出处行：`—— 篇-章号` 或块内 `> —— 篇-章号`
+    if (prev_not_cjk and is_quoted) or is_outro:
+        return (prefix, label)
+    return None
+
+
+def _verse_outro(text: str) -> tuple[str | None, str] | None:
+    """只认**出处行**形状 `—— 篇-章号`（或 `> —— 篇-章号`）。
+
+    与 `_verse_locator` 不同：不认"行首/同行紧邻引号的标签"。向后看取段号时**只能**用出处行，
+    否则会把"下一行自带标签的引语"误当成当前无标注引语的段号（#71 回归：混编卡里
+    `> 「學而時習之…」` 无标注，却被错误继承下一行 `> 一之三 「…」` 的段号）。
+    出处行才代表"上一条引语的段号信号"。
+    """
+    if not re.match(r"^\s*>?\s*——", text):
+        return None
+    vm = VLABEL_RE.search(text)
+    if not vm:
+        return None
+    return (vm.group(1), vm.group(2))
+
+
+class Corpus(dict):
+    """`{int: str}` 的子类：**现有"当 dict 用"的代码零改动**，只额外挂定位索引。
+
+    - verses: 标签 → 段键（如 "一之三" → 1_000_002）
+    - labels: 段键 → 标签（仅展示用）
+    - verses_duplicated: 重复出现的标签（首个生效，其余报出但不覆盖）
+    """
+
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        self.verses: dict[str, int] = {}
+        self.labels: dict[int, str] = {}
+        self.verses_duplicated: list[str] = []
+
+
+def index_corpus(text: str) -> Corpus:
+    """把语料建段索引，支持三类标记（ts / 【第N段】 / 篇-章号），**向后兼容**。
+
+    - 有篇-章号标签（独占一行）→ 以标签为段边界切细粒度段；
+      **若语料同时带【第N段】/时间戳**（如维基文库《論語》：5 个【第N段】wrapper 各含数十个篇-章号），
+      那些是**粗粒度 wrapper**，内含所有篇-章号——若一并建索引，细粒度引语会"同时命中 wrapper 段"
+      而被误判 SPAN_HIT。故篇-章号存在时**丢弃粗粒度段，只留细粒度**（#71 的判定正确性优先）。
+    - 无篇-章号但有 ts/book 标记 → 沿用 split_paragraphs 的既有段号。
+    - 三类标记全无 → 抛 ValueError（错误信息同步三类标记）。
+    """
+    out = Corpus()
+    try:
+        base = split_paragraphs(text)
+    except ValueError:
+        base = {}
+    verse_ms = list(VERSE_LABEL_LINE_RE.finditer(text))
+    if verse_ms:
+        for i, m in enumerate(verse_ms):
+            label = m.group(1)
+            start = m.start()
+            end = verse_ms[i + 1].start() if i + 1 < len(verse_ms) else len(text)
+            body = text[start:end].strip()
+            key = VERSE_KEY_BASE + i
+            if label in out.verses:
+                out.verses_duplicated.append(label)
+            out[key] = body
+            out.verses[label] = key
+            out.labels[key] = label
+    elif base:
+        for k, v in base.items():
+            out[k] = v
+    else:
+        raise ValueError(
+            "语料里找不到任何 [时间戳] / 【第N段】 / 篇-章号（如 一之三）标记——无法建立段号索引。"
+            "书类语料请用 td.py corpus-anchor 规整成 【第N段】 形式，"
+            "视频/播客请用 td.py transcript 产出 [时间戳] 逐字稿，"
+            "经典篇-章号（如 一之三）语料请确保篇-章号独占一行。")
+    return out
+
+
 def _resolve_src(raw: str | None, corpora: dict) -> str | None:
     """把卡片里写的来源标识解析成 corpora 的键。
 
@@ -342,14 +447,17 @@ def _top(rates: dict[int, float], k: int = 3) -> list[dict]:
     return [{"para": n, "rate": round(r, 3)} for n, r in items]
 
 
-def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
+def verify_file(claim_file: Path, corpora: dict[str, dict[int, str] | Corpus],
                 n: int = 5, require_anchor: bool = True) -> dict:
-    """核验一份卡片/候选文件里的所有「§N 引文」。
+    """核验一份卡片/候选文件里的所有带定位标记的引语。
 
-    只检查**带 §N 标注**的引语——没标注的属于"不可定位"，单列出来。
+    支持四类定位标记：§N / [时间戳] / 【第N段】 / 篇-章号（如 一之三）。
+    没标注的属于"不可定位"，单列出来（与 verify-quotes / lint-quotes「无出处即跳过」同口径）。
     这与 CONSTRAINTS C10「引用数 ≠ 核验数」同一个纪律：
     **必须把"引语总数"与"锚定核验数"都报出来，并对账。**
     """
+    # #71：入参可能是老测试直接传的 plain dict（{int:str}）——包一层 Corpus 保证接口一致。
+    corpora = {s: (c if isinstance(c, Corpus) else Corpus(c)) for s, c in corpora.items()}
     text = claim_file.read_text(encoding="utf-8", errors="replace")
     lines = text.splitlines()
     results = []
@@ -383,21 +491,22 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
         return None
 
     default_src = next(iter(corpora)) if corpora else None
-    last_book_target: int | None = None  # 上一个显式「第N段」，供「同上」沿用（复审 #1）
+    # 上一个显式段号（第N段 / 篇-章号），供「同上」跨块沿用（复审 #1 + #71）。
+    last_target: int | None = None
 
     for lineno, line in enumerate(lines, 1):
         is_block = line.lstrip().startswith(">")
         # 书类引用块的段号信号：出处行写「—— 《书名》第N段」。
-        # last_book_target **不随离开引用块重置**——「—— 同上」就是故意跨块沿用上一个
+        # last_target **不随离开引用块重置**——「—— 同上」就是故意跨块沿用上一个
         # 显式段号（书类卡常写成「第1段 / 同上 / 同上」三连），重置会让它们全部退化成
         # 「未标注段号」而被判 SPAN_HIT。block_target 只在向后看**真的看到**段号信号
-        # （第N段 / 同上）时才赋值，所以不重置也不会让无出处的块凭空拿到段号。
+        # （第N段 / 篇-章号 / 同上）时才赋值，所以不重置也不会让无出处的块凭空拿到段号。
         if is_block:
             mseg = re.search(r"第(\d+)[段条]", line)
             if mseg:
-                last_book_target = int(mseg.group(1))
+                last_target = int(mseg.group(1))
         # 一行里可能有多个 §N（并列时间戳），也可能有多个引语
-        cits = []
+        cits: list[tuple[str | None, int, None]] = []
         for m in CITE_RE.finditer(line):
             stem = _resolve_src(m.group(1), corpora)
             group = [int(m.group(2))]
@@ -406,23 +515,67 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
             jm = re.match(r"((?:\s*/\s*§\d+)+)", tail)
             if jm:
                 group += [int(x) for x in JOIN_RE.findall(jm.group(1))]
-            cits += [(stem, g) for g in group]
-        if cits:
-            citations_seen += 1
-        # 书类引用块：本行是引语但无内联 §N 时，向后看同一引用块的下一行取段号。
+            cits += [(stem, g, None) for g in group]
+        # 篇-章号定位（如 一之三）：#71。《論語》类卡片用独占一行的篇-章号作细粒度段号。
+        # 卡片侧三种形状（见 _verse_locator）：行首标签+引号 / 出处行 —— 标签 / 同行紧邻引号。
+        vloc: tuple[str | None, int, str] | None = None
+        vl = _verse_locator(line)
+        if vl:
+            vprefix, vlabel = vl
+            vstem = _resolve_src(vprefix, corpora) or default_src
+            vc = corpora.get(vstem)
+            if not vc:
+                unresolved.append({"line": lineno, "src": vstem,
+                                   "quote": None,
+                                   "reason": "篇-章号来源未在 --corpus 中提供"})
+            else:
+                vkey = vc.verses.get(vlabel)
+                if vkey is None:
+                    unresolved.append({"line": lineno, "src": vstem, "label": vlabel,
+                                       "quote": None,
+                                       "reason": "篇-章号未在语料中提供"})
+                else:
+                    vloc = (vstem, vkey, vlabel)
+                    last_target = vkey
+        # 书类/篇-章号引用块：本行是引语但无内联 §N/篇-章号时，向后看同一引用块的下一行取段号。
         # 书类卡常见「> 「引语」」在「> —— 《书》第N段」**之前**，必须向后看。
         block_target: int | None = None
-        if is_block and not cits:
+        if is_block and not cits and not vloc:
+            # 向后看**同一引用块**的下一行取段号。引用块内的视觉空行（卡片作者常用来给
+            # 长引语与出处行之间留白）必须跳过——否则 `> 「引语」` 与 `> —— 篇-章号` 之间
+            # 一旦有空行，循环就停在空行上、永远够不到出处行（#71 正例 (b) 复现的死法）。
+            # 遇到非块、非空行即停（那是下一个引用块 / 正文，不能再沿用本块的段号）。
             nxt = lineno
-            while nxt < len(lines) and lines[nxt].lstrip().startswith(">"):
-                nm = re.search(r"第(\d+)[段条]", lines[nxt])
+            while nxt < len(lines):
+                nxt_line = lines[nxt]
+                if nxt_line.strip() == "":
+                    nxt += 1
+                    continue
+                if not nxt_line.lstrip().startswith(">"):
+                    break
+                nm = re.search(r"第(\d+)[段条]", nxt_line)
                 if nm:
                     block_target = int(nm.group(1))
                     break
-                if "同上" in lines[nxt] and last_book_target is not None:
-                    block_target = last_book_target
+                # 仅认**出处行**（`—— 篇-章号`）形状的段号；不认"下一行自带标签的引语"，
+                # 否则会错把那条引语的段号继承给当前无标注引语（#71 回归护栏）。
+                vm = _verse_outro(nxt_line)
+                if vm:
+                    vp, vlbl = vm
+                    vs = _resolve_src(vp, corpora) or default_src
+                    vcorp = corpora.get(vs)
+                    if vcorp and vlbl in vcorp.verses:
+                        block_target = vcorp.verses[vlbl]
+                        break
+                if "同上" in nxt_line and last_target is not None:
+                    block_target = last_target
                     break
                 nxt += 1
+            # 同行「—— 同上」：引语与承接标注在同一行（如 `> 「…」—— 同上`）
+            if block_target is None and "同上" in line and last_target is not None:
+                block_target = last_target
+        if cits or vloc or block_target is not None:
+            citations_seen += 1
         # 引语必须"以英文词开头、以英文词收尾"才算引语。
         # 单纯 r'"([^"\n]{12,600})"' 会把两个引号之间的**中文正文**也当成引语
         # （如 `"Give me some evidence for that" ——**同一句式对敌我双方各用一次**。`）。
@@ -467,7 +620,22 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
                     continue
                 if _find_in_corpus(q):
                     short_cited.add(q)
-        quotes = quotes + sorted(short_cited)
+        # #71：显式以**篇-章号**定位（vloc / block_target 来自篇-章号或「同上」）的短引语，
+        # 作者已明确给出出处，必须与 §N 同口径进入核验——且计入硬失败（is_short=False），
+        # 因为"标注了段号"即意味可定位、可核对（这正是「标注了就要核验」的纪律）。
+        # 例：論語「巧言令色，鮮矣仁。」仅 7 汉字，若按通用短候选阈值会被静默丢弃，
+        # 于是这条被明确锚定到「一之三」的引语根本没被核验——典型的"看起来没事"。
+        # （仅 verse 定位触发；书类【第N段】段落的引语天然较长，不受影响。）
+        located_short: set[str] = set()
+        if vloc or (block_target is not None):
+            for q in _cands:
+                if q in quotes or q in short_cited or q in located_short:
+                    continue
+                if not (4 <= len(CJK_CHAR_RE.findall(q)) < 8):
+                    continue
+                if _find_in_corpus(q):
+                    located_short.add(q)
+        quotes = quotes + sorted(short_cited) + sorted(located_short)
         # 抽取层对账（C10）：候选 = 认出 + 噪声 + 因太短跳过的中文候选。
         # 旧实现把"太短的中文候选"混进 noise，于是**看不见自己漏了什么**。
         skipped_here = [q for q in _cands
@@ -486,12 +654,17 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
             is_short = q in short_cited
             # 该行所有段号里，任一命中即算锚定成功（并列锚点是合法用法）
             best_local = None
-            # 书类块无内联 §N 时，用块携带的第N段（向后看取到的）作为目标
-            targets = cits if cits else (
-                [(default_src, block_target)] if block_target is not None
-                else [(default_src, None)])
-            # 每个标注 (来源, 段号) 各查一次：**段号只在它自己的来源内解释**
-            for stem, target in targets:
+            # 书类块无内联 §N/篇-章号时，用块携带的段号（向后看取到的）作为目标
+            if cits:
+                targets = cits
+            elif vloc:
+                targets = [vloc]
+            elif block_target is not None:
+                targets = [(default_src, block_target, None)]
+            else:
+                targets = [(default_src, None, None)]
+            # 每个标注 (来源, 段号, 标签) 各查一次：**段号只在它自己的来源内解释**
+            for stem, target, label in targets:
                 para = corpora.get(stem) if stem else None
                 if not para:
                     # 来源解析不到必须显式记一笔，不能静默 continue——
@@ -502,6 +675,9 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
                 r = check_quote_in_para(q, para, n=n, target=target)
                 r["claimed_at"] = target
                 r["claimed_src"] = stem
+                r["claimed_label"] = label
+                if r.get("hit_at") is not None:
+                    r["found_label"] = para.labels.get(r["hit_at"])
                 if r["verdict"] == "ANCHOR_HIT":
                     best_local = r
                     break
@@ -514,8 +690,10 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
                                "candidates": [], "words": 0}
             r["line"] = lineno
             r["quote"] = q[:160]
-            r["anchored"] = bool(cits) or block_target is not None
+            r["anchored"] = bool(cits) or bool(vloc) or block_target is not None
             r["short"] = is_short      # 短引语（<8 汉字但逐字见于语料）——见下方非对称规则
+            r.setdefault("claimed_label", None)
+            r.setdefault("found_label", None)
             results.append(r)
 
     tally: dict[str, int] = {}
@@ -538,6 +716,9 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
                  if r["short"] and r["verdict"] in ("ANCHOR_MISS", "NOT_IN_CORPUS", "SPAN_HIT")]
     unanchored_list = [r for r in results if r["verdict"] == "UNANCHORED"]
     unanchored = len(unanchored_list)
+    # #71：有"可定位标记"的引语数（§N / 【第N段】 / 篇-章号 / [时间戳] 任一命中）。
+    # 这是判定 UNVERIFIED 的账本：有引语但 0 条可核验 → 不是通过，是"没核验"。
+    checked = sum(1 for r in results if r.get("anchored"))
 
     return {
         "file": str(claim_file),
@@ -595,6 +776,7 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
         "failures": [
             {"line": r["line"], "claimed_at": r["claimed_at"],
              "claimed_src": r.get("claimed_src"), "verdict": r["verdict"],
+             "claimed_label": r.get("claimed_label"), "found_label": r.get("found_label"),
              "found_at": r.get("hit_at"), "rate": r.get("rate"),
              "quote": r["quote"], "candidates": r.get("candidates", [])}
             for r in miss
@@ -604,7 +786,13 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str]],
                      "rate": r.get("rate"), "quote": r["quote"]} for r in partial],
         # PARTIAL 不判FAIL：它已落在正确段号内，只是被字幕分段切开。
         # 但必须报出来让人看见——**静默的"差不多对"比报错更难查**。
-        "verdict": "FAIL" if (miss or unresolved) else "PASS",
+        # #71：三态收口——FAIL（有挂错/来源缺失）/ PASS（有核验且全过）/ UNVERIFIED（有引语但 0 条可核验）。
+        # 0 核查的"软 PASS"是假绿（缺陷 #71）：不能因为"没核验出错误"就印 ✅，
+        # 那等于默认所有人都没标注段号。UNVERIFIED ≠ PASS，CLI 会 die。
+        "checked": checked,
+        "verdict": ("FAIL" if (miss or unresolved)
+                    else "UNVERIFIED" if (seen_quotes > 0 and checked == 0)
+                    else "PASS"),
     }
 
 
@@ -624,8 +812,8 @@ def _merged(corpora: dict[str, dict[int, str]]) -> dict[int, str]:
     return out
 
 
-def load_corpora(paths: list[Path]) -> dict[str, dict[int, str]]:
-    return {p.stem: split_paragraphs(p.read_text(encoding="utf-8", errors="replace"))
+def load_corpora(paths: list[Path]) -> dict[str, Corpus]:
+    return {p.stem: index_corpus(p.read_text(encoding="utf-8", errors="replace"))
             for p in paths}
 
 
@@ -647,7 +835,9 @@ def main() -> int:
         "quotes_seen": sum(r["quotes_seen"] for r in reports),
         "anchored_checked": sum(r["anchored_checked"] for r in reports),
         "failures": [f for r in reports for f in r["failures"]],
-        "verdict": "FAIL" if any(f for r in reports for f in r["failures"]) else "PASS",
+        "verdict": ("FAIL" if any(f for r in reports for f in r["failures"])
+                    else "UNVERIFIED" if any(r["verdict"] == "UNVERIFIED" for r in reports)
+                    else "PASS"),
     }
     print(json.dumps({k: v for k, v in merged.items() if k != "failures"},
                      ensure_ascii=False, indent=2))
@@ -667,7 +857,7 @@ def main() -> int:
     if args.json_out:
         args.json_out.write_text(json.dumps(merged, ensure_ascii=False, indent=2),
                                  encoding="utf-8")
-    return 2 if merged["verdict"] == "FAIL" else 0
+    return 2 if merged["verdict"] != "PASS" else 0
 
 
 if __name__ == "__main__":

@@ -3448,6 +3448,125 @@ def t_anchor_cjk_short_quotes():
     run(["anchor", str(fx / "card.md"), "--corpus", str(fx / "corpus.md")], expect=0)
 
 
+def t_anchor_verse_locators():
+    """#71：anchor 必须原生支持《論語》式「篇-章号」（一之三）细粒度定位。
+
+    正例（fixture card.md）：三种卡片侧形状都要锚定成功——
+      (a) 块引用行首 `> 一之三 「…」`；
+      (b) 引语在前、出处（篇-章号）隔空行在下一行 `> —— 四之十六`；
+      (c) 同上承接（含同行 `—— 同上`）。
+    且短引语（「巧言令色，鮮矣仁。」7 汉字）一旦显式以篇-章号定位，必须进入核验并命中——
+    不能用通用短候选阈值把它静默丢弃（那等于"标了段号却没核验"）。
+
+    反例（fixture card-bad.md）：声明「一之三」却引「一之四」之文 → SPAN_HIT → FAIL，
+    且必须报出「声明 vs 实际」两个标签（一之三 / 一之四），不能假绿。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import anchor as A
+
+    fx = ROOT / "tests" / "fixtures" / "lunyu-verse"
+    assert fx.exists(), f"fixture 缺失：{fx}"
+    corpora = A.load_corpora([fx / "corpus.md"])
+
+    # —— 正例 ——
+    rep = A.verify_file(fx / "card.md", corpora)
+    assert rep["verdict"] == "PASS", f"篇-章号正例应判 PASS：{rep['tally']} {rep['failures']}"
+    assert rep["anchored_checked"] >= 3, \
+        f"篇-章号三种形状都应锚定（≥3）：{rep['tally']}"
+    # (a)(b)(c) 各自命中：5 条 locatable 引语全 ANCHOR_HIT
+    assert rep["tally"].get("ANCHOR_HIT", 0) >= 3, f"ANCHOR_HIT 数不够：{rep['tally']}"
+    # 对账必须平
+    rec = rep["reconciliation"]
+    assert sum(v for kk, v in rec.items() if kk != "seen") == rec["seen"], f"对账不平：{rec}"
+    er = rep["extraction_reconciliation"]
+    assert er["balanced"], f"抽取层对账不平：{er}"
+    # 设计护栏：正文提到篇-章号但无引号 → 不得计入 citations / 不得判失败
+    assert rep["unresolved_sources"] == [], f"反误报：正文篇-章号不得当来源缺失：{rep['unresolved_sources']}"
+
+    # —— 反例：挂错篇-章号必须 FAIL ——
+    bad = A.verify_file(fx / "card-bad.md", corpora)
+    assert bad["verdict"] == "FAIL", f"篇-章号挂错必须判 FAIL：{bad['tally']}"
+    assert bad["failures"], "FAIL 但没给失配明细"
+    f0 = bad["failures"][0]
+    assert f0["claimed_label"] == "一之三" and f0["found_label"] == "一之四", \
+        f"必须报出声明/实际标签：{f0}"
+    assert f0["verdict"] == "SPAN_HIT", f"应判 SPAN_HIT（引语在别的段）：{f0}"
+
+    # CLI 端到端：正例 exit 0、反例 die（exit≠0）
+    run(["anchor", str(fx / "card.md"), "--corpus", str(fx / "corpus.md")], expect=0)
+    run(["anchor", str(fx / "card-bad.md"), "--corpus", str(fx / "corpus.md")], expect=1)
+
+
+def t_anchor_zero_anchor_is_na():
+    """#71：三态收口——卡片有引语但**零条可核验**（无任何 §N/段号/篇-章号/时间戳），
+    必须判 UNVERIFIED 而非 PASS（软 PASS 假绿），且 CLI 必须 die（exit≠0）。
+
+    这是"声称≠实际"的钉子：旧实现只要"没核验出错误"就印 ✅，等于默认所有引语都没标段号。
+    UNVERIFIED ≠ PASS——它明确说"这批引语我一件都没法核对"，把决定权交回人。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import anchor as A
+
+    fx = ROOT / "tests" / "fixtures" / "lunyu-verse"
+    corpora = A.load_corpora([fx / "corpus.md"])
+    with tempfile.TemporaryDirectory() as d:
+        card = Path(d) / "na.md"
+        # 两处引语都**没标段号**——有引用但零可核验
+        card.write_text(
+            "# 仅有无标注引语\n\n"
+            "> 「學而時習之，不亦說乎？」此句见于論語，但未标篇-章号。\n\n"
+            "> 「有朋自遠方來，不亦樂乎？」同样无标注。\n",
+            encoding="utf-8")
+        rep = A.verify_file(card, corpora)
+        assert rep["quotes_seen"] >= 2, f"引语应被抽出：{rep['quotes_seen']}"
+        assert rep["checked"] == 0, \
+            f"零条可核验（无任何定位标记）：{rep['checked']}"
+        assert rep["verdict"] == "UNVERIFIED", \
+            f"零核验必须判 UNVERIFIED 而非 PASS：{rep['verdict']} {rep['tally']}"
+        # 反方向：一旦有一条标了段号并核验通过，立刻回到 PASS（不连坐）
+        ok = Path(d) / "ok.md"
+        ok.write_text(
+            "# 混编：一条无标注 + 一条篇-章号标注\n\n"
+            "> 「學而時習之，不亦說乎？」无标注。\n\n"
+            "> 一之三 「巧言令色，鮮矣仁。」\n",
+            encoding="utf-8")
+        rep2 = A.verify_file(ok, corpora)
+        assert rep2["verdict"] == "PASS", \
+            f"有一条可核验通过即 PASS（不连坐无标注）：{rep2['tally']}"
+    # CLI 端到端：UNVERIFIED 必须 die（exit≠0）
+    with tempfile.TemporaryDirectory() as d:
+        card = Path(d) / "na.md"
+        card.write_text(
+            "> 「學而時習之，不亦說乎？」无标注。\n", encoding="utf-8")
+        run(["anchor", str(card), "--corpus", str(fx / "corpus.md")], expect=1)
+
+
+def t_lunyu_card_no_overclaim():
+    """#72：論語卡（及文档）不得做出无法佐证的「已核验」声称。
+
+    进度研判（2026-10-10）点名：論語卡 A1 段写「评分 Agent 核查确认：叙事出现次数为 0」，
+    但实际没有评分 Agent 做过这件事；SOURCES/scale-evidence 写「引语逐字锚定」暗示自动段级锚定，
+    而当时 anchor 根本不认篇-章号。这是本项目最高频的「声称≠实际」，必须钉死：
+    ① 卡片不得再出现「评分 Agent 核查确认」这个无法佐证的措辞；
+    ② 必须改为诚实的「建卡时…全库检索确认」；
+    ③ 文档不得用「引语逐字锚定」这种过度声称（段级锚定改由 `td.py anchor` 真实跑出并写明命令）。
+    """
+    skill = (ROOT / "examples/open-bundle/skills/lunyu-conduct/SKILL.md") \
+        .read_text(encoding="utf-8")
+    assert "评分 Agent 核查确认" not in skill, \
+        "論語卡 A1 仍含无法佐证的「评分 Agent 核查确认」——应改为「建卡时…全库检索确认」"
+    assert "建卡时对 anchored 语料全库检索确认" in skill, \
+        "論語卡 A1 应改为诚实的「建卡时…全库检索确认」"
+    sources = (ROOT / "examples/open-bundle/skills/lunyu-conduct/SOURCES.md") \
+        .read_text(encoding="utf-8")
+    assert "引语逐字锚定" not in sources, \
+        "SOURCES 不得用「引语逐字锚定」过度声称（段级锚定见 `td.py anchor` 记录）"
+    scale = (ROOT / "docs" / "scale-evidence-open-material-2026-10-10.md") \
+        .read_text(encoding="utf-8")
+    assert "引语逐字锚定" not in scale, \
+        "scale-evidence 不得用「引语逐字锚定」过度声称"
+
+
 def t_no_external_fixture_deps():
     """P0-1c：回归测试**不得静默依赖作者工作区**（`ROOT.parent` 之外的路径）。
 
@@ -3826,6 +3945,9 @@ def main() -> int:
         ("引语段号锚定（#46）", t_anchor_verifier),
         ("anchor 无 §N 引语不计失败（复审 #1）", t_anchor_unanchored_not_fail),
         ("anchor 中文短引语不被丢（#61）", t_anchor_cjk_short_quotes),
+        ("anchor 支持篇-章号定位（#71 正例/反例）", t_anchor_verse_locators),
+        ("anchor 零核验收口为 UNVERIFIED（#71）", t_anchor_zero_anchor_is_na),
+        ("論語卡无过度声称（#72）", t_lunyu_card_no_overclaim),
         ("回归不得依赖作者工作区（P0-1/#65）", t_no_external_fixture_deps),
         ("token 节省实测不产假数字（P0-3）", t_token_savings_benchmark),
         ("corpus-anchor 按结构切段（#70）", t_corpus_anchor_splits_by_structure),

@@ -9,7 +9,7 @@
 | 语料规模 | 1 份 / 5 个抓取块（【第N段】）/ 约 70+ 条 `一之一` 式可引用段 / 5,974 净字符 |
 | 取源方式 | 维基文库 `action=parse&prop=wikitext`（脚本 `tools/fetch_wikisource.py`，urllib 带 backoff） |
 | 清洗 | 剥离 `-{}-` 语言变体标记、`{{}}`/`[[]]` 链接、`== 标题 ==` 转 `##`；保留原字形与标点 |
-| 完整性自检 | `td.py corpus-anchor` 规整 + `td.py lint-quotes` 引语核对（锚定 `corpus/anchored/src-06-lunyu.md`） |
+| 完整性自检 | `td.py corpus-anchor` 规整 + `td.py lint-quotes` 查用字（繁简/异体）；段级锚定见 `td.py anchor` 记录（命令可复跑） |
 
 > 一手占比 1.0 是因为《論語》在公有领域、维基文库有可机读原文——**不是因为做得更认真**，是素材性质使然。
 

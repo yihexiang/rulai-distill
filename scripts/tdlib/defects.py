@@ -518,6 +518,20 @@ DEFECTS = [
      "实测《資治通鑑》5 卷：6 段 → 147 段。"
      "P0-2 批次取到真实公版典籍后立刻暴露",
      ["t_corpus_anchor_splits_by_structure"]),
+    ("tdlib.anchor.verify_file",
+     "anchor 不认《論語》式「篇-章号」细粒度段号（一之三），且「有引语但零条可核验」的卡被默认判 PASS（软 PASS 假绿）",
+     "只认 §N / 时间戳 / 【第N段】三类标记；《論語》等语录体经典用独占一行的「一之三」作段号，12 条真实引语全部无法锚定（UNANCHORED 或报错）；且 verify_file 在「有引语但 0 条可核验」时返回 PASS——「没核验出错误」就印 ✅",
+     "新增篇-章号标记（VERSE_LABEL_LINE_RE 独占一行 + VLABEL_RE 卡片侧三种形状：行首标签 / 出处行 —— 标签 / 同行紧邻引号）；Corpus 子类挂 verses/labels 索引；index_corpus 在语料含篇-章号时丢弃粗粒度【第N段】wrapper 只留细粒度；三态收口 FAIL/PASS/UNVERIFIED（0 核查 ≠ 通过，CLI die）",
+     "critical", "eval_gap",
+     "开放素材臂蒸馏《論語》时暴露：卡片 12 条篇-章号引语整类不可核；软 PASS 收口是「声称≠实际」的典型",
+     ["t_anchor_verse_locators", "t_anchor_zero_anchor_is_na"]),
+    ("examples/open-bundle/skills/lunyu-conduct",
+     "卡片与文档做出无法佐证的「已核验」声称（「评分 Agent 核查确认」是假的；「引语逐字锚定」暗示自动段级锚定）",
+     "論語卡 A1 写「评分 Agent 核查确认：叙事出现次数为 0」，但实际没有评分 Agent 做过这件事（只是建卡时全库检索）；SOURCES/scale-evidence 写「引语逐字锚定」暗示自动段级锚定，而当时 anchor 根本不认篇-章号",
+     "改为「建卡时对 anchored 语料全库检索确认」；段级锚定改由 `td.py anchor` 真实跑出（32 候选 / 12 命中 / 0 挂错）并写明命令可复跑",
+     "major", "structure_gap",
+     "进度研判（2026-10-10）点名：論語卡 A1 的「评分 Agent 核查确认」无法佐证；同模式还存在于 sample-bundle 的 five-affairs 卡（未在本轮改）",
+     ["t_lunyu_card_no_overclaim"]),
 ]
 
 
