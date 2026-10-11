@@ -1,0 +1,22 @@
+{
+  "card": "mengzi-refutation",
+  "grader": "A",
+  "grades": [
+    {"answer_type": "with-skill", "question_id": 1, "score": "A", "reason": "完整套用取譬五步（存原话/找支点/造问句/平移/收口），支点取自对方自认事实，结论留给他自己称，可核可操作。"},
+    {"answer_type": "with-skill", "question_id": 2, "score": "A", "reason": "换具体情境范式应用正确，洗衣机A/B款情境让对方必然答『算浪费』，平移拆断等号，边界收口清楚。"},
+    {"answer_type": "with-skill", "question_id": 3, "score": "A", "reason": "以羊易牛+以子之矛用对，并划了不能/不为界（挟太山vs折枝），只问不替答，收口留称，框架精准。"},
+    {"answer_type": "with-skill", "question_id": 4, "score": "A", "reason": "边界条款与Step3不能/不为界引用准确，列五类不打卡的情境，含两次逃避即停阈值，全面可核。"},
+    {"answer_type": "with-skill", "question_id": 5, "score": "A", "reason": "三句内示范覆盖取譬+平移+收口，结论由对方说出，并附两次逃避即停，简洁合规。"},
+    {"answer_type": "with-skill", "question_id": 6, "score": "A", "reason": "依据A2/第9段/第14段，明确动作不变、改三处分寸（避责区/选项式/轻收口），定位准确。"},
+    {"answer_type": "with-skill", "question_id": 7, "score": "A", "reason": "用卡内三条硬约束+易混淆辨析区分纠偏与说教，判据一句话收束，框架与边界都清楚。"},
+    {"answer_type": "with-skill", "question_id": 8, "score": "A", "reason": "亲历场景完整跑通五步+不能不为界+两次逃避即停+明拒，支点取自对方自认事实，可复核可操作。"},
+    {"answer_type": "no-skill", "question_id": 1, "score": "A", "reason": "纯用自身经验造答得出口的情境，单子靠熬直接推翻总判断，具体可操作，原始质量高。"},
+    {"answer_type": "no-skill", "question_id": 2, "score": "A", "reason": "不反驳定义，给迟到赔违约金情境让对方亲口认浪费，自相矛盾收束干净，可操作。"},
+    {"answer_type": "no-skill", "question_id": 3, "score": "A", "reason": "锁定对方已认前提顺推不愿认结论，逻辑成立；虽自注『推不过去』，但原始推理结构扎实。"},
+    {"answer_type": "no-skill", "question_id": 4, "score": "A", "reason": "四类收手情境（情绪/场合/关系/时机）具体，边界声明清楚，原始建议质量高。"},
+    {"answer_type": "no-skill", "question_id": 5, "score": "A", "reason": "三句内对话示范成立，取譬反问+收口由对方承认，简洁有效。"},
+    {"answer_type": "no-skill", "question_id": 6, "score": "A", "reason": "对上改三处（迂回/留落点/留台阶）切中要害，无需框架也给出可操作分寸。"},
+    {"answer_type": "no-skill", "question_id": 7, "score": "A", "reason": "以『结论是否他自己走到』为唯一判据，复核法清晰，区分准确，原始质量高。"},
+    {"answer_type": "no-skill", "question_id": 8, "score": "A", "reason": "亲历场景自然运用取已认前提顺推，会后单独处理避场合/权力问题，纠偏落地，质量高。"}
+  ]
+}

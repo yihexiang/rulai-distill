@@ -1,0 +1,22 @@
+{
+  "card": "tongjian-decision-trace",
+  "grader": "A",
+  "grades": [
+    {"answer_type": "with-skill", "question_id": 1, "score": "A", "reason": "正确套用 Step2 名分线三小问与名器问，破例/立例判定、§3/§74 引用准确，步骤可观察、边界清晰。"},
+    {"answer_type": "with-skill", "question_id": 2, "score": "A", "reason": "Step3 人线两标+四类高危项全部落到可观察信号，§3/§78/§141/§138 引用准确，利害方识别正确。"},
+    {"answer_type": "with-skill", "question_id": 3, "score": "A", "reason": "Step4 时滞线三档+反噬通路完整，§48/§122/§128 原型对应得当，追踪窗口与显形点具体可操作。"},
+    {"answer_type": "with-skill", "question_id": 4, "score": "A", "reason": "3分钟版三选一触发条件严格套用，撤触发命中且给出可观测回撤信号，附降级改的边界说明。"},
+    {"answer_type": "with-skill", "question_id": 5, "score": "A", "reason": "双线(名分+人线)并用，§3/§76/§45 解读『口头表扬不发文』为名器零外借、利益单向占优，结论可核。"},
+    {"answer_type": "with-skill", "question_id": 6, "score": "A", "reason": "依据核心逻辑点2与Step2检查点论证名分线优先，立例跳Step5的因果链准确，次序可操作。"},
+    {"answer_type": "with-skill", "question_id": 7, "score": "A", "reason": "完整 Step1-5 复真实例(销冠特批折扣)，名器/人线标红/时滞累积/撤改处置全部到位，§3/§128 引用准确。"},
+    {"answer_type": "with-skill", "question_id": 8, "score": "A", "reason": "把主语换成『我』走Step1-5，含防窄化重列与§3天子自坏自检，核心心法(先例读法)收尾，自我审查彻底。"},
+    {"answer_type": "no-skill", "question_id": 1, "score": "B", "reason": "无框架但准确识别评价/奖惩权转移，四步可观察流程清晰可操作，属称职但偏通用的分析。"},
+    {"answer_type": "no-skill", "question_id": 2, "score": "B", "reason": "列出四类利害方并给出可观察信号，逻辑通顺、可操作，但分类稍显泛化、未聚焦关键主体。"},
+    {"answer_type": "no-skill", "question_id": 3, "score": "B", "reason": "3-12月时滞与形态、季度追踪节奏合理可操作，但属常识性管理口径，缺乏出处依据。"},
+    {"answer_type": "no-skill", "question_id": 4, "score": "B", "reason": "自设三步法(目标/代价/替代)给撤改留结论，可操作；非卡内三步但作为原始回答质量称职。"},
+    {"answer_type": "no-skill", "question_id": 5, "score": "B", "reason": "将『只表扬不发文』解读为零成本情绪价值+名分不放，利益线剖析到位、结论可操作，表述清晰。"},
+    {"answer_type": "no-skill", "question_id": 6, "score": "B", "reason": "主张优先利益线(与卡相反)，论证自洽可操作；作为无框架原始回答称职，结论有可观察支撑。"},
+    {"answer_type": "no-skill", "question_id": 7, "score": "B", "reason": "用真实扩张失败案例复盘名分/利益/反噬/结论，结构完整可操作，但分析较表层、未深究关键步骤。"},
+    {"answer_type": "no-skill", "question_id": 8, "score": "B", "reason": "四层自检(名分/利益/反噬/动机)把自身纳入审视，可操作且点出自我盲区，质量称职但通用。"}
+  ]
+}

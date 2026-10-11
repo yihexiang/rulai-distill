@@ -25,6 +25,35 @@ command -v shasum >/dev/null || { echo "需要 shasum（macOS 自带）" >&2; ex
 
 mkdir -p "$OUT"
 cd "$ROOT"
+
+# ── 最低版本语法自检（防 PEP 701 f-string 反斜杠病，# 见 2026-10-11 评估）
+# 现象：f-string 表达式里含反斜杠（如嵌正则）只在 Python 3.12+ 合法，
+# 3.10/3.11 直接 SyntaxError —— 本机用 3.13 跑测试全绿，CI 用 3.10 却红。
+# 这里挑一个 <3.12 的解释器对全部 .py 做 py_compile；挑不到就告警（不致命，
+# 但发布前请在 3.10/3.11 上至少手动复跑一次 py_compile）。
+OLD_PY=""
+for cand in python3.11 python3.10 python3.9 python3; do
+  if command -v "$cand" >/dev/null; then
+    if ! "$cand" -c 'import sys; sys.exit(0 if sys.version_info >= (3,12) else 1)' 2>/dev/null; then
+      OLD_PY="$cand"; break
+    fi
+  fi
+done
+if [ -n "$OLD_PY" ]; then
+  echo "🔎 最低版本语法自检（用 $OLD_PY / $("$OLD_PY" -c 'import sys;print("%d.%d"%sys.version_info[:2])')）"
+  # 用 find -exec 批量编译（避免 bash3 mapfile / 文件名空格问题）
+  if find . -name '*.py' -not -path '*/node_modules/*' -not -path '*/.venv/*' -not -path '*/venv/*' \
+       -exec "$OLD_PY" -m py_compile {} + ; then
+    echo "✅ 全部 .py 在 <3.12 解释器下编译通过（CI py3.10 不会再 SyntaxError）"
+  else
+    echo "❌ 存在 <3.12 不兼容语法（多半是 f-string 反斜杠），先修再发布" >&2
+    exit 1
+  fi
+else
+  echo "⚠️  未在环境中找到 <3.12 的解释器，跳过最低版本语法自检" >&2
+  echo "    发布前请在 Python 3.10/3.11 上至少手动跑一次：python3 -m py_compile \$(find . -name '*.py')" >&2
+fi
+
 # 打包**当前 HEAD**（不是工作区）——保证 zip 内容 == 那个 commit 可复算的内容
 git archive --format=zip --prefix="$NAME/" -o "$OUT/$NAME.zip" HEAD
 

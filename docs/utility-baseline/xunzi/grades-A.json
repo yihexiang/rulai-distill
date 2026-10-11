@@ -1,0 +1,22 @@
+{
+  "card": "xunzi-learning-order",
+  "grader": "A",
+  "grades": [
+    {"answer_type": "with-skill", "question_id": 1, "score": "A", "reason": "完整应用 Step1 定止点 + Step2 排次第，§8『始乎诵经终乎读礼』『始乎为士终乎为圣人』引用准确可核，起讫与不可跳级边界清晰，结论可操作。"},
+    {"answer_type": "with-skill", "question_id": 2, "score": "A", "reason": "用 Step4 正确拆解为『量』与『不断』两件独立事，§6 三处引文准确，给出日单位节奏与断档≥3天判舍的边界规则，可操作。"},
+    {"answer_type": "with-skill", "question_id": 3, "score": "A", "reason": "Step2 检查点 + §6/§7/§12 硬依据齐全，给出三条可操作拦截话术，『同一周期只许一条主线』规则落地，专一框架用对。"},
+    {"answer_type": "with-skill", "question_id": 4, "score": "A", "reason": "Step3 选环境到位，§4/§5/§3 引用准确，给出 4.25/10 自评打分与具体改法，并声明『环境锁定则验收加倍』边界，可操作。"},
+    {"answer_type": "with-skill", "question_id": 5, "score": "A", "reason": "Step5 验收口在内化，§9 君子/小人之学引文精准，以『可举出的行为变化』为判据，边界（只复述=未过）声明清楚。"},
+    {"answer_type": "with-skill", "question_id": 6, "score": "A", "reason": "以 §8 经/礼对应操作层/规范层，结合 Step2 排次第与 Step1 课程有终，强调先经后礼不可跳级，结论可操作；仅自报步骤列表多出 §8學至乎禮而止矣 一项未入正文，属轻微自报松散，不影响内容正确。"},
+    {"answer_type": "with-skill", "question_id": 7, "score": "A", "reason": "§6 行衢道/梧鼠与 §7 结于一引用准确，给出三条判定条件并以三线半途而废实例对照，纠正落到 Step2 检查点，框架与结论均到位。"},
+    {"answer_type": "with-skill", "question_id": 8, "score": "A", "reason": "用失败模式表 + Step1–5 五变量逐条定位，§8/§6/§4/§9 引用准确，含断档判舍与『停』的边界，拒绝笼统归因，诊断单可操作性强。"},
+    {"answer_type": "no-skill", "question_id": 1, "score": "A", "reason": "原始质量高：以『始乎诵经终乎读礼』组织数据学习路径，起承合讫映射合理，引用准确，结论可操作，无框架亦无编造。"},
+    {"answer_type": "no-skill", "question_id": 2, "score": "A", "reason": "正确引用『积土成山』『不积跬步』，复利/睡眠巩固解释合理，给出 60–90 分钟与断档上限的可操作节奏，raw 质量优秀。"},
+    {"answer_type": "no-skill", "question_id": 3, "score": "A", "reason": "准确使用蚓/蟹『用心一/躁』对比拒多线诱惑，给出排成队列、完成一门再解锁一门的可操作做法，概念与引文无误。"},
+    {"answer_type": "no-skill", "question_id": 4, "score": "A", "reason": "『蓬生麻中』『白沙在涅』引用准确，三招选法 + 0–10 打分(约5/10) + 改法具体，环境论与可执行性俱佳。"},
+    {"answer_type": "no-skill", "question_id": 5, "score": "A", "reason": "君子/小人之学分野引文精准，三问检验（独立做/讲给外行/迁移）具体可操作，能区分真会与只背。"},
+    {"answer_type": "no-skill", "question_id": 6, "score": "A", "reason": "对选定方向解释经=技术底子、礼=职场规范，强调由经入礼一贯，理解准确且表述清晰，raw 质量优秀。"},
+    {"answer_type": "no-skill", "question_id": 7, "score": "A", "reason": "『行衢道者不至』释义准确，以三课并行全停实例对照，归因到『路选岔、心分散』，纠正回到专一，逻辑自洽。"},
+    {"answer_type": "no-skill", "question_id": 8, "score": "A", "reason": "基于《劝学》开积/专/境/化/道五条诊断单并给处方，概念引用准确、结构清晰、可操作，raw 质量高。"}
+  ]
+}

@@ -1,4 +1,4 @@
-# rulai-distill · 蒸馏工厂 v1.9.0
+# rulai-distill · 蒸馏工厂 v1.9.1
 
 把书籍 / 长视频 / 播客 / 访谈 / 人物素材，蒸馏成**可执行、可验证、可追溯**的 Agent Skills。
 
@@ -10,7 +10,7 @@
 [![Contract & vendor](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml/badge.svg)](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![python](https://img.shields.io/badge/python-%E2%89%A53.10-blue)
-![regression](https://img.shields.io/badge/regression-112%20passing-brightgreen)
+![regression](https://img.shields.io/badge/regression-112%20passing%20%2F%209%20skipped-brightgreen)
 
 > ### 别的蒸馏技能解决「生成」，这个解决「证明」。
 > **不打分不发版，而且不由自己打分。**
@@ -257,6 +257,11 @@ python3 scripts/td.py rollback ~/.workbuddy/skills/my-book --to latest
 
 **回归测试**：`python3 tests/e2e.py`（112 项，覆盖全部命令与 vendored 上游实跑）
 
+> ⚠️ **「112 全绿」= 112 项实跑且通过，外加 9 项显式未运行，不是 121 项全跑。**
+> 这 9 项依赖作者工作区的真实外部素材（视频 TED 卡、人物马斯克卡、逐字稿等），
+> 在干净 clone 下**不会跑也不计入 112**（设 `RULAI_WORKSPACE=1` 才会跑）。
+> 它们出现在结尾「⚠️未运行 9 项」清单里——**那是「没跑」，不是「通过了」**，请勿当成绿报。
+
 > 📖 命令速查见 [`references/command-cheatsheet.md`](./references/command-cheatsheet.md)（37 个子命令）；
 > 第一次用请看 [`GUIDE.md`](./GUIDE.md) —— 完整流程 + 真实输出 + 故障排查表。
 
@@ -266,7 +271,7 @@ python3 scripts/td.py rollback ~/.workbuddy/skills/my-book --to latest
 
 `rulai-distill` 融合了三个开源项目的长处，并把它们的**契约**升格为权威标准。
 
-| 能力 | 来源 | rulai-distill v1.9.0 |
+| 能力 | 来源 | rulai-distill v1.9.1 |
 |---|---|---|
 | 结构感知分块 + 缓存 | cangjie `build_chunks` | **上游内置** `td.py upstream run chunk`；本包 `td.py chunk` 兜底 |
 | SQLite FTS5 词法索引 + 邻接块 | cangjie `build_index` | **上游内置** `td.py upstream run lexindex` |

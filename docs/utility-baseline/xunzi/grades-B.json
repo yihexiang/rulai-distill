@@ -1,0 +1,23 @@
+{
+  "card": "xunzi-learning-order",
+  "grader": "B",
+  "grades": [
+    {"answer_type": "with-skill", "question_id": 1, "score": "A", "reason": "框架(定止点+排次第)正确应用，§8/§6引文准确可核，结论可操作且声明『档位不可跳』边界。"},
+    {"answer_type": "with-skill", "question_id": 2, "score": "A", "reason": "Step4积渐正确区分『量』与『不断』，三处§6引文准确，给出降量保不断的硬规则。"},
+    {"answer_type": "with-skill", "question_id": 3, "score": "A", "reason": "专一以§6/§7/§12多重硬据支撑，给出『砍到一条主线』的可操作拦截姿势。"},
+    {"answer_type": "with-skill", "question_id": 4, "score": "A", "reason": "Step3选环境落地，§4/§5引用准确，环境打分+改法+锁定加倍边界齐全。"},
+    {"answer_type": "with-skill", "question_id": 5, "score": "A", "reason": "Step5验收以§9君子/小人之学分判，给出『行为可见性』硬判据，边界清晰。"},
+    {"answer_type": "with-skill", "question_id": 6, "score": "A", "reason": "§8经礼起讫映射方向，声明『先经后礼不可跳』与止点，边界清楚。"},
+    {"answer_type": "with-skill", "question_id": 7, "score": "A", "reason": "§6衢道/梧鼠引文准确，举例对照自身三线分流，回Step2纠正。"},
+    {"answer_type": "with-skill", "question_id": 8, "score": "A", "reason": "五变量诊断单逐条对应Step1-5与引文，失败模式定位+停判边界明确。"},
+
+    {"answer_type": "no-skill", "question_id": 1, "score": "B", "reason": "起承合讫映射诵经→读礼，引用准确、可操作，但缺少明确止点/边界声明。"},
+    {"answer_type": "no-skill", "question_id": 2, "score": "B", "reason": "积土成山/不积跬步解释到位，节奏可操作，但适用边界(最小有效量)未声明。"},
+    {"answer_type": "no-skill", "question_id": 3, "score": "A", "reason": "蚯蚓/蟹专一对照贴切，给出『完成一门再开下一门』的清晰边界，结论可操作。"},
+    {"answer_type": "no-skill", "question_id": 4, "score": "B", "reason": "蓬生麻中+白沙在涅引用准确，打分与改法可操作，但止/边界声明偏松。"},
+    {"answer_type": "no-skill", "question_id": 5, "score": "B", "reason": "君子/小人之学三问检验清楚，但缺少『何时判未内化而停』的边界。"},
+    {"answer_type": "no-skill", "question_id": 6, "score": "B", "reason": "经礼映射方向清晰，但『空读礼是浮萍』略夸张且未声明学习止点边界。"},
+    {"answer_type": "no-skill", "question_id": 7, "score": "A", "reason": "衢道对照自身三门齐开实例贴切，给出『通一门再开下一门』边界。"},
+    {"answer_type": "no-skill", "question_id": 8, "score": "B", "reason": "五条诊断(积/专/境/化/道)基于劝学，可操作，但无明确停学/失效边界。"}
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "card": "mengzi-refutation",
+  "grader": "B",
+  "grades": [
+    {"answer_type": "with-skill", "question_id": 1, "score": "A", "reason": "完整套用取譬设问五步（存原话→找支点→造问句取譬→平移→收口），准确引用『王好战请以战喻』，结论留对方且可操作。"},
+    {"answer_type": "with-skill", "question_id": 2, "score": "A", "reason": "以换具体情境（缘木求鱼/邹人与楚人战式类比）制造自相矛盾，步骤规范，收口留对方，框架应用正确。"},
+    {"answer_type": "with-skill", "question_id": 3, "score": "A", "reason": "以羊易牛+以子之矛找准支点，正确划清不能/不为界（挟太山超北海vs为长者折枝），结论由对方称，引用准确。"},
+    {"answer_type": "with-skill", "question_id": 4, "score": "A", "reason": "依据Boundary与Step3不能/不为界列出5种不适用情形，边界声明清楚、可操作。"},
+    {"answer_type": "with-skill", "question_id": 5, "score": "A", "reason": "三句对话示范取譬+平移+收口，结论由对方说出，并附两次逃避即停阈值，示范到位。"},
+    {"answer_type": "with-skill", "question_id": 6, "score": "A", "reason": "正确指出对上取譬动作不变、改分寸（独乐乐选项式、避责任区、轻收口、岔开即停），引用第9段/第14段恰当。"},
+    {"answer_type": "with-skill", "question_id": 7, "score": "A", "reason": "用喻出处/结论谁说出/顺序/停止阈值四条卡内硬约束区分纠偏与说教，判据清晰可核。"},
+    {"answer_type": "with-skill", "question_id": 8, "score": "A", "reason": "亲历场景完整套用取譬+以子之矛，划不能/不为界，含两次逃避即停与明拒收口，框架真实落地。"},
+    {"answer_type": "no-skill", "question_id": 1, "score": "A", "reason": "RAW质量高：用对方熬三夜拿单子的经验造可答情境，直接推翻总判断，清晰可操作。"},
+    {"answer_type": "no-skill", "question_id": 2, "score": "A", "reason": "RAW质量高：以省公交费迟到赔违约金的情境让其自认浪费，逻辑自洽、可操作。"},
+    {"answer_type": "no-skill", "question_id": 3, "score": "B", "reason": "归谬逻辑成立（用其已认前提反推），但结尾自承『推不过去』，结论未锁定，有一处松散。"},
+    {"answer_type": "no-skill", "question_id": 4, "score": "A", "reason": "RAW给出四类收手情形（情绪/场合/关系/时机），边界声明清楚、可操作。"},
+    {"answer_type": "no-skill", "question_id": 5, "score": "A", "reason": "三句对话示范干净，取对方经验反诘、结论自然落出，可操作。"},
+    {"answer_type": "no-skill", "question_id": 6, "score": "A", "reason": "对上纠偏改三处（迂回/留结论/留台阶）表述清楚、可操作，RAW质量优秀。"},
+    {"answer_type": "no-skill", "question_id": 7, "score": "A", "reason": "以『结论是否自己走到』为判据并附删句复核法，辨析清晰、可复核。"},
+    {"answer_type": "no-skill", "question_id": 8, "score": "A", "reason": "亲历场景处理得当（择时、取对方已认前提、顺推改判），结果落地，RAW质量优秀。"}
+  ]
+}

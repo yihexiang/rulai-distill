@@ -1,0 +1,22 @@
+{
+  "card": "hanfei-upward-advice",
+  "grader": "A",
+  "grades": [
+    {"answer_type": "with-skill", "question_id": 1, "score": "A", "reason": "完整套用 Step1判心→Step2过七危→Step5定输出，逐条对照七危且引用§5代价由爱憎而定，结论三选一可操作、边界（七危命中即停）清楚。"},
+    {"answer_type": "with-skill", "question_id": 2, "score": "A", "reason": "用Step1判心三档+可核证据判准，并补§19/§30交叉核验与第三档不出现说档的检查点，定位准、可操作、边界明。"},
+    {"answer_type": "with-skill", "question_id": 3, "score": "A", "reason": "准确枚举§3七危原文至少三种且含原文引据，并强调本卡规则七危命中任一即停，无误用。"},
+    {"answer_type": "with-skill", "question_id": 4, "score": "A", "reason": "按Step4饰所矜灭所耻与§4顺序（先不拂逆再骋辩）构造示范，明写不说逆鳞句、不歪曲事实，框架用对且可操作。"},
+    {"answer_type": "with-skill", "question_id": 5, "score": "A", "reason": "按§2三档调口径，列阴显不一致两说皆亏及判错代价，并落到第三档只出B/C，引用准确、结论可操作、边界清。"},
+    {"answer_type": "with-skill", "question_id": 6, "score": "A", "reason": "整合Step3密级/Step4灭所耻立所矜/Step5，引用§26参验不瞒、§3密成泄败不引爆，并设七危命中即停，可操作且边界明。"},
+    {"answer_type": "with-skill", "question_id": 7, "score": "A", "reason": "正确引用B段边界清单（平级/公开辩论→mengzi-refutation），以权力不对等为适用前提并辨析本卡vs孟子，边界声明准确无越界。"},
+    {"answer_type": "with-skill", "question_id": 8, "score": "A", "reason": "用卡内A1自带反例关其思，套Step2七危第2条与§5/§6爱憎水位复盘，引用逐字可核，关键心法（处知则难）落到可迁移点。"},
+    {"answer_type": "no-skill", "question_id": 1, "score": "B", "reason": "raw质量：七种身危以意译罗列、算代价换方式的结论可操作，但无精确可核引用，属可用非优秀。"},
+    {"answer_type": "no-skill", "question_id": 2, "score": "B", "reason": "raw质量：给名高/厚利的三处观察判据，结论可操作；但只泛引《说难》，无准确定位，一处引用松散。"},
+    {"answer_type": "no-skill", "question_id": 3, "score": "B", "reason": "raw质量：列出三种以上身危情形（含借资等意译），逻辑通顺可操作，但引文非逐字可核，质量属可用。"},
+    {"answer_type": "no-skill", "question_id": 4, "score": "B", "reason": "raw质量：示范以承接/补漏/请示包装，不否定老板且把判断权留给他，可操作；无框架引用故未达A。"},
+    {"answer_type": "no-skill", "question_id": 5, "score": "B", "reason": "raw质量：按阴显四组合调口径，顺显开口、用阴打动，结论可操作；缺精确可核引用，属可用级。"},
+    {"answer_type": "no-skill", "question_id": 6, "score": "B", "reason": "raw质量：同其欲避其耻+事实与方案捆绑+私下时机，不瞒不引爆可操作；意译为主、无定位引用，可用。"},
+    {"answer_type": "no-skill", "question_id": 7, "score": "B", "reason": "raw质量：判平级大体适用并给边界（触核心利害仍自查），推理自洽可操作；与卡内B段边界结论不同但属合理独立判断，未达A引用准度。"},
+    {"answer_type": "no-skill", "question_id": 8, "score": "B", "reason": "raw质量：用常见职场案例套身危式三雷复盘，结论可操作；属泛化示例非卡内反例，引用意译，质量可用。"}
+  ]
+}

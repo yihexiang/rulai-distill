@@ -1,0 +1,22 @@
+{
+  "card": "tongjian-decision-trace",
+  "grader": "B",
+  "grades": [
+    {"answer_type": "with-skill", "question_id": 1, "score": "A", "reason": "正确套用名器问+Step2三小问(a/b/c)与§3/§74，判定名器=考核定等权，给出可观察的判定步骤与破例/立例分叉，结论可操作。"},
+    {"answer_type": "with-skill", "question_id": 2, "score": "A", "reason": "Step3人线两标(得利/反噬能力)与四类高危项逐项过，列出三方并标注标红信号，可观察信号具体到位。"},
+    {"answer_type": "with-skill", "question_id": 3, "score": "A", "reason": "Step4时滞线三档(当场/换人后/累积透支)对应§48/§122/§128，给出三窗口追踪节奏与最早显形点，并标注沉没成本陷阱。"},
+    {"answer_type": "with-skill", "question_id": 4, "score": "A", "reason": "用3分钟版三选一触发条件(撤=动名器+标红)正确命中撤，附日期与三条可观测回撤信号，边界(降级为改)声明清楚。"},
+    {"answer_type": "with-skill", "question_id": 5, "score": "A", "reason": "双线解读：名分线指名器未外借(§3/§76)，人线标领导零成本占优且不计信用透支(§45)，结论与可观察信号自洽。"},
+    {"answer_type": "with-skill", "question_id": 6, "score": "A", "reason": "紧扣卡内核心逻辑点2与Step2检查点，论证名分线先走决定约束资格、立例直接跳Step5，因果链准确非自创。"},
+    {"answer_type": "with-skill", "question_id": 7, "score": "A", "reason": "完整Step1→5复盘真实失误案例，名分/人线/时滞/处置齐全，回溯应撤并给补救动作，框架应用到位。"},
+    {"answer_type": "with-skill", "question_id": 8, "score": "A", "reason": "自我审查把主语换我并逐Step自检，特别落实防窄化警告与§128沉没成本标记，核心心法(先例读法)收束准确。"},
+    {"answer_type": "no-skill", "question_id": 1, "score": "A", "reason": "原始质量高：清晰界定评价权/定性权/奖惩权为名分对象，给出4步可观察比对法，逻辑与操作性俱佳。"},
+    {"answer_type": "no-skill", "question_id": 2, "score": "A", "reason": "列出四类受影响方并配可观察信号(抱怨/阳奉阴违/数据敷衍/找漏洞/流失)，原始分析具体实用。"},
+    {"answer_type": "no-skill", "question_id": 3, "score": "A", "reason": "给出3-12个月时滞判断、五种反噬形态与分月/季/年追踪节奏，原始回答结构清晰可落地。"},
+    {"answer_type": "no-skill", "question_id": 4, "score": "B", "reason": "撤改留三步法(目标/代价/替代)可行但略显循环笼统，未给明确触发阈值，边界条件不如框架版 crisp。"},
+    {"answer_type": "no-skill", "question_id": 5, "score": "A", "reason": "对口头表扬不发文的解读敏锐：零成本情绪价值+攥住正式名分权+保留议价空间，原始洞察质量高。"},
+    {"answer_type": "no-skill", "question_id": 6, "score": "A", "reason": "主张优先利益线(反馈快信号强)自成逻辑、论证连贯，虽与卡逻辑相反但不扣分于框架缺失，原始推理成立。"},
+    {"answer_type": "no-skill", "question_id": 7, "score": "B", "reason": "复盘用了名分/利益/反噬/结论结构，但所举'互联网公司扩张'偏通用模板，非明确'熟悉真实'个案，具体性松散。"},
+    {"answer_type": "no-skill", "question_id": 8, "score": "A", "reason": "四层自检(名分/利益/反噬/动机)完整，含'换人下此决定我会反对吗'的反身追问，原始自我审查质量好。"}
+  ]
+}

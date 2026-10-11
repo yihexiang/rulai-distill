@@ -49,6 +49,7 @@ defects = 76
 | CI 的每一步都能在本地跑通（不必等CI 才发现） | `t_self_validate_clean_and_doc_structure` · `tests/ci_local.sh` | 2026-10-10 |
 | 开放素材端到端已闭环：論語卡（公版典籍）随包分发，通过 `validate` + `lint-quotes` + **独立交叉复核（95/A，gap 1）**，印证工具链能消化 25 万字节级公版语料（不止小样本） | `t_real_sample_artifacts` · `t_corpus_anchor_splits_by_structure` · `t_gate_requires_cross_review` · `scale-evidence-open-material-2026-10-10.md` | 2026-10-10 |
 | 开放素材**分布已达 5 例**：5 张卡覆盖 4 类文本形态（语录 / 编年叙事 / 对话辩说 / 论说×2），合计 239 段 / 91,338 字；**296 条带段号引语全部锚定成功、0 挂错**（逐张命令可复跑）。⚠️ 其余 4 张**只过机器核验，未交叉复核**（不是"已被证实"的证据） | `t_open_material_distribution`（报告表格数字与 `anchor` 实跑**逐张对账**） · `docs/open-material-distribution-2026-10-10.md` | 2026-10-10 |
+| 开放素材 4 张新卡质量分布：独立双盲 LLM 评分 64/64 A（持技能，双评分者共识）＋ eval-kit utility 机械信号对照 3/4 显著 + 1/4 中等增益（区分度主在 `locator_citation`）。⚠️ 评分者为同族 LLM、64/64 全 A 异常干净，可能偏宽松——本结论是质量下限，待收紧 rubric 复评 / 人类 / 异族模型复评（不构成跨模型因果） | `docs/quality-distribution-report-2026-10-11.md` · `docs/utility-baseline/{tongjian,mengzi,hanfei,xunzi}/utility-report.json` · `t_open_material_distribution` | 2026-10-11 |
 
 ## 逐卡证据（不是"12 张"，实测 14 张）
 

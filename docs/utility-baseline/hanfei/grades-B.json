@@ -1,0 +1,22 @@
+{
+  "card": "hanfei-upward-advice",
+  "grader": "B",
+  "grades": [
+    {"answer_type": "with-skill", "question_id": 1, "score": "A", "reason": "完整跑通 Step1判心→Step2过七危(命中5/4/2/7条)→§5代价判准→Step5定B/C档，引用可核，结论可操作，七危命中即停边界清晰。"},
+    {"answer_type": "with-skill", "question_id": 2, "score": "A", "reason": "Step1判心三档配证据判准，引用§2/§19/§30，设两档证据判第三档检查点，可核且可操作。"},
+    {"answer_type": "with-skill", "question_id": 3, "score": "A", "reason": "逐条枚举§3七危并注明第4/5/7条及补充2/6条，引用原文『如此者身危』，可机械对照清单，结论明确。"},
+    {"answer_type": "with-skill", "question_id": 4, "score": "A", "reason": "按Step4饰所矜灭所耻、§4顺序、周澤既渥前提给出可落地示范，明写逆鳞句不说，硬约束不歪曲事实，可操作。"},
+    {"answer_type": "with-skill", "question_id": 5, "score": "A", "reason": "依§2三档调口径，列判错代价与第三档两说皆亏→只出B/C，引用准确，判准落到写得清证据。"},
+    {"answer_type": "with-skill", "question_id": 6, "score": "A", "reason": "整合Step3密级+Step4灭所耻+Step5三选一+§26参验+七危命中即停，不瞒不引爆两轴分明，结论三选一可操作。"},
+    {"answer_type": "with-skill", "question_id": 7, "score": "A", "reason": "正确定位B段边界『平级/公开辩论不适用』，列四项适用前提并区分mengzi-refutation，边界声明清楚。"},
+    {"answer_type": "with-skill", "question_id": 8, "score": "A", "reason": "用卡自带A1反例关其思，以Step2七危第2条+§5处知则难+§6爱憎水位复盘，逐字可核，迁移点精准。"},
+    {"answer_type": "no-skill", "question_id": 1, "score": "B", "reason": "给出七项自查思路与换方式结论，可操作；但七危为意译未精确枚举，引用松散属正常原始质量。"},
+    {"answer_type": "no-skill", "question_id": 2, "score": "B", "reason": "名高/厚利三处判据清晰可操作，符合原意；属合理原始建议，未贴原文但结论可用。"},
+    {"answer_type": "no-skill", "question_id": 3, "score": "B", "reason": "列举至少三种身危情形贴合说难精神，外加两种，可操作；为意译式枚举，非逐条原文但无误。"},
+    {"answer_type": "no-skill", "question_id": 4, "score": "B", "reason": "示范承接决定、包装补漏、请示语气，实用可操作；原始质量良好，无需框架即通顺。"},
+    {"answer_type": "no-skill", "question_id": 5, "score": "B", "reason": "阴显四组合调法合理，顺显避尴尬、用阴打动，可操作；表述稍泛但方向正确。"},
+    {"answer_type": "no-skill", "question_id": 6, "score": "B", "reason": "先同欲后避耻四步法，事归因+配解法+私下时机，不瞒不引爆两轴清楚，可操作。"},
+    {"answer_type": "no-skill", "question_id": 7, "score": "B", "reason": "原始判断『大体适用但调边界』是合理个人见解，论证连贯；与卡实际『不适用』不符，但仅评原始质量不扣分。"},
+    {"answer_type": "no-skill", "question_id": 8, "score": "B", "reason": "以通用职场案例套说难三雷复盘，逻辑自洽可操作；非引用卡内反例，但原始质量可用无含糊。"}
+  ]
+}

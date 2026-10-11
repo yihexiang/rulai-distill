@@ -3747,8 +3747,10 @@ def t_open_material_distribution():
         m = re.search(r"^##\s*来源状态.*?$([\s\S]*?)(?=^##\s|\Z)", body, re.M)
         rows = [ln for ln in (m.group(1) if m else "").splitlines()
                 if re.match(r"^\s*[-*]\s+\S", ln)]
+        bad = [r[:40] for r in rows
+               if not re.match(r"^\s*[-*]\s*\[(?:原文|通法|本卡规则)\]", r)]
         assert rows and all(re.match(r"^\s*[-*]\s*\[(?:原文|通法|本卡规则)\]", ln) for ln in rows), \
-            f"{slug} 来源状态有未标注的论断：{[r[:40] for r in rows if not re.match(r'^\\s*[-*]\\s*\\[(?:原文|通法|本卡规则)\\]', r)]}"
+            f"{slug} 来源状态有未标注的论断：{bad}"
     assert total_hit >= 250, f"ANCHOR_HIT 总数偏低（{total_hit}），分布样本可能不足"
 
 
