@@ -32,7 +32,7 @@
 2. **机械信号交叉验证已跑**（2026-10-11 收尾，shell 恢复后）：`td.py eval-kit utility` 四道信号对 4 卡实跑结果见下方「三·乙、机械信号交叉验证」。结论与 `docs/utility-evidence-2026-10-10.md` 一致——区分度主在 `locator_citation`。
 3. **更严复评待做**：建议对持技能答案做一轮「收紧 A 档门槛」的复评，或引入人类/异族模型评分，再下结论。
 4. **同族非跨模型**：本批答题与评分均同一模型家族，不构成跨模型因果（评估 P1 utility v2 要求 GLM/Hy3/DeepSeek 异族对照，留待后续授权）。
-5. **视频/播客 1 例**需联网 fetch-subtitle，当前 shell 不可用，未做。
+5. **视频/播客 1 例已补做**（2026-10-11，本人联网 `fetch-subtitle`）：Charles Duhigg《The science behind dramatically better conversations》（TEDxManchester·2024·12:58），取人工校对英文字幕（252 cues → 35 段），`verify-quotes` 机械核验 11/11 引语逐字命中（`video-run/eval/super-communicator-quote-verification.json`）。**未跑交叉复核**——与两张既有 TED 卡（two-kinds-of-procrastination / problem-before-evidence）同口径，仅机器核验，不构成"已被证实"。
 
 ## 三·乙、机械信号交叉验证（已跑，2026-10-11 收尾）
 

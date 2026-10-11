@@ -86,4 +86,4 @@ docs/utility-baseline/<card>/
 ## 六、不做（诚实声明）
 - 不编造评分结果；评分 Agent 的结论原样记录，分布由真实分数统计。
 - 不做跨模型 without 侧（需 GLM/Hy3/DeepSeek 异族模型，留待后续授权）。
-- 视频/播客 1 例需联网 fetch-subtitle，当前 shell 不可用，留待环境恢复。
+- 视频/播客 1 例已补做（2026-10-11，本人联网 `fetch-subtitle`）：超级沟通者卡（TEDxManchester·2024），verify-quotes 11/11 机械核验通过；**未跑交叉复核**（与两张既有 TED 卡同口径，仅机器核验，不构成"已被证实"）。

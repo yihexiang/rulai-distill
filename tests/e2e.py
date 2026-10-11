@@ -2418,7 +2418,8 @@ def t_real_sample_artifacts():
     stext = sources.read_text(encoding="utf-8")
     assert "公有领域" in stext, "SOURCES.md 未声明公有领域来源"
     externals = [("人物(马斯克)", external_ws("musk-run/skills/musk-thinking/SKILL.md")),
-                 ("视频(TED)", external_ws("video-run/skills/two-kinds-of-procrastination/SKILL.md"))]
+                 ("视频(TED)", external_ws("video-run/skills/two-kinds-of-procrastination/SKILL.md")),
+                 ("视频(TEDx)", external_ws("video-run/skills/super-communicator/SKILL.md"))]
     ok: dict[str, Path] = {}
     for name, pth in externals:
         if pth is None:
@@ -2427,16 +2428,23 @@ def t_real_sample_artifacts():
         r = run(["validate", str(pth)])
         assert "error 0" in r.stdout, f"{name} 卡片未通过静态校验：{r.stdout}"
         ok[name] = Path(pth)
-    # 视频素材必须是真实抓取（声明里有 URL 与抓取日期）
-    ted = ok.get("视频(TED)")
-    if ted is not None:
-        head = ted.read_text(encoding="utf-8")[:1200]
-        assert "youtube.com/watch" in head, "视频卡缺来源 URL"
-        assert "2026-10-04 抓取" in head, "视频卡缺抓取日期"
-        qv = external_ws("video-run/eval/quote-verification.json")
+    # 视频素材必须是真实抓取（声明里有 URL 与抓取日期），且引语全部核到。
+    # 两张 TED 卡抓取日期与核验 JSON 路径不同，按卡分别断言，避免硬编码单张日期。
+    video_checks = {
+        "视频(TED)": ("2026-10-04 抓取", "video-run/eval/quote-verification.json"),
+        "视频(TEDx)": ("2026-10-11 抓取", "video-run/eval/super-communicator-quote-verification.json"),
+    }
+    for vname, (grab_date, qv_rel) in video_checks.items():
+        vcard = ok.get(vname)
+        if vcard is None:
+            continue
+        text = vcard.read_text(encoding="utf-8")
+        assert "youtube.com/watch" in text, f"{vname} 卡缺来源 URL"
+        assert grab_date in text, f"{vname} 卡缺抓取日期（期望 {grab_date}）"
+        qv = external_ws(qv_rel)
         if qv is not None:
             d = _json.loads(Path(qv).read_text(encoding="utf-8"))
-            assert d["verified"] > 0 and not d["unverified"], f"视频卡引语未全部核到：{d}"
+            assert d["verified"] > 0 and not d["unverified"], f"{vname} 卡引语未全部核到：{d}"
 
 
 def t_style_decoy_anonymity():

@@ -36,8 +36,8 @@ defects = 76
 | 端到端回归全绿，且**新机器 clone 后也全绿**（不靠跳过） | `t_no_external_fixture_deps` · `t_no_unregistered_tests` | 2026-10-10 |
 | `gate` 默认要求交叉复核记录，单评分一律不判通过 | `t_gate_requires_cross_review` · `t_ci_artifact_gate` | 2026-10-10 |
 | `verify-quotes` / `anchor` / `lint-quotes` 在**真实素材**上抓到过真问题 | `t_verify_quotes_misplaced_vs_fabricated` · `t_anchor_cjk_short_quotes` · `t_lint_quotes_technical_and_sectional` | 2026-10-10 |
-| 工具链在**14 张真实卡**上实跑 `validate`，**error 0** | `t_real_sample_artifacts` · 逐卡 `td.py validate <发布根>`（见下表） | 2026-10-11 |
-| 交叉复核已在 **7 张卡**上跑通（独立答题 Agent + 2 个独立评分 Agent） | `t_gate_requires_cross_review` · 逐张 `FIDELITY.json`（见下表） | 2026-10-10 |
+| 工具链在**15 张真实卡**上实跑 `validate`，**error 0** | `t_real_sample_artifacts` · 逐卡 `td.py validate <发布根>`（见下表） | 2026-10-11 |
+| 交叉复核已在 **8 张卡**上跑通（独立答题 Agent + 2 个独立评分 Agent） | `t_gate_requires_cross_review` · 逐张 `FIDELITY.json`（见下表） | 2026-10-11 |
 | 独立性的边界是「**结构独立 ≠ 组织独立**」 | `t_gate_requires_cross_review` | 2026-10-10 |
 | 引语核验只能证明「它检查过的那一面」 | `t_verify_quotes_lang_filter_not_silent` · `t_anchor_unanchored_not_fail` | 2026-10-10 |
 | 长书分块的 token 节省：**区间 1.0×～34×**，短书/宽词几乎不省 | `t_token_savings_benchmark` · `benchmarks/token-savings/report-2026-10-10.md` | 2026-10-10 |
@@ -51,7 +51,7 @@ defects = 76
 | 开放素材**分布已达 5 例**：5 张卡覆盖 4 类文本形态（语录 / 编年叙事 / 对话辩说 / 论说×2），合计 239 段 / 91,338 字；**296 条带段号引语全部锚定成功、0 挂错**（逐张命令可复跑）。⚠️ 其余 4 张**只过机器核验，未交叉复核**（不是"已被证实"的证据） | `t_open_material_distribution`（报告表格数字与 `anchor` 实跑**逐张对账**） · `docs/open-material-distribution-2026-10-10.md` | 2026-10-10 |
 | 开放素材 4 张新卡质量分布：独立双盲 LLM 评分 64/64 A（持技能，双评分者共识）＋ eval-kit utility 机械信号对照 3/4 显著 + 1/4 中等增益（区分度主在 `locator_citation`）。⚠️ 评分者为同族 LLM、64/64 全 A 异常干净，可能偏宽松——本结论是质量下限，待收紧 rubric 复评 / 人类 / 异族模型复评（不构成跨模型因果） | `docs/quality-distribution-report-2026-10-11.md` · `docs/utility-baseline/{tongjian,mengzi,hanfei,xunzi}/utility-report.json` · `t_open_material_distribution` | 2026-10-11 |
 
-## 逐卡证据（不是"12 张"，实测 14 张）
+## 逐卡证据（不是"12 张"，实测 15 张）
 
 `validate` 必须在**发布根**上跑，不是单个技能目录——
 单技能目录里那些 `../../README.md`、`../geju-yunshi/` 是合法的兄弟链接，
@@ -64,6 +64,7 @@ defects = 76
 | `musk-decisions`（人物·新） | `musk-run2/skills/musk-decisions` | error 0 | **90 / A**（92/89，gap 3） |
 | `two-kinds-of-procrastination`（视频·TED） | `video-run/skills/two-kinds-of-procrastination` | error 0 | 未跑（历史 93.5/S 为**自评**） |
 | `problem-before-evidence`（视频） | `video-run/skills/problem-before-evidence` | error 0 | 未跑 |
+| `super-communicator`（视频·TEDx） | `video-run/skills/super-communicator` | error 0 | **100 / A**（dual-agent：grader-1/grader-2 均 100，gap 0）⚠️ 同族 LLM 双评分全满分，偏宽松，视为质量下限（与 64/64 全 A 同口径） |
 | `bazi-paipan` | `guoxue-skills` | error 0 | **93 / A**（92/93，gap 1） |
 | `geju-yunshi` | `guoxue-skills` | error 0 | **95 / A**（96/93，gap 3） |
 | `quming-xue` | `guoxue-skills` | error 0 | **96 / A**（96/95，gap 1） |
