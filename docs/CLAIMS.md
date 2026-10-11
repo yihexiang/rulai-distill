@@ -36,20 +36,21 @@ defects = 76
 | 端到端回归全绿，且**新机器 clone 后也全绿**（不靠跳过） | `t_no_external_fixture_deps` · `t_no_unregistered_tests` | 2026-10-10 |
 | `gate` 默认要求交叉复核记录，单评分一律不判通过 | `t_gate_requires_cross_review` · `t_ci_artifact_gate` | 2026-10-10 |
 | `verify-quotes` / `anchor` / `lint-quotes` 在**真实素材**上抓到过真问题 | `t_verify_quotes_misplaced_vs_fabricated` · `t_anchor_cjk_short_quotes` · `t_lint_quotes_technical_and_sectional` | 2026-10-10 |
-| 工具链在**13 张真实卡**上实跑 `validate`，**error 0** | `t_real_sample_artifacts` · 逐卡 `td.py validate <发布根>`（见下表） | 2026-10-10 |
+| 工具链在**14 张真实卡**上实跑 `validate`，**error 0** | `t_real_sample_artifacts` · 逐卡 `td.py validate <发布根>`（见下表） | 2026-10-11 |
 | 交叉复核已在 **7 张卡**上跑通（独立答题 Agent + 2 个独立评分 Agent） | `t_gate_requires_cross_review` · 逐张 `FIDELITY.json`（见下表） | 2026-10-10 |
 | 独立性的边界是「**结构独立 ≠ 组织独立**」 | `t_gate_requires_cross_review` | 2026-10-10 |
 | 引语核验只能证明「它检查过的那一面」 | `t_verify_quotes_lang_filter_not_silent` · `t_anchor_unanchored_not_fail` | 2026-10-10 |
 | 长书分块的 token 节省：**区间 1.0×～34×**，短书/宽词几乎不省 | `t_token_savings_benchmark` · `benchmarks/token-savings/report-2026-10-10.md` | 2026-10-10 |
 | 缺陷台账里**多数错在验证工具自身**，不在卡片内容 | `t_defect_ledger_stats` | 2026-10-10 |
-| **效用对照（no-skill vs with-skill）已跑通**：lunyu 显著增益、five-affairs 中等增益；判据是四道**机械信号**（定位引用/引语复用/边界声明/术语复用），含题面泄漏剔除 | `t_evalkit_utility_baseline` · `docs/utility-evidence-2026-10-10.md` · `docs/utility-evidence-lunyu.json` | 2026-10-10 |
+| **效用对照（no-skill vs with-skill）已跑通**：lunyu 显著增益、five-affairs 中等增益；判据是四道**机械信号**（定位引用/引语复用/边界声明/术语复用），含题面泄漏剔除（边界与限制见下条） | `t_evalkit_utility_baseline` · `docs/utility-evidence-2026-10-10.md` · `docs/utility-evidence-lunyu.json` | 2026-10-11 |
+| 效用对照的增益**只来自「定位引用」这一道可复核信号**：`boundary_declared`/`card_term` 在「不给卡片」的 no-skill 对照组里也会命中（模型默认行为），**不构成区分度**；对照仅由**同一模型家族**的不同会话产出，**不是跨模型因果证据**；每卡仅 1 次会话对照（n=1），不构成统计重复实验；增益等级 `none` 是合法结论，本项目不做「有增益才好用」的对外宣称 | `docs/utility-evidence-2026-10-10.md`（第三节「三条必须一起读的发现」·第五节「边界」） | 2026-10-11 |
 | 缺陷数 / 分布 / 回归项数三者由测试强制相等 | `t_defect_ledger_stats` · `t_defect_regression_ledger` · `t_docs_no_drift` | 2026-10-10 |
 | 回归测试**不得静默依赖作者工作区** | `t_no_external_fixture_deps` | 2026-10-10 |
 | CI 的每一步都能在本地跑通（不必等CI 才发现） | `t_self_validate_clean_and_doc_structure` · `tests/ci_local.sh` | 2026-10-10 |
 | 开放素材端到端已闭环：論語卡（公版典籍）随包分发，通过 `validate` + `lint-quotes` + **独立交叉复核（95/A，gap 1）**，印证工具链能消化 25 万字节级公版语料（不止小样本） | `t_real_sample_artifacts` · `t_corpus_anchor_splits_by_structure` · `t_gate_requires_cross_review` · `scale-evidence-open-material-2026-10-10.md` | 2026-10-10 |
 | 开放素材**分布已达 5 例**：5 张卡覆盖 4 类文本形态（语录 / 编年叙事 / 对话辩说 / 论说×2），合计 239 段 / 91,338 字；**296 条带段号引语全部锚定成功、0 挂错**（逐张命令可复跑）。⚠️ 其余 4 张**只过机器核验，未交叉复核**（不是"已被证实"的证据） | `t_open_material_distribution`（报告表格数字与 `anchor` 实跑**逐张对账**） · `docs/open-material-distribution-2026-10-10.md` | 2026-10-10 |
 
-## 逐卡证据（不是"12 张"，实测 13 张）
+## 逐卡证据（不是"12 张"，实测 14 张）
 
 `validate` 必须在**发布根**上跑，不是单个技能目录——
 单技能目录里那些 `../../README.md`、`../geju-yunshi/` 是合法的兄弟链接，

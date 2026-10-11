@@ -84,3 +84,20 @@
 - 重复实验：每卡 ≥3 次独立会话对照，报中位数与方差（当前 n=1）。
 - 跨模型对照：至少一个不同模型家族跑 without 侧（当前同家族）。
 - 信号改进：`boundary_declared` 区分度为零，需换成更严的判据（如「声明 + 给出替代路径」才算命中）。
+
+## 七、产出 JSON 字段说明（供复算与审计）
+
+`utility()` 对每个对照产出一份 JSON（`docs/utility-evidence-*.json`），字段含义：
+
+- `subject`：被评测卡片标识。
+- `card`：卡片 SKILL.md 路径。
+- `signals`：参与判定的信号名列表（当前 4 道：`locator_citation` / `verbatim_quote` / `boundary_declared` / `card_term`）。
+- `with` / `without`：有卡 / 无卡答案在各信号上的命中（布尔）。
+- `delta`：每个信号 `with − without`（0 表示无区分度）。
+- `counts`：`with` / `without` 命中的信号数，以及 `delta` 为正向的信号总数。
+- `leaked_terms`：题库题面已出现、已从 `card_term` 判据中剔除的标签（留痕，防「照抄题面即算命中」）。
+- `gain`：`significant` / `moderate` / `none`（none 合法，负向探针钉住不许虚报）。
+- `boundary`：必须随结论一起引用的四条边界声明（机械信号不覆盖结论正确性、非跨模型因果、n=1、none 合法）。
+- `errors`：判定前的校验错误（空集 / 无答题者等）；非空则 `gain = invalid`。
+
+> 历史上曾用 `verdict` / `with_hits` 等字段名，现已统一为 `gain` 与 `with`+`without`；读取旧快照若遇到未知字段，以本 schema 为准。

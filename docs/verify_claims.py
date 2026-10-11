@@ -107,6 +107,22 @@ def read_facts() -> dict[str, int]:
     return out
 
 
+def count_card_rows() -> int:
+    """数「## 逐卡证据」表里以「管道符 + 反引号」开头的数据行（卡片 slug 在反引号里）。
+
+    表头与分隔行不以「管道符 + 反引号」开头，故只数卡片行。
+    这是本项目「卡片数 = 逐卡表行数」的权威来源——任何「N 张真实卡」声明都必须等于它，
+    否则就是数字腐烂（#54 同源病：守卫必须钉住它该管的那一面）。
+    """
+    if not CLAIMS_MD.exists():
+        return -1
+    text = CLAIMS_MD.read_text(encoding="utf-8")
+    m = re.search(r"^## 逐卡证据.*?$(.*?)(?=^## |\Z)", text, re.M | re.S)
+    if not m:
+        return -1
+    return sum(1 for line in m.group(1).splitlines() if line.startswith("| `"))
+
+
 def sync_facts(facts: dict[str, int]) -> int:
     """把实际数字写回 facts 段、本文表格，以及其他文档里的回归项数。
 
@@ -249,6 +265,19 @@ def main() -> int:
             f"{f} 里的数字 {sorted(ns)} 与实际不一致"
             f"（回归 {facts['tests']} · 缺陷 {facts['defects']}；"
             f"跑 --sync 后手工同步，或改文档）")
+
+    # ⑥ 逐卡证据表的行数必须与所有「N 张真实卡 / 实测 N 张」声明一致。
+    #    此前 v1.9.0 加了第 14 张卡却没同步「13 张」声明，且没有任何守卫抓到——
+    #    这正是「声称 ≠ 实际」的本项目头号病。守卫钉住「声明数 == 表行数」。
+    rows = count_card_rows()
+    if rows >= 0:
+        claimed_nums = set(int(x) for x in re.findall(r"实测\s*(\d+)\s*张", CLAIMS_MD.read_text(encoding="utf-8")))
+        claimed_nums |= set(int(x) for x in re.findall(r"(\d+)\s*张真实卡", CLAIMS_MD.read_text(encoding="utf-8")))
+        for n in sorted(claimed_nums):
+            if n != rows:
+                problems.append(
+                    f"卡片数声明 {n} 与逐卡证据表 {rows} 行不符"
+                    f"（数字腐烂；更新表格或声明）")
 
     out = {"facts": facts, "declared": declared,
            "claims": len(claims), "problems": problems}
