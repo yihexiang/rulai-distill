@@ -37,7 +37,7 @@ defects = 76
 | `gate` 默认要求交叉复核记录，单评分一律不判通过 | `t_gate_requires_cross_review` · `t_ci_artifact_gate` | 2026-10-10 |
 | `verify-quotes` / `anchor` / `lint-quotes` 在**真实素材**上抓到过真问题 | `t_verify_quotes_misplaced_vs_fabricated` · `t_anchor_cjk_short_quotes` · `t_lint_quotes_technical_and_sectional` | 2026-10-10 |
 | 工具链在**15 张真实卡**上实跑 `validate`，**error 0** | `t_real_sample_artifacts` · 逐卡 `td.py validate <发布根>`（见下表） | 2026-10-11 |
-| 交叉复核已在 **8 张卡**上跑通（独立答题 Agent + 2 个独立评分 Agent） | `t_gate_requires_cross_review` · 逐张 `FIDELITY.json`（见下表） | 2026-10-11 |
+| 交叉复核已在 **10 张卡**上跑通（独立答题 Agent + 2 个独立评分 Agent） | `t_gate_requires_cross_review` · 逐张 `FIDELITY.json`（见下表） | 2026-10-11 |
 | 独立性的边界是「**结构独立 ≠ 组织独立**」 | `t_gate_requires_cross_review` | 2026-10-10 |
 | 引语核验只能证明「它检查过的那一面」 | `t_verify_quotes_lang_filter_not_silent` · `t_anchor_unanchored_not_fail` | 2026-10-10 |
 | 长书分块的 token 节省：**区间 1.0×～34×**，短书/宽词几乎不省 | `t_token_savings_benchmark` · `benchmarks/token-savings/report-2026-10-10.md` | 2026-10-10 |
@@ -62,8 +62,8 @@ defects = 76
 | `five-affairs-seven-questions`（书·孙子） | `examples/sample-bundle` | error 0 | **93 / A**（90/98，gap 8） |
 | `musk-thinking`（人物·旧） | `musk-run/skills/musk-thinking` | error 0 | 未跑（历史单次 95/A **未交叉复核**） |
 | `musk-decisions`（人物·新） | `musk-run2/skills/musk-decisions` | error 0 | **90 / A**（92/89，gap 3） |
-| `two-kinds-of-procrastination`（视频·TED） | `video-run/skills/two-kinds-of-procrastination` | error 0 | 未跑（历史 93.5/S 为**自评**） |
-| `problem-before-evidence`（视频） | `video-run/skills/problem-before-evidence` | error 0 | 未跑 |
+| `two-kinds-of-procrastination`（视频·TED） | `video-run/skills/two-kinds-of-procrastination` | error 0 | **100 / A**（dual-agent：grader-1/grader-2 均 100，gap 0；替代历史自评 93.5/S）⚠️ 同族 LLM 双评分全满分，偏宽松，视为质量下限 |
+| `problem-before-evidence`（视频） | `video-run/skills/problem-before-evidence` | error 0 | **100 / A**（dual-agent：grader-1/grader-2 均 100，gap 0）⚠️ 同族 LLM 双评分全满分，偏宽松，视为质量下限 |
 | `super-communicator`（视频·TEDx） | `video-run/skills/super-communicator` | error 0 | **100 / A**（dual-agent：grader-1/grader-2 均 100，gap 0）⚠️ 同族 LLM 双评分全满分，偏宽松，视为质量下限（与 64/64 全 A 同口径） |
 | `bazi-paipan` | `guoxue-skills` | error 0 | **93 / A**（92/93，gap 1） |
 | `geju-yunshi` | `guoxue-skills` | error 0 | **95 / A**（96/93，gap 3） |
@@ -75,17 +75,20 @@ defects = 76
 | `hanfei-upward-advice`（开放·韓非子） | `examples/open-bundle` | error 0 | **未跑**（仅机器核验：anchor 86 / 挂错 0） |
 | `xunzi-learning-order`（开放·荀子） | `examples/open-bundle` | error 0 | **未跑**（仅机器核验：anchor 94 / 挂错 0） |
 
-**交叉复核 7 张里有两处要单独说**：`zhouyi-yili` 两个评分者给出**完全相同**的总分，
+**交叉复核 10 张里有三处要单独说**：`zhouyi-yili` 与本轮新增的 3 张
+（`super-communicator`、`two-kinds-of-procrastination`、`problem-before-evidence`）两个评分者**都给出了完全相同的总分（100/100）**，
 那不构成两次独立证实——`eval-kit check` 会就"多个评分给相同分数"发提醒，
-但**它不是否决项**（那条提醒防的是复制粘贴，不是真的独立一致）。
+但**它不是否决项**（那条提醒防的是复制粘贴，不是真的独立一致）。这 4 张的满分
+和早前 `quality-distribution-report` 里「64/64 全 A」是**同一类偏宽松一致**（同族 LLM 互评友善 + rubric A 门槛偏低），
+一律按**质量下限**对待，不写成"已被证实优秀"。
 `lunyu-conduct` 的答题/评分由**同一运行环境的不同会话**完成——是**结构独立**，
 不是组织独立（无跨模型/跨机构复评），与下文诚实边界第 1 条同口径。
 
 ## 三条不能写进 README 的诚实边界
 
-1. **7 张交叉复核 ≠ 7 类素材**。guoxue 四张同属国学、同一套语料规整方式；
+1. **10 张交叉复核 ≠ 10 类素材**。guoxue 四张同属国学、同一套语料规整方式；
    它们证明的是"流程在这类素材上跑得通"，**不是"这个方法对所有素材都成立"**。
-2. **`musk-thinking` 的 95/A 是单次自评**，从未交叉复核。它不该和上面 7 张并排。
+2. **`musk-thinking` 的 95/A 是单次自评**，从未交叉复核。它不该和上面 10 张并排。
 3. **卡片内容真错的有 4 条**（台账里 `卡片内容真错` 那一类：#42/#66/#72/#73），
    其余多数是工具自身的错。这**不是"卡片质量很好"的证据**——
    它只说明"我们检查的地方还没发现更多卡片错"，而检查面本身是有限的。
