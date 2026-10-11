@@ -1,0 +1,22 @@
+{
+  "schema": "rulai-distill/fidelity/v1",
+  "subject": "mengzi-refutation",
+  "eval_mode": "dual-agent",
+  "answerer": "answerer-mengzi-1",
+  "graders": [
+    "grader-mengzi-1",
+    "grader-mengzi-2"
+  ],
+  "cross_grader_gap": 1.0,
+  "dimensions": {
+    "consistency": 30,
+    "style": 20,
+    "edge_honesty": 18,
+    "source_transparency": 15,
+    "structure": 15
+  },
+  "total": 98,
+  "grade": "A",
+  "blocking_issues": [],
+  "verdict": "pass"
+}

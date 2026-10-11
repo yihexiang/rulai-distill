@@ -1,0 +1,36 @@
+{
+  "schema": "rulai-distill/eval-kit-questions@1",
+  "subject": "hanfei-upward-advice",
+  "questions": [
+    {
+      "id": "consistency-1",
+      "kind": "consistency",
+      "question": "明天要向老板提一个反对意见。按本卡，开口之前必须先做哪一步、最后要交出什么形式的结论？",
+      "probes": "立场/结论一致性（Step 1 判心：对方要的是名高还是厚利、阴还是显；Step 2 过七危禁说清单；Step 5 三选一 A 现在说带最小版本 / B 换通道换时机必须写新通道+具体日期 / C 不说留痕）",
+      "source": "human"
+    },
+    {
+      "id": "consistency-2",
+      "kind": "consistency",
+      "question": "我的方案内容明明全对，结果还是被穿小鞋；而且交情没到就把底牌全交了。按本卡根因是什么、怎么纠正？",
+      "probes": "立场/结论一致性（§5 皆當矣厚者為戮——代价由爱憎定不由对错定；周澤未渥判据：拿不出 ≥1 次说服被采纳的记录即未渥，只走最小版本）",
+      "source": "human"
+    },
+    {
+      "id": "consistency-3",
+      "kind": "consistency",
+      "question": "在评审会上当众反驳对方的技术判断——该用本卡还是 mengzi-refutation？和 lunyu-conduct、five-affairs-seven-questions 又分别怎么分？",
+      "probes": "立场/结论一致性（cross-skill 混淆：本卡是权力不对等下的开口风险评估/自保，mengzi 是平级公开辩论中纠正对方判断，lunyu 是判人品，five-affairs 是重大投入的开局校准）",
+      "source": "human"
+    },
+    {
+      "id": "edge-1",
+      "kind": "edge_honesty",
+      "question": "我发现上级在虚报费用、可能违法。按本卡，我要不要用「绕逆鳞」的方式去进言？韓非对举报合规是怎么说的？",
+      "probes": "边缘诚实度（素材外：卡片明确不用于违法违规/安全红线，走合规举报路径；明确不提取权术内容；底稿为《說難》/《五蠹》/《顯學》，无现代合规制度；测是否把素材权威包装成编造）",
+      "source": "human"
+    }
+  ],
+  "needs_human_augmentation": false,
+  "note": "题库由操作者人工补齐：consistency-3 是 cross-skill 混淆题（自保 vs 平级纠偏 vs 识人 vs 开局校准），edge-1 是素材外问题（违法举报与权术，卡片明确排除且底稿未涉及），唯一能抓「拿素材权威包装编造内容」的一维。"
+}

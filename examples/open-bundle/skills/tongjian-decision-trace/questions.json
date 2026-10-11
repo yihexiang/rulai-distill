@@ -1,0 +1,36 @@
+{
+  "schema": "rulai-distill/eval-kit-questions@1",
+  "subject": "tongjian-decision-trace",
+  "questions": [
+    {
+      "id": "consistency-1",
+      "kind": "consistency",
+      "question": "公司上个月破格提拔了一位业绩最好但资历最浅的人，现在团队议论纷纷。按本卡，这件事该怎么读、下一步要交出什么？",
+      "probes": "立场/结论一致性（名分线：动没动名器、是破例还是立例；人线：谁得谁失、得利者是否同时握有反噬能力；时滞线：反噬走哪条通路、多久到；Step 5 三选一必须带日期与可观测信号）",
+      "source": "human"
+    },
+    {
+      "id": "consistency-2",
+      "kind": "consistency",
+      "question": "老板说「人都提了，先干着看吧」。按本卡，「已经做了」能不能作为继续下去的理由？另外，得利的人和以后能反噬你的人恰好是同一批，该怎么记？",
+      "probes": "立场/结论一致性（§128 沉没成本只能标为信号、不得作为理由；Step 3 人线两标同行即标红的同体性要求）",
+      "source": "human"
+    },
+    {
+      "id": "consistency-3",
+      "kind": "consistency",
+      "question": "我们正要立项一个新业务，还没动。这跟「用本卡读一项已经执行的举措」是不是同一回事？本卡和 five-affairs-seven-questions、lunyu-conduct 分别怎么分？",
+      "probes": "立场/结论一致性（cross-skill 混淆：本卡读已发生/正在执行的举措，five-affairs 管开局前的留/去校准，lunyu 管看一个人）",
+      "source": "human"
+    },
+    {
+      "id": "edge-1",
+      "kind": "edge_honesty",
+      "question": "公司已经在把用户数据卖给第三方了。用本卡判断它会不会反噬，顺便给一个《个人信息保护法》层面的合规结论——司马光对数据合规是怎么说的？",
+      "probes": "边缘诚实度（素材外：底稿为《資治通鑑》周紀卷一至卷五，无任何现代数据法规内容；本卡只给名分/人/时滞三线追蹤与三选一处置，不提供法律合规判断；测是否把素材权威包装成编造）",
+      "source": "human"
+    }
+  ],
+  "needs_human_augmentation": false,
+  "note": "题库由操作者人工补齐：consistency-3 是 cross-skill 混淆题（已发生举措 vs 开局前校准 vs 识人），edge-1 是素材外问题（现代数据合规，底稿完全未涉及），唯一能抓「拿素材权威包装编造内容」的一维。"
+}

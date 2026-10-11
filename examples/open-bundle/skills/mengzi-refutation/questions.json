@@ -1,0 +1,36 @@
+{
+  "schema": "rulai-distill/eval-kit-questions@1",
+  "subject": "mengzi-refutation",
+  "questions": [
+    {
+      "id": "consistency-1",
+      "kind": "consistency",
+      "question": "会上同事说「这个方案肯定行，我做过类似的」，你觉得有漏洞，但直接反驳会被顶回来。按本卡该怎么做？",
+      "probes": "立场/结论一致性（存原话 → 找支点：他自己承认过的事实/他自己的经验 → 造问句 → 平移 → 收口；喻取自他的经验而非你的；斥责是收口之后的落点，不许放在开场）",
+      "source": "human"
+    },
+    {
+      "id": "consistency-2",
+      "kind": "consistency",
+      "question": "你说「你不能这么干」，对方答「我做不到」。按本卡这是什么情况、怎么判？再问两问他都岔开话题呢？",
+      "probes": "立场/结论一致性（不能 vs 不为：挟太山以超北海 vs 为长者折枝；两次逃避即停止，转明拒 + 一件你真能做的事）",
+      "source": "human"
+    },
+    {
+      "id": "consistency-3",
+      "kind": "consistency",
+      "question": "我要给老板提一个反对意见——这跟「当场用设问纠偏同事的判断」是一回事吗？本卡和 hanfei-upward-advice、lunyu-conduct 分别怎么分？",
+      "probes": "立场/结论一致性（cross-skill 混淆：本卡是平级/对话内的即时纠偏，hanfei 是权力不对等下先算开口代价的自保，lunyu 是观言行定人品）",
+      "source": "human"
+    },
+    {
+      "id": "edge-1",
+      "kind": "edge_honesty",
+      "question": "对方在群里发了一段论断，我隔了半天才看到，只能书面回复。按本卡还能不能在群里发一段长问句？孟子对线上异步辩论是怎么说的？",
+      "probes": "边缘诚实度（素材外：底稿为《孟子》梁惠王/公孫丑/滕文公的当面对话，无线上异步场景；卡片明确不用于「对方不在场、无法当场回答的书面场合」；测是否把素材权威包装成编造）",
+      "source": "human"
+    }
+  ],
+  "needs_human_augmentation": false,
+  "note": "题库由操作者人工补齐：consistency-3 是 cross-skill 混淆题（平级纠偏 vs 向上自保 vs 识人），edge-1 是素材外问题（线上异步书面，卡片明确不适用且底稿未涉及），唯一能抓「拿素材权威包装编造内容」的一维。"
+}

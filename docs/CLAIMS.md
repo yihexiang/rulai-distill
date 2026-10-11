@@ -37,8 +37,10 @@ defects = 76
 | `gate` 默认要求交叉复核记录，单评分一律不判通过 | `t_gate_requires_cross_review` · `t_ci_artifact_gate` | 2026-10-10 |
 | `verify-quotes` / `anchor` / `lint-quotes` 在**真实素材**上抓到过真问题 | `t_verify_quotes_misplaced_vs_fabricated` · `t_anchor_cjk_short_quotes` · `t_lint_quotes_technical_and_sectional` | 2026-10-10 |
 | 工具链在**15 张真实卡**上实跑 `validate`，**error 0** | `t_real_sample_artifacts` · 逐卡 `td.py validate <发布根>`（见下表） | 2026-10-11 |
-| 交叉复核已在 **10 张卡**上跑通（独立答题 Agent + 2 个独立评分 Agent） | `t_gate_requires_cross_review` · 逐张 `FIDELITY.json`（见下表） | 2026-10-11 |
+| 交叉复核已在 **14 张卡**上跑通（独立答题 Agent + 2 个独立评分 Agent） | `t_gate_requires_cross_review` · 逐张 `FIDELITY.json`（见下表） | 2026-10-11 |
 | 独立性的边界是「**结构独立 ≠ 组织独立**」 | `t_gate_requires_cross_review` | 2026-10-10 |
+| 效用对照已在 **2 张卡上完成 n=3 重复实验**：tongjian / mengzi 各 3 次独立会话，**6/6 次复现显著增益**（正向差 3/3/4 与 3/3/3）；其余 4 张仍为 n=1 | `t_evalkit_utility_baseline` · `docs/utility-replication-2026-10-11.md` · `docs/utility-baseline/{tongjian,mengzi}/run-{2,3}/utility-report.json` | 2026-10-11 |
+| 重复实验只解决了「单次会话的偶然性」，**没解决同族偏宽松**：`card_term` 在第二张卡的 no-skill 侧同样命中（区分度仍集中在 `locator_citation`）；跨模型复评本环境未达成（见诚实边界第 4 条） | `docs/utility-replication-2026-10-11.md`（第三节「本轮新发现」·第四节「边界」） | 2026-10-11 |
 | 引语核验只能证明「它检查过的那一面」 | `t_verify_quotes_lang_filter_not_silent` · `t_anchor_unanchored_not_fail` | 2026-10-10 |
 | 长书分块的 token 节省：**区间 1.0×～34×**，短书/宽词几乎不省 | `t_token_savings_benchmark` · `benchmarks/token-savings/report-2026-10-10.md` | 2026-10-10 |
 | 缺陷台账里**多数错在验证工具自身**，不在卡片内容 | `t_defect_ledger_stats` | 2026-10-10 |
@@ -70,28 +72,36 @@ defects = 76
 | `quming-xue` | `guoxue-skills` | error 0 | **96 / A**（96/95，gap 1） |
 | `zhouyi-yili` | `guoxue-skills` | error 0 | **96 / A**（97/97，gap 0） |
 | `lunyu-conduct`（开放·論語） | `examples/open-bundle` | error 0 | **95 / A**（94/95，gap 1；2026-10-10 跑通，开放素材首张） |
-| `tongjian-decision-trace`（开放·資治通鑑） | `examples/open-bundle` | error 0 | **未跑**（仅机器核验：anchor 69 / 挂错 0） |
-| `mengzi-refutation`（开放·孟子） | `examples/open-bundle` | error 0 | **未跑**（仅机器核验：anchor 34 / 挂错 0） |
-| `hanfei-upward-advice`（开放·韓非子） | `examples/open-bundle` | error 0 | **未跑**（仅机器核验：anchor 86 / 挂错 0） |
-| `xunzi-learning-order`（开放·荀子） | `examples/open-bundle` | error 0 | **未跑**（仅机器核验：anchor 94 / 挂错 0） |
+| `tongjian-decision-trace`（开放·資治通鑑） | `examples/open-bundle` | error 0 | **100 / A**（dual-agent：grader-1/grader-2 均 100，gap 0）⚠️ 同族 LLM 双评分全满分，偏宽松，视为质量下限 |
+| `mengzi-refutation`（开放·孟子） | `examples/open-bundle` | error 0 | **98 / A**（dual-agent：99/98，gap 1；本轮唯一非满分，扣分在 edge_honesty） |
+| `hanfei-upward-advice`（开放·韓非子） | `examples/open-bundle` | error 0 | **100 / A**（dual-agent：grader-1/grader-2 均 100，gap 0）⚠️ 同族 LLM 双评分全满分，偏宽松，视为质量下限 |
+| `xunzi-learning-order`（开放·荀子） | `examples/open-bundle` | error 0 | **100 / A**（dual-agent：grader-1/grader-2 均 100，gap 0）⚠️ 同族 LLM 双评分全满分，偏宽松，视为质量下限 |
 
-**交叉复核 10 张里有三处要单独说**：`zhouyi-yili` 与本轮新增的 3 张
-（`super-communicator`、`two-kinds-of-procrastination`、`problem-before-evidence`）两个评分者**都给出了完全相同的总分（100/100）**，
+**交叉复核 14 张里有两处要单独说**：`zhouyi-yili` 与本轮新增的 7 张
+（`super-communicator`、`two-kinds-of-procrastination`、`problem-before-evidence`、
+`tongjian-decision-trace`、`hanfei-upward-advice`、`xunzi-learning-order`）两个评分者**都给出了完全相同的总分（100/100）**，
 那不构成两次独立证实——`eval-kit check` 会就"多个评分给相同分数"发提醒，
-但**它不是否决项**（那条提醒防的是复制粘贴，不是真的独立一致）。这 4 张的满分
+但**它不是否决项**（那条提醒防的是复制粘贴，不是真的独立一致）。这 7 张的满分
 和早前 `quality-distribution-report` 里「64/64 全 A」是**同一类偏宽松一致**（同族 LLM 互评友善 + rubric A 门槛偏低），
-一律按**质量下限**对待，不写成"已被证实优秀"。
+一律按**质量下限**对待，不写成"已被证实优秀"。本轮唯一例外是 `mengzi-refutation`（99/98，gap 1，
+扣分落在 edge_honesty）——它是 14 张里**唯一出现扣分与分差**的一张，恰恰说明"全满分"不是评分者的机械默认。
 `lunyu-conduct` 的答题/评分由**同一运行环境的不同会话**完成——是**结构独立**，
 不是组织独立（无跨模型/跨机构复评），与下文诚实边界第 1 条同口径。
 
-## 三条不能写进 README 的诚实边界
+## 四条不能写进 README 的诚实边界
 
-1. **10 张交叉复核 ≠ 10 类素材**。guoxue 四张同属国学、同一套语料规整方式；
+1. **14 张交叉复核 ≠ 14 类素材**。guoxue 四张同属国学、同一套语料规整方式；
    它们证明的是"流程在这类素材上跑得通"，**不是"这个方法对所有素材都成立"**。
-2. **`musk-thinking` 的 95/A 是单次自评**，从未交叉复核。它不该和上面 10 张并排。
+2. **`musk-thinking` 的 95/A 是单次自评**，从未交叉复核。它不该和上面 14 张并排。
 3. **卡片内容真错的有 4 条**（台账里 `卡片内容真错` 那一类：#42/#66/#72/#73），
    其余多数是工具自身的错。这**不是"卡片质量很好"的证据**——
    它只说明"我们检查的地方还没发现更多卡片错"，而检查面本身是有限的。
+4. **跨模型复评仍是 0 例（本环境未达成，不做等价替代）**。本轮尝试过「换模型档位」
+   的第三个评分者（`mengzi-refutation`：`scores-3-crosstier.json`，98 分，
+   与另两位 99/98 一致、分差 1）——但它自报的模型档位仍是**同一运行环境内的不同档位**，
+   **无法确认为不同模型家族**（GLM / DeepSeek / 其他厂商模型在本环境不可达）。
+   所以它**只算「不同档位会话的复现」，不算跨族证据**，
+   **不写进任何"已被异族模型证实"口径的表述**。
 
 ## 新增声称时必须做的事
 
