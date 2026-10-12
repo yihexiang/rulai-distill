@@ -1,0 +1,46 @@
+{
+  "subject": "bazi-paipan",
+  "card": "/Users/yihe/WorkBuddy/2026-10-03-12-20-21/guoxue-skills/skills/bazi-paipan/SKILL.md",
+  "signals": [
+    "locator_citation",
+    "verbatim_quote",
+    "boundary_declared",
+    "card_term"
+  ],
+  "with": {
+    "locator_citation": true,
+    "verbatim_quote": true,
+    "boundary_declared": true,
+    "card_term": false
+  },
+  "without": {
+    "locator_citation": true,
+    "verbatim_quote": true,
+    "boundary_declared": false,
+    "card_term": true
+  },
+  "delta": {
+    "locator_citation": 0,
+    "verbatim_quote": 0,
+    "boundary_declared": 1,
+    "card_term": -1
+  },
+  "counts": {
+    "with": 3,
+    "without": 3,
+    "delta": 1
+  },
+  "leaked_terms": [
+    "八字",
+    "四柱",
+    "排盘"
+  ],
+  "gain": "moderate",
+  "boundary": [
+    "只判机械可判的行为特征（定位引用/引语复用/边界声明/术语复用），不覆盖结论正确性与说服力",
+    "with/without 由同一模型家族的不同会话产出，不是跨模型因果证据",
+    "无增益（none）是合法结论，不得为凑效果虚报",
+    "题面已出现的 tags 已从判据剔除（leaked_terms），否则答题者照抄题面即算命中"
+  ],
+  "errors": []
+}

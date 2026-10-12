@@ -6,16 +6,17 @@
     "five-affairs",
     "hanfei",
     "xunzi",
-    "lunyu"
+    "lunyu",
+    "bazi-paipan"
   ],
   "runs": [
     "run-1",
     "run-2",
     "run-3"
   ],
-  "total_runs": 18,
-  "all_positive": true,
-  "none_count": 0,
+  "total_runs": 21,
+  "all_positive": false,
+  "none_count": 2,
   "locator_citation_invariant": {
     "with_hit": 18,
     "without_hit": 0,
@@ -58,6 +59,13 @@
       "significant": 2,
       "moderate": 1,
       "none": 0
+    },
+    "bazi-paipan": {
+      "subject": "bazi-paipan",
+      "significant": 0,
+      "moderate": 1,
+      "none": 2,
+      "cross_repo": "guoxue-skills/skills/bazi-paipan"
     }
   },
   "rows": [
@@ -222,13 +230,48 @@
       "without": 2,
       "delta": 2,
       "gain": "moderate"
+    },
+    {
+      "card": "bazi-paipan",
+      "subject": "bazi-paipan",
+      "run": "run-1",
+      "with": 3,
+      "without": 3,
+      "delta": 1,
+      "gain": "moderate"
+    },
+    {
+      "card": "bazi-paipan",
+      "subject": "bazi-paipan",
+      "run": "run-2",
+      "with": 4,
+      "without": 4,
+      "delta": 0,
+      "gain": "none"
+    },
+    {
+      "card": "bazi-paipan",
+      "subject": "bazi-paipan",
+      "run": "run-3",
+      "with": 3,
+      "without": 4,
+      "delta": 0,
+      "gain": "none"
     }
   ],
   "boundaries": [
     "同族模型内复现，非跨模型因果证据",
-    "机械信号不等于有用",
-    "none 仍是合法结论",
-    "n=3 覆盖 6 张卡，其余 9 张未做",
-    "five-affairs 净增实质仅为 locator_citation"
-  ]
+    "机械信号不等于有用（测不到常识领域卡的算对率/可复现性）",
+    "none 是合法结论且已被 bazi-paipan 实测证明（2 none + 1 moderate）",
+    "locator_citation 唯一区分信号仅对本仓 6 典籍卡成立，不外推",
+    "跨仓库仅 bazi-paipan 完成试点，其余外部卡未做"
+  ],
+  "cross_repo_finding": {
+    "card": "bazi-paipan",
+    "repo": "guoxue-skills",
+    "result": "1 moderate + 2 none",
+    "root_cause": "八字为常识领域，no-skill 基线亦能引来源/声明边界/用术语，locator_citation 失去区分力",
+    "implication": "locator_citation 唯一稳定区分信号仅对本仓典籍卡成立，不外推到常识领域卡；none 是既成事实",
+    "guard_scope": "t_utility_n3_runs_complete 只覆盖 6 本仓典籍卡；bazi 由 t_utility_n3_crossrepo_caveat 钉住披露"
+  }
 }

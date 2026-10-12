@@ -1707,6 +1707,30 @@ def t_utility_n3_runs_complete():
         f"locator_citation 应在全部 {total} 次 without 侧零命中，实际 {lc_without}"
 
 
+def t_utility_n3_crossrepo_caveat():
+    """跨仓库卡 bazi-paipan 的诚实披露守卫（P2 试点发现）。
+
+    本仓 6 典籍卡的 locator 不变量**不外推**到常识领域卡：bazi-paipan（guoxue-skills）
+    的 no-skill 基线亦能引来源/声明边界，3 run 为 1 moderate + 2 none。
+    本测试钉住：① bazi-paipan n=3 结构完整；② n3-aggregate.md 已诚实披露该边界
+    （含 bazi-paipan、none、不外推字样），防止后续把 none 结果粉饰成"稳定复现"。
+    """
+    BASE = ROOT / "docs" / "utility-baseline"
+    RUNS = ["run-1", "run-2", "run-3"]
+    REQ = ["answers.json", "answers-baseline.json", "questions.json", "utility-report.json"]
+    VALID_GAINS = {"significant", "moderate", "none"}
+    for run in RUNS:
+        rd = BASE / "bazi-paipan" / run
+        for fn in REQ:
+            assert (rd / fn).exists(), f"[bazi-paipan/{run}] 缺 {fn}（跨仓库试点 n=3 不完整）"
+        rep = json.loads((rd / "utility-report.json").read_text(encoding="utf-8"))
+        assert rep.get("gain") in VALID_GAINS, f"[bazi-paipan/{run}] gain 非法：{rep.get('gain')}"
+    # 诚实披露须在汇总文档中，移除即红（防止藏 none / 过度外推 locator 不变量）
+    agg = (BASE / "n3-aggregate.md").read_text(encoding="utf-8")
+    for marker in ("bazi-paipan", "none", "不外推", "常识领域"):
+        assert marker in agg, f"n3-aggregate.md 须诚实披露跨仓库边界，缺标记：{marker}"
+
+
 def t_verify_quotes_direction():
     """缺陷 3/4/5：引语核验必须向后取窗、遇到下一个引用即停、编号用位置切片。
 
@@ -4417,6 +4441,7 @@ def main() -> int:
         ("rubric 一票否决覆盖第一人称编造（#79）", t_rubric_veto_first_person_fabrication),
         ("人物模糊需求诊断分支已补回（P1#1）", t_persona_need_diagnosis_branch),
         ("效用 n=3 重复实验完整 + locator_citation 恒为唯一区分信号", t_utility_n3_runs_complete),
+        ("跨仓库卡 n=3 诚实披露（bazi-paipan none 不外推）", t_utility_n3_crossrepo_caveat),
         ("文档数字与代码不漂移", t_docs_no_drift),
         ("schema 与 --help 完整", t_schema_and_help),
         ("错误信息人话化", t_errors_are_human),
