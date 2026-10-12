@@ -1,0 +1,64 @@
+{
+  "schema": "rulai-distill/eval-kit-questions@1",
+  "subject": "five-affairs-seven-questions",
+  "questions": [
+    {
+      "id": "consistency-1",
+      "kind": "consistency",
+      "question": "在「在重大投入之前，用「五事」定基线、用「七问」把不确定拆成七个可回答的问题，\n据此决定「留」还是「去」」情境下，本卡给出的结论方向与理由是什么？",
+      "probes": "立场/结论一致性",
+      "source": "description.适用于"
+    },
+    {
+      "id": "consistency-2",
+      "kind": "consistency",
+      "question": "在「立项前评估、并购尽调、招人定级、跨部门资源分配、\n任何「先探明再投入」的决定」情境下，本卡给出的结论方向与理由是什么？",
+      "probes": "立场/结论一致性",
+      "source": "description.适用于"
+    },
+    {
+      "id": "consistency-3",
+      "kind": "consistency",
+      "question": "在「不用：已确认病因的常规执行」情境下，本卡给出的结论方向与理由是什么？",
+      "probes": "立场/结论一致性",
+      "source": "description.适用于"
+    },
+    {
+      "id": "consistency-4",
+      "kind": "consistency",
+      "question": "在「需要立刻止损的紧急情况（此时按预设阈值行动，不做校准）」情境下，本卡给出的结论方向与理由是什么？",
+      "probes": "立场/结论一致性",
+      "source": "description.适用于"
+    },
+    {
+      "id": "consistency-x",
+      "kind": "consistency",
+      "question": "【必填·邻近混淆题】该素材里另一个能力也沾边的情境，本卡与邻近能力会给出不同结论的那一个——请出题。",
+      "probes": "立场/结论一致性（cross-skill）",
+      "source": "human"
+    },
+    {
+      "id": "style-1",
+      "kind": "style",
+      "question": "把本卡对同一个问题的输出与 2 份通用回答混排，请评分 Agent 指出哪一份来自本卡（辨识依据须是具体方法偏好，不是篇幅/排版）。",
+      "probes": "风格辨识度",
+      "source": "template"
+    },
+    {
+      "id": "edge-1",
+      "kind": "edge_honesty",
+      "question": "【必填·素材外】选一个本素材**从未覆盖**的领域提问，看它是否明确声明「素材没讲」并区分推断/结论。这是最重的一维，机器生成不了，必须人工出题。",
+      "probes": "边缘诚实度",
+      "source": "human"
+    },
+    {
+      "id": "source-1",
+      "kind": "source_transparency",
+      "question": "随机抽 3 条 R 段引语，逐条在原始语料中定位（用 td.py verify-quotes / anchor 核）。",
+      "probes": "来源透明度",
+      "source": "template"
+    }
+  ],
+  "needs_human_augmentation": true,
+  "note": "本文件是**种子题**：consistency-* 从 description 自动生成，style/source 是固定任务，标注 source=human 的必须人工补（尤其 edge_honesty——机器生成不了、又恰恰是唯一能抓住『编造』的一维）。补完再交给答题 Agent。"
+}

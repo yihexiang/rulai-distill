@@ -58,6 +58,59 @@ python3 scripts/td.py eval-kit utility \
    重复实验解决的是「单次会话的偶然性」，**没有解决「同族互评偏宽松」**。
 2. **机械信号 ≠ 有用**：四道信号只判「可机械判别的行文特征」，
    不覆盖结论正确性、说服力、以及用户实际是否因此做出更好的决定。
-3. **n=3 只覆盖 2 张卡**：其余 4 张（lunyu / five-affairs / hanfei / xunzi）仍为 n=1，未做重复实验。
-   本报告不构成「所有卡都稳定复现」的证据。
+3. **n=3 现已覆盖 6 张卡**：tongjian / mengzi（2026-10-11）+ five-affairs / hanfei / xunzi / lunyu（2026-10-12 补做）。
+   余下 9 张既存卡（five-affairs 之外的 sample-bundle 待定，以及 musks/guoxue/video 等）仍未做重复实验；
+   本报告**仍不构成「所有卡都稳定复现」的证据**——只证明这 6 张开放素材卡在同族模型内可复现。
 4. **无增益（`none`）仍是合法结论**：本项目不做「有增益才好用」的对外宣称。
+   本轮 12 次会话无一出现 `none`，但这只因为所选 6 张卡确实都新增了 `locator_citation`；
+   **它不构成「none 不会发生」的证据**，只能说明本批卡在该信号上都有增量。
+
+## 五、补做：剩余 4 张卡的 n=3（2026-10-12）
+
+> 把第四节第 3 条里列为「未做」的 4 张卡（lunyu / five-affairs / hanfei / xunzi）补齐 n=3 重复实验，
+> 方法完全沿用第一节：同卡、同题库、三次独立会话，run-1/run-2/run-3 题目逐字相同（已复制到各 `run-N/` 目录）。
+> five-affairs / hanfei / xunzi 的 run-1 来自此前顶层基线答案（已归档进 `run-1/`），lunyu 三 run 均为本轮新建
+> （其基线答案此前未随仓保存，本轮先重建题库再派发独立会话）。
+
+### 5.1 结果：12/12 次会话均为正向增益
+
+| 卡 | 会话 | with 命中 | without 命中 | 正向差 | 等级 |
+|---|---|---|---|---|---|
+| `five-affairs-seven-questions` | run-1 | 4 | 3 | 1 | moderate |
+| `five-affairs-seven-questions` | run-2 | 4 | 3 | 1 | moderate |
+| `five-affairs-seven-questions` | run-3 | 4 | 3 | 1 | moderate |
+| `hanfei-upward-advice` | run-1 | 4 | 0 | 4 | significant |
+| `hanfei-upward-advice` | run-2 | 4 | 0 | 4 | significant |
+| `hanfei-upward-advice` | run-3 | 4 | 1 | 3 | significant |
+| `xunzi-learning-order` | run-1 | 2 | 2 | 1 | moderate |
+| `xunzi-learning-order` | run-2 | 2 | 1 | 1 | moderate |
+| `xunzi-learning-order` | run-3 | 3 | 1 | 2 | significant |
+| `lunyu-conduct` | run-1 | 4 | 1 | 3 | significant |
+| `lunyu-conduct` | run-2 | 4 | 0 | 4 | significant |
+| `lunyu-conduct` | run-3 | 4 | 2 | 2 | moderate |
+
+**结论：4 张卡各 3/3 次会话均复现正向增益，没有一次出现负向或零增益。**
+但等级分化明显——`hanfei` / `lunyu` 多为 significant，`five-affairs` 稳定停在 moderate，`xunzi` 介于两者之间。
+
+### 5.2 本轮巩固的三条发现
+
+1. **`locator_citation`（定位引用）是全 6 卡唯一稳定区分信号。**
+   在 6 张卡 × 3 run = **18 次会话**里，`locator_citation` 的 with 侧 **18/18 命中**、without 侧 **18/18 零命中**。
+   这与第三节第 3 条在 tongjian/mengzi 上的结论完全一致，现已扩到全部 6 张开放素材卡。
+   其余三道信号（verbatim_quote / boundary_declared / card_term）在 6 张卡上各自有噪点，
+   **有时 without 侧也会命中**（最典型是 five-affairs 的 without 侧命中 3/4 信号）。
+
+2. **`five-affairs` 的增量实质上只有「定位引用」。**
+   它的 without 侧在三次会话里都命中了 verbatim_quote / boundary_declared / card_term（3/4），
+   所以 with 侧只能再多加一个 locator_citation（净差恒为 +1，稳定 moderate）。
+   **诚实结论：five-affairs 对该题库的边际价值≈ citation grounding，其余机械特征模型不靠卡片也能产出。**
+
+3. **等级按卡分层，不按 run 抖动太多。**
+   five-affairs 三次全 moderate、hanfei 三次全 significant、xunzi 两次 moderate 一次 significant、lunyu 两次 significant 一次 moderate——
+   同一张卡的 run 间等级基本稳定，说明等级主要由「卡本身的信号结构」决定，而非会话偶然。
+
+### 5.3 与第四节边界的衔接
+
+- 第四节第 3 条已改为「n=3 现已覆盖 6 张卡」，并保留「不构成所有卡稳定复现的证据」的限制。
+- 第四节第 4 条补充：本轮 12 次无 `none` 只是因为所选卡都新增了 locator_citation，不代表 `none` 不可能。
+- 同族模型、机械信号≠有用 两条边界（第四节 1、2）对 4 张新卡同样成立，未变。

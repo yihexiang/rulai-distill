@@ -25,7 +25,11 @@ python3 scripts/td.py eval-kit utility \
 
 ## 说明
 
-- `lunyu` 卡的基线答案文件**未随仓保存**（只留了 `docs/utility-evidence-lunyu.json`
-  结论快照）；若要重跑 lunyu 效用对照，需重新生成其 `with` / `without` 两份答案。
-- 本目录的答案是**单次会话**产出（n=1），不构成统计重复实验；重复实验（每卡 ≥3 次）
-  与跨模型 without 侧仍属未做项。
+- 本目录顶层 `answers*.json` / `questions.json` 是 **run-1 的原始基线来源**；
+  它们已被逐字复制进 `run-1/`（与 `run-2/` `run-3/` 同级），便于 n=3 重复实验归档与复跑。
+  n=3 的逐 run 报告在 `run-N/utility-report.json`。
+- **n=3 重复实验已完成**（2026-10-12）：five-affairs / hanfei / xunzi / lunyu 四张卡各 3 次独立会话，
+  详见 `docs/utility-replication-2026-10-11.md` 第五节。
+- `lunyu` 卡的基线答案此前**未随仓保存**，已于本轮重建（`docs/utility-baseline/lunyu/run-{1,2,3}/`），
+  与既有 tongjian / mengzi 一样补齐 n=3。
+- 跨模型 without 侧仍属未做项（同族模型内复现，非跨模型因果）。

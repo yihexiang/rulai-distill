@@ -1632,6 +1632,21 @@ def t_defect_regression_ledger():
             assert f"def {name}(" in src, f"台账引用的测试不存在：{name}"
 
 
+def t_rubric_veto_first_person_fabrication():
+    """缺陷 #79：标准 rubric 一票否决须覆盖未标注来源/示例的第一人称事实陈述。
+
+    xunzi 卡 Q7「举一个你半途而废的例子」诱导答题者把自拟经历当事实、未标示例；
+    标准 rubric 原一票否决只覆盖维度3编造与伪造来源，漏掉这类更隐蔽的第一人称编造。
+    修复：一票否决补第 5 条。本测试钉住该条款存在，移除即红。
+    """
+    doc = (ROOT / "references" / "scoring-rubric.md").read_text(encoding="utf-8")
+    assert "一票否决" in doc, "scoring-rubric.md 应含一票否决条款"
+    # 该短语只因 #79 修复而存在，移除即红
+    assert "第一人称事实陈述" in doc, \
+        "一票否决须覆盖未标注来源/示例的第一人称事实陈述（#79 修复项）"
+    assert "未标注来源" in doc, "一票否决第 5 条须写明『未标注来源』"
+
+
 def t_verify_quotes_direction():
     """缺陷 3/4/5：引语核验必须向后取窗、遇到下一个引用即停、编号用位置切片。
 
@@ -4339,6 +4354,7 @@ def main() -> int:
         ("中文按字计数·查不到要明说（#58/#59）", t_chinese_unit_count_and_honest_capability),
         ("语言过滤不静默（#60）", t_verify_quotes_lang_filter_not_silent),
         ("缺陷台账正文数字不腐烂", t_defect_ledger_stats),
+        ("rubric 一票否决覆盖第一人称编造（#79）", t_rubric_veto_first_person_fabrication),
         ("文档数字与代码不漂移", t_docs_no_drift),
         ("schema 与 --help 完整", t_schema_and_help),
         ("错误信息人话化", t_errors_are_human),

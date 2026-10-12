@@ -597,6 +597,16 @@ DEFECTS = [
      "2026-10-10：mengzi 蒸馏 Agent 在报告里问「18 条 unanchored 要不要改写法」——"
      "不该让它改写法，是工具少认了一种作者的给出处写法",
      ["t_anchor_inline_attribution"]),
+    ("题库设计（xunzi Q7）+ 标准 rubric 一票否决",
+     "xunzi 卡 Q7「举一个你半途而废的例子」诱导答题 Agent 把自拟第一人称经历当事实陈述且未标示例",
+     "标准版 rubric 给 A（一票否决未触发）；3 位严格评分者分别给 A/B/D",
+     "题干不应诱导编造；且标准 rubric 一票否决须覆盖「未标注来源/示例的第一人称事实陈述」"
+     "（material fabrication）——它不属维度3（素材外编造），却是更隐蔽的第一人称编造",
+     "major", "eval_gap",
+     "收紧 rubric 复评（2026-10-12）发现：xunzi Q7 标准版 A、严格版 A/B/D；答题 Agent 用第一人称写"
+     "「我当年…」当事实且未标示例，标准 rubric 一票否决只覆盖维度3编造与伪造来源，未覆盖此类",
+     ["references/scoring-rubric.md 一票否决补「未标注来源/示例的第一人称事实陈述视为编造」条款",
+      "xunzi Q7 题干改写须同步重跑 utility 基线，故延后到 n=3 之后"]),
 ]
 
 
