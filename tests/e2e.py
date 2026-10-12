@@ -1647,6 +1647,23 @@ def t_rubric_veto_first_person_fabrication():
     assert "未标注来源" in doc, "一票否决第 5 条须写明『未标注来源』"
 
 
+def t_persona_need_diagnosis_branch():
+    """P1#1：人物蒸馏的「模糊需求诊断」分支须作为可选分支存在且被 SKILL.md 引用。
+
+    nuwa 的 Phase 0B（需求诊断）+ Phase 0A（档位确认）补回为可选分支；
+    本测试钉住该分支文档与关键结构标记存在，且 SKILL.md 引用它，
+    避免「已补回 nuwa 人物管线」的声明腐烂成空话。
+    """
+    diag = (ROOT / "references" / "persona-need-diagnosis.md")
+    assert diag.exists(), "须有 references/persona-need-diagnosis.md（模糊需求诊断分支）"
+    text = diag.read_text(encoding="utf-8")
+    for marker in ("需求维度表", "候选推荐", "人物 Skill 还是主题 Skill", "成本档位"):
+        assert marker in text, f"persona-need-diagnosis.md 缺结构标记：{marker}"
+    skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+    assert "persona-need-diagnosis.md" in skill, \
+        "SKILL.md §人物蒸馏分支须引用 persona-need-diagnosis.md"
+
+
 def t_utility_n3_runs_complete():
     """缺陷 #79 之后：6 张开放素材卡各自须有 run-1/run-2/run-3 的完整效用对照产物，
     且结构合法；并钉住核心结论——`locator_citation` 在 6 卡×3 run=18 次会话中
@@ -4398,6 +4415,7 @@ def main() -> int:
         ("语言过滤不静默（#60）", t_verify_quotes_lang_filter_not_silent),
         ("缺陷台账正文数字不腐烂", t_defect_ledger_stats),
         ("rubric 一票否决覆盖第一人称编造（#79）", t_rubric_veto_first_person_fabrication),
+        ("人物模糊需求诊断分支已补回（P1#1）", t_persona_need_diagnosis_branch),
         ("效用 n=3 重复实验完整 + locator_citation 恒为唯一区分信号", t_utility_n3_runs_complete),
         ("文档数字与代码不漂移", t_docs_no_drift),
         ("schema 与 --help 完整", t_schema_and_help),

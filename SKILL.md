@@ -232,6 +232,12 @@ td.py count <dir>                                  # token 计量
 
 素材是**人**（书名/访谈/演讲换成人物名）时，阶段 2 的能力卡换成**认知植入结构**：
 
+### 入口分流：模糊需求诊断（可选，补自 nuwa）
+
+用户来的时候**只有模糊需求、没有目标人物**（「我想提升决策质量」「有没有一种思维方式能帮我看透商业本质」）时，先走 `references/persona-need-diagnosis.md` 的**模糊需求诊断分支**：需求定位（≤2 轮追问）→ 候选推荐（人物 vs 主题）→ 用户选择 → 再进入下方蒸馏。这把 nuwa 的「从需求反推蒸馏对象」补回，避免维度错配与无谓的重调研。用户已给明确人名则跳过，直接六路调研。
+
+> **本版本已补回的 nuwa 人物资产**：① 六路调研骨架（`td.py research init` 的 01-writings…06-timeline，含 03-expression-dna 车道，合并时带**车道覆盖审计**——比 nuwa 多一层缺失车道告警）；② 表达 DNA 六维结构化（`extractors/persona-extractor.md` 第 6 类 + `templates/PERSONA.md.template`「我说话的方式」）；③ 模糊需求诊断（本小节 + `references/persona-need-diagnosis.md`）。三者在 rulai 下均按**离线优先**改造。
+
 ```
 我是谁              身份锚定（不是"模仿他"，是"带着他的经历思考"）
 我的认知上下文
@@ -284,7 +290,7 @@ td.py count <dir>                                  # token 计量
 - 可选：`PyYAML`（严格 frontmatter）、`tiktoken`（精确 token 计量）、`jsonschema`
 - **无网络调用**：所有脚本纯本地，不访问任何外部 API
 - 自检：`python3 scripts/td.py doctor`
-- 回归：`python3 tests/e2e.py`（114 项，零依赖与完整依赖两种解释器各跑一遍）
+- 回归：`python3 tests/e2e.py`（115 项，零依赖与完整依赖两种解释器各跑一遍）
 - CI：`.github/workflows/pipeline-check.yml`（双版本矩阵 + 红线扫描 + Schema 校验）
 
 ## 许可
