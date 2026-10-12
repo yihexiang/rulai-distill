@@ -51,7 +51,8 @@ defects = 76
 | CI 的每一步都能在本地跑通（不必等CI 才发现） | `t_self_validate_clean_and_doc_structure` · `tests/ci_local.sh` | 2026-10-10 |
 | 开放素材端到端已闭环：論語卡（公版典籍）随包分发，通过 `validate` + `lint-quotes` + **独立交叉复核（95/A，gap 1）**，印证工具链能消化 25 万字节级公版语料（不止小样本） | `t_real_sample_artifacts` · `t_corpus_anchor_splits_by_structure` · `t_gate_requires_cross_review` · `scale-evidence-open-material-2026-10-10.md` | 2026-10-10 |
 | 开放素材**分布已达 5 例**：5 张卡覆盖 4 类文本形态（语录 / 编年叙事 / 对话辩说 / 论说×2），合计 239 段 / 91,338 字；**296 条带段号引语全部锚定成功、0 挂错**（逐张命令可复跑）。⚠️ 其余 4 张**只过机器核验，未交叉复核**（不是"已被证实"的证据） | `t_open_material_distribution`（报告表格数字与 `anchor` 实跑**逐张对账**） · `docs/open-material-distribution-2026-10-10.md` | 2026-10-10 |
-| 开放素材 4 张新卡质量分布：独立双盲 LLM 评分 64/64 A（持技能，双评分者共识）＋ eval-kit utility 机械信号对照 3/4 显著 + 1/4 中等增益（区分度主在 `locator_citation`）。⚠️ 评分者为同族 LLM、64/64 全 A 异常干净，可能偏宽松——本结论是质量下限，待收紧 rubric 复评 / 人类 / 异族模型复评（不构成跨模型因果） | `docs/quality-distribution-report-2026-10-11.md` · `docs/utility-baseline/{tongjian,mengzi,hanfei,xunzi}/utility-report.json` · `t_open_material_distribution` | 2026-10-11 |
+| 开放素材 4 张新卡质量分布：独立双盲 LLM 评分 64/64 A（持技能，双评分者共识）＋ eval-kit utility 机械信号对照 3/4 显著 + 1/4 中等增益（区分度主在 `locator_citation`）。⚠️ 评分者为同族 LLM、64/64 全 A 异常干净，可能偏宽松——本结论是质量下限（**收紧 rubric 复评已做，见下条**：该 64/64 **不能复现**） | `docs/quality-distribution-report-2026-10-11.md` · `docs/utility-baseline/{tongjian,mengzi,hanfei,xunzi}/utility-report.json` · `t_open_material_distribution` | 2026-10-11 |
+| **收紧 rubric 复评已跑**：A 档 85→92 + 4 条硬门槛后，64/64 全 A **不能复现**——@1 得 49/64 A、@1.1 得 24/32 A（均约 75% 维持 A），并**查出 xunzi Q7 一题编造**（标准版当时给 A、一票否决未触发）。⚠️ 收紧版自身也被查出缺陷（@1 的 A 档算术上等价于满分 100，已修为 @1.1）；@1.1 仅 1 位评分者，**与 @1 不可直接换算** | `docs/strict-rubric-recheck-2026-10-12.md` · `references/scoring-rubric-strict.md` · `docs/utility-baseline/*/grades-strict-{A,B,v11-A}.json` | 2026-10-12 |
 
 ## 逐卡证据（不是"12 张"，实测 15 张）
 
@@ -88,7 +89,7 @@ defects = 76
 `lunyu-conduct` 的答题/评分由**同一运行环境的不同会话**完成——是**结构独立**，
 不是组织独立（无跨模型/跨机构复评），与下文诚实边界第 1 条同口径。
 
-## 四条不能写进 README 的诚实边界
+## 五条不能写进 README 的诚实边界
 
 1. **14 张交叉复核 ≠ 14 类素材**。guoxue 四张同属国学、同一套语料规整方式；
    它们证明的是"流程在这类素材上跑得通"，**不是"这个方法对所有素材都成立"**。
@@ -102,6 +103,12 @@ defects = 76
    **无法确认为不同模型家族**（GLM / DeepSeek / 其他厂商模型在本环境不可达）。
    所以它**只算「不同档位会话的复现」，不算跨族证据**，
    **不写进任何"已被异族模型证实"口径的表述**。
+5. **「等级 A」不等于「没有编造」**。收紧复评（2026-10-12）在 `xunzi-learning-order` 第 7 题上
+   查出一处**编造**：答题 Agent 把自拟的第一人称经历（含无法核验的细节）当成事实陈述、且未标注为示例，
+   而**标准版给了它 A、一票否决项未被触发**；三位严格评分者分别判 A / B / D。
+   另：该题题面「举一个你半途而废的例子」本身在诱导编造（对无真实经历的答题者只有拒绝或编造两条路），
+   属**题库设计缺陷**，与已记录的题面泄漏（#62/#65）同类，**尚未登记入缺陷台账**。
+   → 因此任何把「A 档」当质量铁证的口径都不成立；A 档只能说明"没被这一版判据查出来"。
 
 ## 新增声称时必须做的事
 

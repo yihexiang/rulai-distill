@@ -1,0 +1,219 @@
+{
+  "card": "hanfei-upward-advice",
+  "grader": "strict-v11-A",
+  "rubric": "scoring-rubric-strict@1.1",
+  "card_level": {
+    "source_transparency": 15,
+    "structure": 15,
+    "note": "来源透明度 15：frontmatter 明列 source_locator 为 corpus/anchored/src-04-hanfeizi.md 及第2、3、4、5、6、7、19、26、30段；卡片声明底稿为公有领域一手原文且一手占比 1.0；本轮抽核第2、3、4、5、6、26段均命中。若缺 source_locator 扣至10，若无一手占比证据扣至10或5，任一抽核引语找不到则扣至0并使 G3 失败。结构 15：R、I、A1、A2、E、B 六段齐全；E 段六步逐步给出完成标准和检查点；B 段列出8条失败模式。若六段缺一扣至12，若 E 任一步缺完成标准扣至12，若 B 失败模式不足2条扣至8。"
+  },
+  "citation_checks": [
+    {
+      "ref": "第2段",
+      "cmd": "rg -n -C 1 '凡說之難，在知所說之心，可以吾說當之。' corpus/anchored/src-04-hanfeizi.md",
+      "found": true,
+      "evidence": "第14行命中：『凡說之難，在知所說之心，可以吾說當之。』同段还逐字包含名高、厚利及阴为厚利而显为名高三档，支持答案1、2、5。"
+    },
+    {
+      "ref": "第3段",
+      "cmd": "rg -n -C 1 '周澤未渥也，而語極知' corpus/anchored/src-04-hanfeizi.md",
+      "found": true,
+      "evidence": "第17行位于『【第3段】』下，命中『周澤未渥也，而語極知，說行而有功，則德忘；說不行而有敗，則見疑，如此者身危』；同一行可见『如此者身危』共7处，支持答案1、3、6。"
+    },
+    {
+      "ref": "第4段",
+      "cmd": "rg -n -C 1 '凡說之務，在知飾所說之所矜而滅其所恥。' corpus/anchored/src-04-hanfeizi.md",
+      "found": true,
+      "evidence": "第20行位于『【第4段】』下，逐字命中『凡說之務，在知飾所說之所矜而滅其所恥。』，并在同段命中『大意無所拂悟，辭言無所繫縻，然後極騁智辯焉』，支持答案4、6。"
+    },
+    {
+      "ref": "第5段",
+      "cmd": "rg -n -C 1 '此二人說者皆當矣，厚者爲戮，薄者見疑' corpus/anchored/src-04-hanfeizi.md",
+      "found": true,
+      "evidence": "第23行位于『【第5段】』下，命中『此二人說者皆當矣，厚者爲戮，薄者見疑，則非知之難也，處知則難也』；同段也有關其思『胡可伐』及武公『怒而戮之』，支持答案1、8。"
+    },
+    {
+      "ref": "第6段",
+      "cmd": "rg -n -C 1 '故有愛於主，則智當而加親；有憎於主，則智不當見罪而加䟽。' corpus/anchored/src-04-hanfeizi.md",
+      "found": true,
+      "evidence": "第26行位于『【第6段】』下，逐字命中爱憎引语，且前文明确写『故彌子之行未變於初也』，支持答案8对爱憎水位的复盘。"
+    },
+    {
+      "ref": "第26段",
+      "cmd": "rg -n -C 1 '無參驗而必之者，愚也；弗能必而據之者，誣也。' corpus/anchored/src-04-hanfeizi.md",
+      "found": true,
+      "evidence": "第86行位于『【第26段】』下，逐字命中『無參驗而必之者，愚也；弗能必而據之者，誣也。』，支持答案6关于先核验事实、不要下未验证断语的依据。"
+    }
+  ],
+  "grades": [
+    {
+      "answer_type": "with-skill",
+      "question_id": 1,
+      "dimensions": {
+        "consistency": 22,
+        "style": 20,
+        "edge_honesty": 20,
+        "source_transparency": 15,
+        "structure": 15
+      },
+      "total": 92,
+      "grade": "A",
+      "gates": {
+        "G1_edge": true,
+        "G2_consistency": true,
+        "G3_citation": true,
+        "G4_style": true
+      },
+      "deduction_points": "一致性已因只核对七危中的第5、4、2、7条且末尾停在『B 或 C』而非单选，按30→22；若连命中项与后果也对不上则22→15。风格若去掉『命中任一即跳 B/C』和未渥判据，20→16；若只列 Step 标签则降至12。边缘诚实若把『多半名高』无证据说成确定事实，20→14；若编造卡内规则则降至0。来源若任一抽核引语不在对应段落，15→0且 G3 失败。结构若卡片 E 步缺完成标准，15→12。",
+      "reason": "结论与理由方向正确：答案引用『此二人說者皆當矣，厚者爲戮』说明正确不等于安全，并按『命中任一条』导向 B/C；但题目要求按七种先算，实际只判了4项，漏第1、3、6条，而且没有落实三选一的单一结论。该缺陷正符合 @1.1 的22分档，而非蒙对的15分档。"
+    },
+    {
+      "answer_type": "with-skill",
+      "question_id": 2,
+      "dimensions": {
+        "consistency": 30,
+        "style": 20,
+        "edge_honesty": 20,
+        "source_transparency": 15,
+        "structure": 15
+      },
+      "total": 100,
+      "grade": "A",
+      "gates": {
+        "G1_edge": true,
+        "G2_consistency": true,
+        "G3_citation": true,
+        "G4_style": true
+      },
+      "deduction_points": "一致性若漏掉『阴为厚利而显为名高』或把两档证据并存仍判前两档，30→22。风格若只给三类标签而无『写一条原话或行为』及交叉核验动作，20→12；保留动作但去掉判据则20→16。边缘诚实若把 title、曝光等例子冒充原文，20→14，若声称有不存在的原文则降至0。来源抽核失败则15→0并使 G3 失败。结构若 E 段判心步骤没有完成标准则15→12。",
+      "reason": "答案完整执行判心：列出名高、厚利、阴显不一三档，要求『写他最近的一条原话或行为作证据，不许写我感觉』，并以『若两档都有证据→直接判第三档』作为检查点；还用第19、30段的言功对照做反向核验，结论、理由和完成标准均齐。"
+    },
+    {
+      "answer_type": "with-skill",
+      "question_id": 3,
+      "dimensions": {
+        "consistency": 30,
+        "style": 20,
+        "edge_honesty": 20,
+        "source_transparency": 15,
+        "structure": 15
+      },
+      "total": 100,
+      "grade": "A",
+      "gates": {
+        "G1_edge": true,
+        "G2_consistency": true,
+        "G3_citation": true,
+        "G4_style": true
+      },
+      "deduction_points": "一致性若只列两种或漏掉各项触发机制，30→22；若把非七危内容混入则降至15。风格若只抄条目、不解释现代触发情境与『命中任一即停』判据，20→12。边缘诚实若把七种说成原文以外的数量，20→14；若虚构段号或原句则降至0。来源任一抽核失败则15→0并使 G3 失败。结构若 B 段失败模式少于2条则15→8。",
+      "reason": "题目只要求至少三种，答案实际列出第4、5、7、2、6条共五种，并分别引用『周澤未渥也，而語極知』『明言礼義以挑其惡』『彊以其所不能爲』等原话与后果；最后补上逐项打命中或未命中、任一命中即停，完成度超过题目下限。"
+    },
+    {
+      "answer_type": "with-skill",
+      "question_id": 4,
+      "dimensions": {
+        "consistency": 22,
+        "style": 20,
+        "edge_honesty": 20,
+        "source_transparency": 15,
+        "structure": 15
+      },
+      "total": 92,
+      "grade": "A",
+      "gates": {
+        "G1_edge": true,
+        "G2_consistency": true,
+        "G3_citation": true,
+        "G4_style": true
+      },
+      "deduction_points": "一致性已因示范共4句、超过卡片 A 档最小版本『≤3句』，且『返工率高30%』『两周延期』是未标注占位数据而按30→22；若再漏周泽既渥或逆鳞前提则22→15。风格若只给示范句而不标切入点、所耻、逆鳞和顺序，20→12；有序列无判据则20→16。边缘诚实当前未把占位量化归为卡内原文；若宣称这些数值是真实实测或原文事实则20→0。来源抽核失败则15→0并使 G3 失败。结构若 Step 4 缺完成标准则15→12。",
+      "reason": "方法骨架正确且可辨识：先要求七危未命中和『周澤既渥』，再按『飾所說之所矜而滅其所恥』安排切口，并明确不说『你公开支持是错的』这一逆鳞句。但示范从『老板，你当初推这个方向』到『你看下周一』共有4句，违反卡片最小版本不超过3句；30%与两周也未标为待替换变量，属于结论对、执行不完整的22分情形。"
+    },
+    {
+      "answer_type": "with-skill",
+      "question_id": 5,
+      "dimensions": {
+        "consistency": 30,
+        "style": 20,
+        "edge_honesty": 20,
+        "source_transparency": 15,
+        "structure": 15
+      },
+      "total": 100,
+      "grade": "A",
+      "gates": {
+        "G1_edge": true,
+        "G2_consistency": true,
+        "G3_citation": true,
+        "G4_style": true
+      },
+      "deduction_points": "一致性若把阴显不一误写成选对一边即可安全，30→15；若只漏 B/C 限制则30→22。风格若只说『按偏好调整』而无证据、切口与输出动作，20→12；有动作无检查点则20→16。边缘诚实若把现代口径说成韓非原句，20→14，虚构原文则降至0。来源抽核失败则15→0并使 G3 失败。结构若判心步骤缺完成标准则15→12。",
+      "reason": "答案逐一对应第2段三档及判错代价：名高配名高、厚利配厚利，阴显不一则明确『两种说法都亏』；执行上先写动机证据，再选切口，第三档只出 B/C，并以『写不出就不许开口』收口，结论、理由、动作和判据完整。"
+    },
+    {
+      "answer_type": "with-skill",
+      "question_id": 6,
+      "dimensions": {
+        "consistency": 30,
+        "style": 20,
+        "edge_honesty": 20,
+        "source_transparency": 15,
+        "structure": 15
+      },
+      "total": 100,
+      "grade": "A",
+      "gates": {
+        "G1_edge": true,
+        "G2_consistency": true,
+        "G3_citation": true,
+        "G4_style": true
+      },
+      "deduction_points": "一致性若只讲私下沟通而漏事实核验、责任认领或七危闸门，30→22；若建议隐瞒事实则降至0。风格若去掉在场人员、时间点、载体三项完成标准，20→16；只列 Step 标签则降至12。边缘诚实若把未核验推测当坏消息事实，20→0；轻微扩大第26段含义则降至14。来源抽核失败则15→0并使 G3 失败。结构若 Step 3 或 Step 5 缺完成标准则15→12。",
+      "reason": "答案形成完整递送链：先以『無參驗而必之者，愚也』约束只报已核验事实，再按『夫事以密成，語以泄敗』写清人员、时间、载体，随后用立其矜、灭其耻给最小事实和下一步，并要求自己有份时先认责；命中隐秘事项则转 B/C，且明确『再看看不是合法输出』。"
+    },
+    {
+      "answer_type": "with-skill",
+      "question_id": 7,
+      "dimensions": {
+        "consistency": 30,
+        "style": 20,
+        "edge_honesty": 20,
+        "source_transparency": 15,
+        "structure": 15
+      },
+      "total": 100,
+      "grade": "A",
+      "gates": {
+        "G1_edge": true,
+        "G2_consistency": true,
+        "G3_citation": true,
+        "G4_style": true
+      },
+      "deduction_points": "一致性若只说平级不适用却不给权力不对等判据，30→22；若反称平级也应套七危则降至0。风格若仅报邻近技能名而无四项边界测试，20→12；有测试无结论判据则20→16。边缘诚实若把边界扩成对平级者的人品判断，20→14，若编造卡片支持则降至0。来源抽核失败则15→0并使 G3 失败。结构若 B 段缺不适用清单或易混淆辨析则15→12。",
+      "reason": "答案直接给出『不适用』，并引用卡片根本前提『权力不对等』；它列出权力、逆耳内容、阴显可能不一、接受不说四项边界，再以『平级用孟子，向上用韓非』区分邻近能力，决策标准和越界后果完整。"
+    },
+    {
+      "answer_type": "with-skill",
+      "question_id": 8,
+      "dimensions": {
+        "consistency": 30,
+        "style": 20,
+        "edge_honesty": 20,
+        "source_transparency": 15,
+        "structure": 15
+      },
+      "total": 100,
+      "grade": "A",
+      "gates": {
+        "G1_edge": true,
+        "G2_consistency": true,
+        "G3_citation": true,
+        "G4_style": true
+      },
+      "deduction_points": "一致性若只复述被罚故事而不定位七危、爱憎和可迁移判断，30→22；若把被罚原因归为意见错误则降至0。风格若无案例、机制、原文判准、迁移点的复盘序列，20→16或12。边缘诚实若虚构自己亲历案例，20→0；选卡内案例但冒充卡外亲历则降至14。来源若第5、6段任一引语查不到，15→0且 G3 失败。结构若 A1 没有真实案例或 B 段没有对应失败模式则15→12。",
+      "reason": "答案没有虚构个人亲历，而是明示采用『卡 A1 自带、逐字可核的反例』；它从關其思『胡可伐』和『怒而戮之』入手，定位七危第2条，再用『皆當矣，厚者爲戮』及第6段爱憎判准解释内容正确仍受罚，最后落到『處知則難也』的可迁移结论，复盘链完整。"
+    }
+  ],
+  "notes": "@1.1 修好了 @1 的算术缺陷：本轮答案1和4都以 consistency 22、其余门槛通过而得到92分，证明92–99不再不可达；22分档共使用2次，准确承接了只判七危4项、未单选 B/C、示范超过3句及未标注量化占位这些『结论和理由正确但执行不完整』的问题。观察到的实际分值为92与100，等级仍为8个 A，这只能说明该批答案在收紧判据下仍维持，不是外部独立证实。剩余漏洞：卡级来源与结构满分仍会给每题共享30分；短问答是否构成完整动作序列仍有主观空间；G3仅抽样；示范中的未标注占位数据究竟只扣一致性还是同时触发边缘诚实，边界仍可能造成评分者分歧。"
+}
