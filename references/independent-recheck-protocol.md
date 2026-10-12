@@ -1,0 +1,47 @@
+# 组织级独立复评协议（把「结构独立」升级为「组织独立」）
+
+> 目的：兑现 README 已声明的诚实边界——当前 FIDELITY 质检是**结构独立**（答题/评分是两个 Agent，但同属一个模型家族、由本项目调度）。本协议定义如何引入**外部独立视角**，让结论从「结构独立」升级为「组织独立」。
+> 状态：**协议已就绪，实测尚未开始**。截至 2026-10-12，0 张卡片完成组织级复评。
+> 阻塞点：需要**另一个模型家族**的访问权限，或**人类评者**——这两样都不在项目自身管辖内，需用户/外部提供。
+
+## 两种独立视角
+
+| 类型 | 谁来做 | 解决什么 | 产物 |
+|---|---|---|---|
+| 跨模型复评 | 不同模型家族（如本项目用 A 族，复评用 B 族）按同一 8 题 rubric 重答+重评 | 「同族互评偏宽松」「自评偏差」的残余风险 | `review.json`（reviewer_type=cross_model） |
+| 第二人复评 | 人类评者盲读卡片+底稿，按 rubric 打分 | 「机器评分是否脱离人类判断」 | `review.json`（reviewer_type=human） |
+
+任一类型 ≥1 份有效复评即可把该卡片标记为「组织独立」。
+
+## 复评产物 schema（`docs/independent-recheck/<card>/<reviewer>/review.json`）
+
+```json
+{
+  "card": "<card-slug>",
+  "reviewer_type": "cross_model | human",
+  "model_or_reviewer": "<模型族名 或 评者代号>",
+  "date": "YYYY-MM-DD",
+  "answers_rechecked": [
+    {"id": 1, "verdict": "consistent | fabrication | inconsistent", "notes": "<可选>"}
+  ],
+  "fidelity_grade_reconfirmed": "A | B | C | D | none",
+  "fabrication_flagged": false,
+  "independence_note": "<该复评如何独立：不同模型族 / 盲读人类>"
+}
+```
+
+`fabrication_flagged=true` 或 `fidelity_grade_reconfirmed=none` → 该复评**不通过**，须回写缺陷台账并回到对应卡片修复，不得计入「组织独立」。
+
+## 落点与聚合
+
+- 每份复评落在 `docs/independent-recheck/<card>/<reviewer>/review.json`。
+- 聚合脚本：`python3 scripts/tdlib/independent_recheck.py` 扫描该目录，输出：
+  - `docs/independent-recheck/ORG-INDEPENDENCE-LEDGER.json`（机器可读：每张卡是否组织独立、有效复评数、类型）
+  - `docs/independent-recheck/ORG-INDEPENDENCE-LEDGER.md`（人读摘要）
+- 当某卡首次达成组织独立，在其注册表条目与 README 的诚实边界里把「结构独立」改为「组织独立（已复评 N 次）」。
+
+## 诚实边界（协议自带）
+
+- 复评不是「再跑一遍自家脚本」——必须由**真外部**视角执行；用本项目同族模型伪装复评视为作弊，不计入。
+- 复评样本量小（1 次）只能降「结构独立」风险，不能消除；建议每卡 ≥2 份异源复评（跨模型 + 人类各一份）才算稳健。
+- 本协议不声称已执行；实际复评发生后，须登记缺陷台账（如有编造/降级发现）并补 e2e 守卫钉住「声明=实际」。
