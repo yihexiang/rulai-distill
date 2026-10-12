@@ -26,6 +26,7 @@
 | xunzi | xunzi-learning-order | 1 | 2 | 0 | 中等为主、1 次显著 |
 | lunyu | lunyu-conduct | 2 | 1 | 0 | 显著为主、1 次中等 |
 | bazi-paipan | bazi-paipan（**跨仓库** guoxue-skills） | 0 | 1 | 2 | ⚠️ 常识领域基线持平，多为 none（见第五节） |
+| quming-xue | quming-xue（**跨仓库** guoxue-skills） | 0 | 2 | 1 | ⚠️ 常识领域基线持平（见第五节） |
 
 ## 三、逐 run 明细（18 行）
 
@@ -52,6 +53,9 @@
 | bazi-paipan | run-1 | 3 | 3 | 1 | moderate |
 | bazi-paipan | run-2 | 4 | 4 | 0 | none |
 | bazi-paipan | run-3 | 3 | 4 | 0 | none |
+| quming-xue | run-1 | 4 | 3 | 1 | moderate |
+| quming-xue | run-2 | 3 | 3 | 0 | none |
+| quming-xue | run-3 | 4 | 3 | 1 | moderate |
 
 ## 四、边界（不夸大）
 
@@ -66,20 +70,19 @@
 5. **five-affairs 的增量实质≈citation grounding**：其 without 侧三次都命中 verbatim_quote/boundary_declared/
    card_term（3/4），with 侧只能再多加 locator_citation（净差恒 +1）。
 
-## 五、跨仓库卡 bazi-paipan 的诚实发现（2026-10-12 新增，试点）
+## 五、跨仓库卡的诚实发现（2026-10-12 新增，试点：bazi-paipan + quming-xue）
 
-`bazi-paipan` 位于**独立仓库 `guoxue-skills/`**，是本项目首次做的**跨仓库 utility 对照**
-（`td.py eval-kit utility --card` 指向兄弟仓库 SKILL.md，答案落本仓）。结果与 6 张本仓典籍卡**截然不同**：
+`bazi-paipan` 与 `quming-xue` 均位于**独立仓库 `guoxue-skills/`**，是本项目首次做的**跨仓库 utility 对照**
+（`td.py eval-kit utility --card` 指向兄弟仓库 SKILL.md，答案落本仓）。两张结果**一致**，且与 6 张本仓典籍卡**截然不同**：
 
-| run | with | without | 差 | 等级 |
+| 卡 | run-1 | run-2 | run-3 | 合计 |
 |---|---|---|---|---|
-| run-1 | 3 | 3 | +1 | moderate（区分信号仅 boundary_declared） |
-| run-2 | 4 | 4 | 0 | **none**（完全持平） |
-| run-3 | 3 | 4 | 0 | **none**（基线反超） |
+| bazi-paipan | +1 moderate | 0 none | 0 none | 1 moderate + 2 none |
+| quming-xue | +1 moderate | 0 none | +1 moderate | 2 moderate + 1 none |
 
-**根因**：八字是**模型训练语料里充足的常识领域**。no-skill 基线（凭通用命理知识）就能
-引《渊海子平》、给出立春分界/十二节/五虎遁/五鼠遁/子时两口径、并拒绝预测——四道机械信号几乎全中。
-也就是说，`locator_citation` 在这里**不再是区分信号**（with=without=1），卡在机械信号层面的边际增益趋零。
+**共同根因**：八字/取名都是**模型训练语料里充足的常识领域**。no-skill 基线（凭通用命理知识）就能
+引《渊海子平》、给出立春分界/五虎遁/喜用神主驱动/子时两口径、并拒绝预测——四道机械信号几乎全中。
+也就是说，`locator_citation` 在这里**不再是区分信号**（两张卡都 with=without=1），卡在机械信号层面的边际增益趋零（最好情形净 +1）。
 
 **这个发现的价值（不是失败，是校准）**：
 1. 它证伪了「locator_citation 是普适区分信号」的过度外推——该信号只在**模型没有原文记忆的典籍/文本卡**上构成区分。

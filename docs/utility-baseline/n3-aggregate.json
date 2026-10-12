@@ -7,16 +7,17 @@
     "hanfei",
     "xunzi",
     "lunyu",
-    "bazi-paipan"
+    "bazi-paipan",
+    "quming-xue"
   ],
   "runs": [
     "run-1",
     "run-2",
     "run-3"
   ],
-  "total_runs": 21,
+  "total_runs": 24,
   "all_positive": false,
-  "none_count": 2,
+  "none_count": 3,
   "locator_citation_invariant": {
     "with_hit": 18,
     "without_hit": 0,
@@ -66,6 +67,13 @@
       "moderate": 1,
       "none": 2,
       "cross_repo": "guoxue-skills/skills/bazi-paipan"
+    },
+    "quming-xue": {
+      "subject": "quming-xue",
+      "significant": 0,
+      "moderate": 2,
+      "none": 1,
+      "cross_repo": "guoxue-skills/skills/quming-xue"
     }
   },
   "rows": [
@@ -257,6 +265,33 @@
       "without": 4,
       "delta": 0,
       "gain": "none"
+    },
+    {
+      "card": "quming-xue",
+      "subject": "quming-xue",
+      "run": "run-1",
+      "with": 4,
+      "without": 3,
+      "delta": 1,
+      "gain": "moderate"
+    },
+    {
+      "card": "quming-xue",
+      "subject": "quming-xue",
+      "run": "run-2",
+      "with": 3,
+      "without": 3,
+      "delta": 0,
+      "gain": "none"
+    },
+    {
+      "card": "quming-xue",
+      "subject": "quming-xue",
+      "run": "run-3",
+      "with": 4,
+      "without": 3,
+      "delta": 1,
+      "gain": "moderate"
     }
   ],
   "boundaries": [
@@ -269,9 +304,13 @@
   "cross_repo_finding": {
     "card": "bazi-paipan",
     "repo": "guoxue-skills",
-    "result": "1 moderate + 2 none",
+    "result": "bazi: 1 moderate + 2 none；quming: 2 moderate + 1 none（2 卡一致：基线在 locator/verbatim 持平，卡最多净 +1）",
     "root_cause": "八字为常识领域，no-skill 基线亦能引来源/声明边界/用术语，locator_citation 失去区分力",
     "implication": "locator_citation 唯一稳定区分信号仅对本仓典籍卡成立，不外推到常识领域卡；none 是既成事实",
-    "guard_scope": "t_utility_n3_runs_complete 只覆盖 6 本仓典籍卡；bazi 由 t_utility_n3_crossrepo_caveat 钉住披露"
+    "guard_scope": "t_utility_n3_runs_complete 只覆盖 6 本仓典籍卡；bazi 由 t_utility_n3_crossrepo_caveat 钉住披露",
+    "cards_confirmed": [
+      "bazi-paipan",
+      "quming-xue"
+    ]
   }
 }
