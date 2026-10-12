@@ -1731,6 +1731,18 @@ def t_utility_n3_crossrepo_caveat():
         assert marker in agg, f"n3-aggregate.md 须诚实披露跨仓库边界，缺标记：{marker}"
 
 
+def t_readme_card_count_disclosure():
+    """缺陷 #80：README「真实战绩」表的真实卡计数须披露跨仓库口径。
+
+    本仓 examples/ 只发 6 张已建卡；bazi/geju/quming/zhouyi 在独立仓库 guoxue-skills、
+    musk-* 在 musk-run/musk-run2、视频卡在 video-run；musk-mental-models 与第 2 视频卡从未建实体。
+    本测试钉住 README 已披露该边界，防止把跨仓库/不存在的卡当本仓「每条都能自己复算」的战绩。
+    """
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    for marker in ("跨仓库", "本仓", "guoxue-skills"):
+        assert marker in readme, f"README 须披露真实卡计数的跨仓库口径，缺标记：{marker}"
+
+
 def t_verify_quotes_direction():
     """缺陷 3/4/5：引语核验必须向后取窗、遇到下一个引用即停、编号用位置切片。
 
@@ -4442,6 +4454,7 @@ def main() -> int:
         ("人物模糊需求诊断分支已补回（P1#1）", t_persona_need_diagnosis_branch),
         ("效用 n=3 重复实验完整 + locator_citation 恒为唯一区分信号", t_utility_n3_runs_complete),
         ("跨仓库卡 n=3 诚实披露（bazi-paipan none 不外推）", t_utility_n3_crossrepo_caveat),
+        ("README 真实卡计数披露跨仓库口径（#80）", t_readme_card_count_disclosure),
         ("文档数字与代码不漂移", t_docs_no_drift),
         ("schema 与 --help 完整", t_schema_and_help),
         ("错误信息人话化", t_errors_are_human),

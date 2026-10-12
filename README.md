@@ -10,7 +10,7 @@
 [![Contract & vendor](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml/badge.svg)](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![python](https://img.shields.io/badge/python-%E2%89%A53.10-blue)
-![regression](https://img.shields.io/badge/regression-116%20passing%20%2F%209%20skipped-brightgreen)
+![regression](https://img.shields.io/badge/regression-117%20passing%20%2F%209%20skipped-brightgreen)
 
 > ### 别的蒸馏技能解决「生成」，这个解决「证明」。
 > **不打分不发版，而且不由自己打分。**
@@ -61,7 +61,7 @@ gate       →  默认要求 ≥2 个独立评分者交叉复核，否则**拒�
 
 ### 3️⃣ 缺陷有**台账**，而台账由测试强制相等
 
-本项目把自己的 77 个缺陷全部登记在 `CONSTRAINTS.md`，并逐条写成可机校验的 failure-case
+本项目把自己的 78 个缺陷全部登记在 `CONSTRAINTS.md`，并逐条写成可机校验的 failure-case
 （`td.py failure list`）：每条都带「当时怎么错的 / 应该是什么 / 严重级 / 对应回归测试」。
 **台账行数、分布数字、回归项数三者由测试强制相等——数字写错即 CI 红。**
 
@@ -81,12 +81,18 @@ gate       →  默认要求 ≥2 个独立评分者交叉复核，否则**拒�
 | `quming-xue` | 取名（依喜用神） | **96 / A** | 同上（96 / 95，分差 1） |
 | `zhouyi-yili` | 周易义理（处境分析） | **96 / A** | 同上（97 / 97，分差 0）——⚠️ 两个评分者**总分完全相同**，不构成两次独立证实 |
 | `lunyu-conduct` | 开放素材（論語·公版典籍） | **95 / A** | 同上（94 / 95，分差 1）；报告随包：`examples/open-bundle/skills/lunyu-conduct/FIDELITY.json` |
-| 14 张真实卡（含 5 张开放素材卡） | 混合 | — | `validate` + `output-eval` + `lint-quotes` 实跑：**error 0、零崩溃、零假红** |
+| 真实卡 · **跨仓库计数** | 混合 | — | `validate` + `output-eval` + `lint-quotes` 实跑：**error 0、零崩溃、零假红** |
 
 **这些数字的边界，写在明处**：独立性是**结构独立**（子 Agent 隔离）而非组织独立（没有第二个人复评）；
 `musk-decisions` 只测了 3 道人工题；样本卡是精修展示件，**不能代表开放素材的普遍水平**；
 guoxue 那四张同属国学、同一套语料规整方式，**四张通过不等于四类素材被验证过**。
 逐条证据与最近核验日期见 [`docs/CLAIMS.md`](./docs/CLAIMS.md)（机器核验：`python3 docs/verify_claims.py`）。
+
+> **⚠️ 计数口径（跨仓库，缺陷 #80）**：上表「真实卡」是**跨仓库计数**——**本仓 `examples/` 只发 6 张**
+> （开放素材 5 + `five-affairs`）；`bazi-paipan / geju-yunshi / quming-xue / zhouyi-yili` 在独立仓库
+> **`guoxue-skills/`**，`musk-*` 在 `musk-run` / `musk-run2`，视频卡在 `video-run`。所谓「14 张」含跨仓库卡，
+> 且其中 2 张（`musk-mental-models`、第 2 张视频卡）**从未建实体**，真实实体卡 = 本仓 6 + 外部 7 = **13**。
+> 因此「每一条都能自己复算」的精确含义是**命令可复跑**；跨仓库卡须到对应兄弟仓库、语料在场才能复算。
 
 ### 开放素材臂（P0-2 · 2026-10-10 新增）
 
@@ -176,7 +182,7 @@ python3 scripts/td.py eval-kit utility \
 
 | 维度 | 状态 | 证据 |
 |---|---|---|
-| **机械可靠性** | ✅ 可信 | 116 项回归全绿；`gate` 默认要求交叉复核记录（实测生效）；`verify-quotes`/`anchor`/`lint-quotes` 均在真实素材上抓到过真问题；工具链在 **14 张真实卡**上实跑零崩溃、零假红 |
+| **机械可靠性** | ✅ 可信 | 117 项回归全绿；`gate` 默认要求交叉复核记录（实测生效）；`verify-quotes`/`anchor`/`lint-quotes` 均在真实素材上抓到过真问题；工具链在 **14 张真实卡**上实跑零崩溃、零假红 |
 | **产出正确性** | ⚠️ **已跑通闭环，仍强依赖素材** | `eval-kit` 已在 **7 张卡**上跑通**真实交叉复核**（独立答题 Agent + 2 个独立评分 Agent）：样本卡 `five-affairs` **93/A**、`musk-decisions` **90/A**，guoxue 四张 **93/95/96/96（A）**，开放素材 `lunyu-conduct` **95/A**。⚠️ 这些是**结构独立**而非组织独立；样本卡是精修展示件，**不能代表开放素材的普遍水平** |
 
 具体地说，这个项目目前**做不到**的事：
@@ -255,7 +261,7 @@ python3 scripts/td.py compile books/my-book --out ~/.workbuddy/skills/my-book --
 python3 scripts/td.py rollback ~/.workbuddy/skills/my-book --to latest
 ```
 
-**回归测试**：`python3 tests/e2e.py`（116 项，覆盖全部命令与 vendored 上游实跑）
+**回归测试**：`python3 tests/e2e.py`（117 项，覆盖全部命令与 vendored 上游实跑）
 
 > ⚠️ **「112 全绿」= 112 项实跑且通过，外加 9 项显式未运行，不是 121 项全跑。**
 > 这 9 项依赖作者工作区的真实外部素材（视频 TED 卡、人物马斯克卡、逐字稿等），
@@ -318,7 +324,7 @@ rulai-distill/
 ├── SKILL.md                  ← Agent 加载的入口（渐进式披露）
 ├── GUIDE.md                  ← 安装与完整流程（第一次用看这个）
 ├── CAPABILITIES.md           ← 16 类上游能力逐项归属 + 自研清单 + 声明不做
-├── CONSTRAINTS.md            ← 77 条自身缺陷台账（每条对应回归测试）
+├── CONSTRAINTS.md            ← 78 条自身缺陷台账（每条对应回归测试）
 ├── methodology/              ← 00 全景 / 01 提取 / 02 三重验证 / 03 晋级门 / 04 压力测试 / 05 FIDELITY
 ├── extractors/               ← framework / principle / case / counter-example / glossary / persona
 ├── templates/                ← CAPABILITY / PERSONA / FIDELITY / TEST-SUITE / BOOK_OVERVIEW
@@ -334,7 +340,7 @@ rulai-distill/
 │   │                            / fidelity / evalkit / anchor / lintquotes / strategy / publish
 │   │                            / evals / evolve / promptc / upstream
 │   └── vendor/cangjie/       ← 上游 MIT 原件 + PROVENANCE.md（不改）
-└── tests/e2e.py              ← 端到端回归（116 项，双解释器各跑一遍）
+└── tests/e2e.py              ← 端到端回归（117 项，双解释器各跑一遍）
 ```
 
 ---

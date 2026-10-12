@@ -607,6 +607,19 @@ DEFECTS = [
      "「我当年…」当事实且未标示例，标准 rubric 一票否决只覆盖维度3编造与伪造来源，未覆盖此类",
      ["references/scoring-rubric.md 一票否决补「未标注来源/示例的第一人称事实陈述视为编造」条款",
       "xunzi Q7 题干改写须同步重跑 utility 基线，故延后到 n=3 之后"]),
+    ("README 对外声称（真实卡计数）",
+     "README「真实战绩（每一条都能自己复算）」表称「14 张真实卡（含 5 张开放素材卡）」",
+     "本仓库 examples/ 只发 6 张已建卡（开放素材 5 + five-affairs）；其余 8 张在独立仓库"
+     "（guoxue-skills/musk-run/musk-run2/video-run），其中 musk-mental-models 与第 2 张视频卡"
+     "从未建实体；真实实体卡 = 本仓 6 + 外部 7 = 13，非 14",
+     "对外声称须披露跨仓库事实：本仓发货 6 张 + 外部 7 张（2 张不存在）；「每条都能自己复算」"
+     "只对本仓 6 张成立，跨仓库卡须到兄弟仓库复算——这正是 #68 verify_claims 该抓到的「声称≠实际」",
+     "major", "eval_gap",
+     "2026-10-12 P2 铺开前核查：git ls-files 无 musk/guoxue/video/bazi/zhouyi/quming；"
+     "全仓 find 仅 6 张 SKILL.md；兄弟目录 guoxue-skills(4)/musk-run/musk-run2/video-run 各含实体卡，"
+     "musk-mental-models 与第 2 视频卡无实体",
+     ["t_readme_card_count_disclosure",
+      "README「真实战绩」补跨仓库计数口径披露行"]),
 ]
 
 
