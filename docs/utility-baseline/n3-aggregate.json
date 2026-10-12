@@ -1,0 +1,234 @@
+{
+  "generated": "2026-10-12",
+  "cards": [
+    "tongjian",
+    "mengzi",
+    "five-affairs",
+    "hanfei",
+    "xunzi",
+    "lunyu"
+  ],
+  "runs": [
+    "run-1",
+    "run-2",
+    "run-3"
+  ],
+  "total_runs": 18,
+  "all_positive": true,
+  "none_count": 0,
+  "locator_citation_invariant": {
+    "with_hit": 18,
+    "without_hit": 0,
+    "total": 18,
+    "note": "唯一稳定区分信号：with 全中 / without 全零"
+  },
+  "card_summary": {
+    "tongjian": {
+      "subject": "tongjian-decision-trace",
+      "significant": 3,
+      "moderate": 0,
+      "none": 0
+    },
+    "mengzi": {
+      "subject": "mengzi-refutation",
+      "significant": 3,
+      "moderate": 0,
+      "none": 0
+    },
+    "five-affairs": {
+      "subject": "five-affairs-seven-questions",
+      "significant": 0,
+      "moderate": 3,
+      "none": 0
+    },
+    "hanfei": {
+      "subject": "hanfei-upward-advice",
+      "significant": 3,
+      "moderate": 0,
+      "none": 0
+    },
+    "xunzi": {
+      "subject": "xunzi-learning-order",
+      "significant": 1,
+      "moderate": 2,
+      "none": 0
+    },
+    "lunyu": {
+      "subject": "lunyu-conduct",
+      "significant": 2,
+      "moderate": 1,
+      "none": 0
+    }
+  },
+  "rows": [
+    {
+      "card": "tongjian",
+      "subject": "tongjian-decision-trace",
+      "run": "run-1",
+      "with": 3,
+      "without": 0,
+      "delta": 3,
+      "gain": "significant"
+    },
+    {
+      "card": "tongjian",
+      "subject": "tongjian-decision-trace",
+      "run": "run-2",
+      "with": 3,
+      "without": 0,
+      "delta": 3,
+      "gain": "significant"
+    },
+    {
+      "card": "tongjian",
+      "subject": "tongjian-decision-trace",
+      "run": "run-3",
+      "with": 4,
+      "without": 0,
+      "delta": 4,
+      "gain": "significant"
+    },
+    {
+      "card": "mengzi",
+      "subject": "mengzi-refutation",
+      "run": "run-1",
+      "with": 3,
+      "without": 0,
+      "delta": 3,
+      "gain": "significant"
+    },
+    {
+      "card": "mengzi",
+      "subject": "mengzi-refutation",
+      "run": "run-2",
+      "with": 4,
+      "without": 1,
+      "delta": 3,
+      "gain": "significant"
+    },
+    {
+      "card": "mengzi",
+      "subject": "mengzi-refutation",
+      "run": "run-3",
+      "with": 4,
+      "without": 1,
+      "delta": 3,
+      "gain": "significant"
+    },
+    {
+      "card": "five-affairs",
+      "subject": "five-affairs-seven-questions",
+      "run": "run-1",
+      "with": 4,
+      "without": 3,
+      "delta": 1,
+      "gain": "moderate"
+    },
+    {
+      "card": "five-affairs",
+      "subject": "five-affairs-seven-questions",
+      "run": "run-2",
+      "with": 4,
+      "without": 3,
+      "delta": 1,
+      "gain": "moderate"
+    },
+    {
+      "card": "five-affairs",
+      "subject": "five-affairs-seven-questions",
+      "run": "run-3",
+      "with": 4,
+      "without": 3,
+      "delta": 1,
+      "gain": "moderate"
+    },
+    {
+      "card": "hanfei",
+      "subject": "hanfei-upward-advice",
+      "run": "run-1",
+      "with": 4,
+      "without": 0,
+      "delta": 4,
+      "gain": "significant"
+    },
+    {
+      "card": "hanfei",
+      "subject": "hanfei-upward-advice",
+      "run": "run-2",
+      "with": 4,
+      "without": 0,
+      "delta": 4,
+      "gain": "significant"
+    },
+    {
+      "card": "hanfei",
+      "subject": "hanfei-upward-advice",
+      "run": "run-3",
+      "with": 4,
+      "without": 1,
+      "delta": 3,
+      "gain": "significant"
+    },
+    {
+      "card": "xunzi",
+      "subject": "xunzi-learning-order",
+      "run": "run-1",
+      "with": 2,
+      "without": 2,
+      "delta": 1,
+      "gain": "moderate"
+    },
+    {
+      "card": "xunzi",
+      "subject": "xunzi-learning-order",
+      "run": "run-2",
+      "with": 2,
+      "without": 1,
+      "delta": 1,
+      "gain": "moderate"
+    },
+    {
+      "card": "xunzi",
+      "subject": "xunzi-learning-order",
+      "run": "run-3",
+      "with": 3,
+      "without": 1,
+      "delta": 2,
+      "gain": "significant"
+    },
+    {
+      "card": "lunyu",
+      "subject": "lunyu-conduct",
+      "run": "run-1",
+      "with": 4,
+      "without": 1,
+      "delta": 3,
+      "gain": "significant"
+    },
+    {
+      "card": "lunyu",
+      "subject": "lunyu-conduct",
+      "run": "run-2",
+      "with": 4,
+      "without": 0,
+      "delta": 4,
+      "gain": "significant"
+    },
+    {
+      "card": "lunyu",
+      "subject": "lunyu-conduct",
+      "run": "run-3",
+      "with": 4,
+      "without": 2,
+      "delta": 2,
+      "gain": "moderate"
+    }
+  ],
+  "boundaries": [
+    "同族模型内复现，非跨模型因果证据",
+    "机械信号不等于有用",
+    "none 仍是合法结论",
+    "n=3 覆盖 6 张卡，其余 9 张未做",
+    "five-affairs 净增实质仅为 locator_citation"
+  ]
+}

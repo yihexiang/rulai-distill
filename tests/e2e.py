@@ -1647,6 +1647,49 @@ def t_rubric_veto_first_person_fabrication():
     assert "未标注来源" in doc, "一票否决第 5 条须写明『未标注来源』"
 
 
+def t_utility_n3_runs_complete():
+    """缺陷 #79 之后：6 张开放素材卡各自须有 run-1/run-2/run-3 的完整效用对照产物，
+    且结构合法；并钉住核心结论——`locator_citation` 在 6 卡×3 run=18 次会话中
+    with 全命中、without 全零（唯一稳定区分信号）。
+
+    n=3 重复实验的**防漂移守卫**：任何一张卡缺 run / 缺文件 / utility-report 结构非法，
+    或某次 without 也命中 locator_citation（"唯一稳定区分信号"结论被破坏），本测试即红。
+    """
+    BASE = ROOT / "docs" / "utility-baseline"
+    CARDS = [
+        ("tongjian", "tongjian-decision-trace"),
+        ("mengzi", "mengzi-refutation"),
+        ("five-affairs", "five-affairs-seven-questions"),
+        ("hanfei", "hanfei-upward-advice"),
+        ("xunzi", "xunzi-learning-order"),
+        ("lunyu", "lunyu-conduct"),
+    ]
+    RUNS = ["run-1", "run-2", "run-3"]
+    REQ = ["answers.json", "answers-baseline.json", "questions.json", "utility-report.json"]
+    VALID_GAINS = {"significant", "moderate", "none"}
+    EXPECTED_SIGNALS = {"locator_citation", "verbatim_quote", "boundary_declared", "card_term"}
+
+    lc_with, lc_without, total = 0, 0, 0
+    for card, _subj in CARDS:
+        for run in RUNS:
+            rd = BASE / card / run
+            for fn in REQ:
+                assert (rd / fn).exists(), f"[{card}/{run}] 缺 {fn}（n=3 不完整）"
+            rep = json.loads((rd / "utility-report.json").read_text(encoding="utf-8"))
+            assert set(rep.get("signals", [])) == EXPECTED_SIGNALS, \
+                f"[{card}/{run}] signals 不全：{rep.get('signals')}"
+            assert rep.get("gain") in VALID_GAINS, \
+                f"[{card}/{run}] gain 非法：{rep.get('gain')}"
+            w = rep["with"]; wo = rep["without"]
+            total += 1
+            if w.get("locator_citation"): lc_with += 1
+            if wo.get("locator_citation"): lc_without += 1
+    assert lc_with == total, \
+        f"locator_citation 应在全部 {total} 次 with 侧命中，实际 {lc_with}"
+    assert lc_without == 0, \
+        f"locator_citation 应在全部 {total} 次 without 侧零命中，实际 {lc_without}"
+
+
 def t_verify_quotes_direction():
     """缺陷 3/4/5：引语核验必须向后取窗、遇到下一个引用即停、编号用位置切片。
 
@@ -4355,6 +4398,7 @@ def main() -> int:
         ("语言过滤不静默（#60）", t_verify_quotes_lang_filter_not_silent),
         ("缺陷台账正文数字不腐烂", t_defect_ledger_stats),
         ("rubric 一票否决覆盖第一人称编造（#79）", t_rubric_veto_first_person_fabrication),
+        ("效用 n=3 重复实验完整 + locator_citation 恒为唯一区分信号", t_utility_n3_runs_complete),
         ("文档数字与代码不漂移", t_docs_no_drift),
         ("schema 与 --help 完整", t_schema_and_help),
         ("错误信息人话化", t_errors_are_human),

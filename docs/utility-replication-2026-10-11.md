@@ -114,3 +114,11 @@ python3 scripts/td.py eval-kit utility \
 - 第四节第 3 条已改为「n=3 现已覆盖 6 张卡」，并保留「不构成所有卡稳定复现的证据」的限制。
 - 第四节第 4 条补充：本轮 12 次无 `none` 只是因为所选卡都新增了 locator_citation，不代表 `none` 不可能。
 - 同族模型、机械信号≠有用 两条边界（第四节 1、2）对 4 张新卡同样成立，未变。
+
+### 5.4 聚合汇总与防漂移守卫
+
+- 6 卡 × 3 run = **18 行**的完整明细、每卡 n=3 汇总、以及「locator_citation 恒为唯一区分信号」结论，已汇总到
+  `docs/utility-baseline/n3-aggregate.md`（机器可读版 `n3-aggregate.json`）。
+- 新增 e2e 守卫 `t_utility_n3_runs_complete`：钉住 6 张卡 run-1/2/3 结构完整、每份 `utility-report.json`
+  信号齐全且 gain 合法，并强制 locator_citation 在 18 次会话中 with 全中 / without 全零。
+  任何卡缺 run、报告结构非法、或 without 侧也命中 locator_citation（「唯一稳定区分信号」结论被破坏），e2e 即红。
