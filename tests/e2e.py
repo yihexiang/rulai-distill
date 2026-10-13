@@ -1662,6 +1662,18 @@ def t_persona_need_diagnosis_branch():
     skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
     assert "persona-need-diagnosis.md" in skill, \
         "SKILL.md §人物蒸馏分支须引用 persona-need-diagnosis.md"
+    # B1：心智模型三重验证须在 persona-extractor 且被 SKILL.md 声明（防"已补回"腐烂）
+    ext = (ROOT / "extractors" / "persona-extractor.md").read_text(encoding="utf-8")
+    for marker in ("心智模型三重验证", "跨域复现", "生成力", "排他性"):
+        assert marker in ext, f"persona-extractor.md 缺三重验证结构标记：{marker}"
+    assert "心智模型三重验证" in skill, "SKILL.md §人物蒸馏分支须声明心智模型三重验证（B1）"
+    # B2：人物版 eval-kit 题型预设须存在且被 SKILL.md 引用（防腐烂）
+    preset = ROOT / "references" / "persona-eval-preset.md"
+    assert preset.exists(), "须有 references/persona-eval-preset.md（人物 eval-kit 题型预设）"
+    ptext = preset.read_text(encoding="utf-8")
+    for marker in ("已知立场", "超范围", "盲读", "eval-kit-questions@1"):
+        assert marker in ptext, f"persona-eval-preset.md 缺题型配方标记：{marker}"
+    assert "persona-eval-preset.md" in skill, "SKILL.md §人物蒸馏分支须引用 persona-eval-preset.md（B2）"
 
 
 def t_utility_n3_runs_complete():

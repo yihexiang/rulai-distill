@@ -236,7 +236,7 @@ td.py count <dir>                                  # token 计量
 
 用户来的时候**只有模糊需求、没有目标人物**（「我想提升决策质量」「有没有一种思维方式能帮我看透商业本质」）时，先走 `references/persona-need-diagnosis.md` 的**模糊需求诊断分支**：需求定位（≤2 轮追问）→ 候选推荐（人物 vs 主题）→ 用户选择 → 再进入下方蒸馏。这把 nuwa 的「从需求反推蒸馏对象」补回，避免维度错配与无谓的重调研。用户已给明确人名则跳过，直接六路调研。
 
-> **本版本已补回的 nuwa 人物资产**：① 六路调研骨架（`td.py research init` 的 01-writings…06-timeline，含 03-expression-dna 车道，合并时带**车道覆盖审计**——比 nuwa 多一层缺失车道告警）；② 表达 DNA 六维结构化（`extractors/persona-extractor.md` 第 6 类 + `templates/PERSONA.md.template`「我说话的方式」）；③ 模糊需求诊断（本小节 + `references/persona-need-diagnosis.md`）。三者在 rulai 下均按**离线优先**改造。
+> **本版本已补回的 nuwa 人物资产**：① 六路调研骨架（`td.py research init` 的 01-writings…06-timeline，含 03-expression-dna 车道，合并时带**车道覆盖审计**——比 nuwa 多一层缺失车道告警）；② 表达 DNA 六维结构化（`extractors/persona-extractor.md` 第 6 类 + `templates/PERSONA.md.template`「我说话的方式」）；③ 模糊需求诊断（本小节 + `references/persona-need-diagnosis.md`）；④ **心智模型三重验证**（`extractors/persona-extractor.md`：跨域复现 ≥2 车道 / 生成力留出题 / 排他性对照 no-skill 基线，附降级规则——区别于 cangjie 阶段 1.5 的候选单元三重验证）；⑤ **人物版 eval-kit 题型预设**（`references/persona-eval-preset.md`：3 已知立场 + 1 超范围 + 1 盲读，含出题纪律与完整示例）。五者在 rulai 下均按**离线优先**改造。
 
 ```
 我是谁              身份锚定（不是"模仿他"，是"带着他的经历思考"）
