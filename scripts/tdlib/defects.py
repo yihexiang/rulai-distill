@@ -636,6 +636,43 @@ DEFECTS = [
      "补回归测试时发现只改归一化不够——read_json 先把整个 JSONL 拒了，"
      "是「先写测试再改代码」抓到的第二层根因",
      ["t_trigger_score_accepts_list"]),
+    ("eval-kit init 出题器判别力缺陷（两子项）",
+     "①consistency-* 题干**逐字嵌入卡片 description 原句**（「在「…」情境下」）——"
+     "答题 Agent 持卡照抄即满分，测的是「读没读懂」不是「能不能用」；"
+     "②style-1 要求「与 2 份通用回答混排盲辨」，套件却**不生成任何对照样本**，"
+     "盲排这一半从未可执行，评分者只能凭「辨识依据像不像方法偏好」给分",
+     "book-bundle Phase 4b 首轮：7 张卡用标准 rubric 评，**5 张拿满分 100**；"
+     "第二轮换严格 rubric 才掉到 76-86/B。同一批卡、同一批作答，差 14-24 分——"
+     "差距几乎全在这两处：**宽松轮给的分没有一次真正的判别发生过**，是系统性假绿",
+     "出题器必须自曝判别力：①consistency 题改迁移型（另举卡片没写过的新例、走完步骤），"
+     "并打 discriminative=low + leakage 字段；②init 随套件生成 style-decoys.md（2 份通用回答），"
+     "scores 模板的 style.note 强制先声明盲排状态",
+     "major", "tool_gap",
+     "2026-10-13 Phase 4b 双轮交叉复核：标准轮 100/100/100/98/97/100/100，"
+     "严格轮 84/84/76/76/76/82/86；两名严格评分者都独立指出「consistency-1~4 题干就是 "
+     "description 原文，复述即可得分」「style 无对照样本，正确挑出零实测」",
+     ["t_evalkit_consistency_not_verbatim_description",
+      "t_evalkit_style_has_decoy_samples"]),
+    ("随包卡的「自陈可复算」声称与实跑不符（4 处）",
+     "chunchi-structure：卡片自定「引语一律逐字抄自底稿繁体」，正文却给简体转述加「」"
+     "（敌若胜盟友先反／胜则服不胜则击）→ verify-quotes 15 条命中 13，2 条判「全篇未找到」；"
+     "zhiren-five-looks：正文给的可复跑命令 `grep -c \"使人視\"` 注「→ 2」，实跑返回 1"
+     "（grep -c 按行计数，两处落在同一行）；"
+     "zai-de-bu-zai-xian：R 段 §17 标「周紀二」但语料中它在周紀二分界（第302行）之前，"
+     "§109 标「周紀五」却把更晚的 §117/§118 标「周紀四」——同卡自相矛盾；"
+     "zengguofan-xiushen：frontmatter 称「候选 9 条」，正文明细 6+1+2+1=10，账目自己没算平",
+     "Phase 2 建卡自验把这些卡记为「verify-quotes 全命中 / 静态自验通过」，"
+     "Phase 4b 双轮独立评分逐条抓出——**建卡者的自验不等于独立核验**，"
+     "且 chunchi 这条正是 C10「引用数 ≠ 核验数」的复发（15 条里 2 条挂着引号却核不到）",
+     "卡片里凡自称「可复跑」「可核」的命令与计数，必须能被机械复算："
+     "①引语一律过 verify-quotes（0 未找到）；②正文 grep 命令实跑比对；"
+     "③frontmatter 计数与正文明细加总一致",
+     "major", "knowledge_gap",
+     "2026-10-13 Phase 4b：严格轮评分者在扣分时必须引用原文，"
+     "顺手把卡片里 4 处自陈数字/命令实跑了一遍，全部对不上；"
+     "建卡时的「全命中」记录并未逐条复核到这一层",
+     ["t_cards_quotes_all_verifiable",
+      "t_card_selfcheck_commands_recomputable"]),
 ]
 
 

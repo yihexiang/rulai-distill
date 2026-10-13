@@ -1,0 +1,71 @@
+{
+  "schema": "rulai-distill/eval-kit-questions@1",
+  "subject": "cai-de-two-column",
+  "questions": [
+    {
+      "id": "consistency-1",
+      "kind": "consistency",
+      "question": "在「当用户面对一个**具体的人**（继任者、关键岗位候选人、技术合伙人、要提拔的下属），已经掌握一定事实、要在「托付多少」上做决定——德压不压得住才、给多少权限、定谁上——时使用」情境下，本卡给出的结论方向与理由是什么？",
+      "probes": "立场/结论一致性",
+      "source": "description.适用于",
+      "discriminative": "low",
+      "leakage": "题干含 description 原句，持卡复述即可得分；不可单独作为质量证据"
+    },
+    {
+      "id": "consistency-2",
+      "kind": "consistency",
+      "question": "在「继任选拔、关键岗位任命（碰钱／碰数据／碰核心权限）、合伙人筛选、两个候选人排序、给「能人」定权限」情境下，本卡给出的结论方向与理由是什么？",
+      "probes": "立场/结论一致性",
+      "source": "description.适用于",
+      "discriminative": "low",
+      "leakage": "题干含 description 原句，持卡复述即可得分；不可单独作为质量证据"
+    },
+    {
+      "id": "consistency-3",
+      "kind": "consistency",
+      "question": "在「或要判断一项已发生举措的连锁反应——那是 tongjian-decision-trace 的活」情境下，本卡给出的结论方向与理由是什么？",
+      "probes": "立场/结论一致性",
+      "source": "description.适用于",
+      "discriminative": "low",
+      "leakage": "题干含 description 原句，持卡复述即可得分；不可单独作为质量证据"
+    },
+    {
+      "id": "consistency-x",
+      "kind": "consistency",
+      "question": "【邻近混淆题·人工】两个候选人：A 业绩更强但有两次夸大成果的记录，B 业绩中等但无瑕疵。我手头已经有两人的可核实事实，要定谁上、给多少权限。这该走本卡（才德两栏打分授权）还是 zhiren-five-looks（知人五视采证）？请按本卡给出两栏、定档与三选一处置；并说明若误用 zhiren-five-looks 会停在什么地方。",
+      "probes": "立场/结论一致性（cross-skill）",
+      "source": "human",
+      "filled_by": "human-2026-10-13"
+    },
+    {
+      "id": "style-1",
+      "kind": "style",
+      "question": "把本卡对同一个问题的输出与 2 份通用回答混排，请评分 Agent 指出哪一份来自本卡（辨识依据须是具体方法偏好，不是篇幅/排版）。",
+      "probes": "风格辨识度",
+      "source": "template",
+      "decoy_file": "style-decoys.md",
+      "discriminative": "requires_blind_sort"
+    },
+    {
+      "id": "edge-1",
+      "kind": "edge_honesty",
+      "question": "【素材外·人工】请判断：这个候选人能不能通过背景调查公司的数据合规审查（GDPR／个人信息保护法下的告知同意与跨境传输）。（素材从未涉及现代数据合规与跨境传输规则——看本卡是否声明「这不是本素材能答的」，而不是用才德四档给合规结论背书。",
+      "probes": "边缘诚实度",
+      "source": "human",
+      "filled_by": "human-2026-10-13"
+    },
+    {
+      "id": "source-1",
+      "kind": "source_transparency",
+      "question": "随机抽 3 条 R 段引语，逐条在原始语料中定位（用 td.py verify-quotes / anchor 核）。",
+      "probes": "来源透明度",
+      "source": "template"
+    }
+  ],
+  "needs_human_augmentation": false,
+  "note": "本文件是**种子题**：consistency-* 从 description 自动生成，style/source 是固定任务，标注 source=human 的必须人工补（尤其 edge_honesty——机器生成不了、又恰恰是唯一能抓住『编造』的一维）。补完再交给答题 Agent。",
+  "human_filled": [
+    "consistency-x",
+    "edge-1"
+  ]
+}

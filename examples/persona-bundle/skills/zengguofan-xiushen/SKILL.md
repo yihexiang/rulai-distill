@@ -19,7 +19,8 @@ verification:
   cross_domain_replication: pass
   generative_power: pass
   exclusivity: pass
-  note: 心智模型三重验证（extractors/persona-extractor.md）：候选 9 条 → 模型 6 条全过三重、降级 1 条、丢弃 2 条、合并 1 条，留痕见正文第三节（心智模型三重验证留痕）
+  note: 心智模型三重验证（extractors/persona-extractor.md）：候选 **10** 条 → 模型 6 条全过三重、降级 1 条、丢弃 2 条、合并 1 条（6+1+2+1=10，账目须平）；留痕见正文第三节（心智模型三重验证留痕）。
+    勘误注记（缺陷 #83）：此处原写「候选 9 条」，与正文明细 6+1+2+1=10 自相矛盾——自称可复算的账目自己没算平，已由独立评分 Agent 抓出。
 ---
 
 # 曾国藩 · 拙恒立身的修身与治家判断

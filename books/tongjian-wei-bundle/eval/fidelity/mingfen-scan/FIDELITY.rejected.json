@@ -1,0 +1,24 @@
+{
+  "schema": "rulai-distill/fidelity/v1",
+  "subject": "mingfen-scan",
+  "eval_mode": "dual-agent",
+  "answerer": "answerer-mingfen-1",
+  "graders": [
+    "grader-mingfen-1",
+    "grader-mingfen-2"
+  ],
+  "cross_grader_gap": 16.0,
+  "dimensions": {
+    "consistency": 26,
+    "style": 18,
+    "edge_honesty": 20,
+    "source_transparency": 14,
+    "structure": 14
+  },
+  "total": 92,
+  "grade": "A",
+  "blocking_issues": [
+    "分差 16 > 阈值 10：评分 Agent 判断分歧过大，须人工复核"
+  ],
+  "verdict": "fail"
+}

@@ -158,7 +158,9 @@ verification:
 ```bash
 cd <repo>/corpus/anchored
 grep -c "五者足以定之矣" src-01-tongjian-wei.md   # → 1（§3）
-grep -c "使人視"          src-01-tongjian-wei.md   # → 2（均在 §48）
+grep -o "使人視" src-01-tongjian-wei.md | wc -l   # → 2（均在 §48，同段内两处）
+# 注（缺陷 #83）：此处原写 `grep -c "使人視"` 并注「→ 2」，但 grep -c 计的是**行数**，
+# 两处命中落在同一行，实跑返回 1——命令与标注自相矛盾。改用 grep -o | wc -l 才是次数。
 grep -c "毀言日至"        src-01-tongjian-wei.md   # → 1（§48）
 grep -c "譽言日至"        src-01-tongjian-wei.md   # → 1（§48）
 grep -c "出諸袖中而奏之"  src-01-tongjian-wei.md   # → 1（§3）

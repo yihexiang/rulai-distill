@@ -1,0 +1,24 @@
+{
+  "schema": "rulai-distill/fidelity/v1",
+  "subject": "cai-de-two-column",
+  "eval_mode": "dual-agent",
+  "answerer": "answerer-caide-1",
+  "graders": [
+    "grader-caide-1",
+    "grader-caide-2"
+  ],
+  "cross_grader_gap": 16.0,
+  "dimensions": {
+    "consistency": 26,
+    "style": 16,
+    "edge_honesty": 20,
+    "source_transparency": 15,
+    "structure": 15
+  },
+  "total": 92,
+  "grade": "A",
+  "blocking_issues": [
+    "分差 16 > 阈值 10：评分 Agent 判断分歧过大，须人工复核"
+  ],
+  "verdict": "fail"
+}

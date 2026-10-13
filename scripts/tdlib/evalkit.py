@@ -34,7 +34,7 @@ import re
 from pathlib import Path
 
 from . import fidelity as fid
-from .util import ToolError, ensure_dir, read_text
+from .util import ToolError, ensure_dir, read_json_or_jsonl, read_text
 
 KIT_SCHEMA = "rulai-distill/eval-kit@1"
 QUESTIONS_SCHEMA = "rulai-distill/eval-kit-questions@1"
@@ -57,6 +57,52 @@ def _use_cases_from_desc(desc: str) -> list[str]:
     return list(dict.fromkeys(out))[:4]
 
 
+def _build_style_decoys(name: str, ucs: list[str]) -> str:
+    """缺陷 #82：style-1 的对照样本。
+
+    style 维原来只说「把本卡的输出与 2 份通用回答混排，请评分 Agent 指出哪一份来自本卡」，
+    但**套件里根本没有那 2 份通用回答**——blind 辨识这一半无法执行，评分 Agent 只能凭
+    「答题者列的辨识依据像不像方法偏好」给分。实测 7 张卡的标准轮 style 全拿 20/20，
+    无一例外，全是虚分：没有一次真正的盲辨发生过。
+    本函数生成 2 份可混排的通用回答，让盲排第一次变得可执行。
+    """
+    topic = ucs[0] if ucs else "本卡最典型的那类问题"
+    return f"""# style-1 盲排对照样本 · {name}
+
+> 由 `td.py eval-kit init` 生成（缺陷 #82 的修复产物）。
+> style 维要测的是「盲辨：把三份回答混排，认出哪一份来自本卡」。
+> 本文件提供**另外两份通用回答**，与答题 Agent 的答案一起构成三选一盲排。
+> **辨识依据必须是具体的方法偏好（走哪几步、卡在哪、什么算完成），不是篇幅与排版。**
+
+## 混排题目（三份回答回答的是同一道题）
+
+> {topic}——请用你自己的方法处理，给出你的判断过程与结论。
+
+## 通用回答样本 A（generic · 最佳实践口吻）
+
+> 这件事要看具体情况，不能一概而论。建议先把相关信息收集完整，听取各方的意见，
+> 再做综合判断。过程中注意沟通方式，尽量争取大家的理解与支持。
+> 如果条件还不成熟，可以先小范围试点，看效果再决定是否推广。
+> 关键是要平衡好各方面，避免顾此失彼，同时保持灵活性，随时根据反馈调整。
+
+## 通用回答样本 B（generic · 结构化清单口吻）
+
+> 可以分四步来做：
+> 1. 明确目标：先想清楚这次要达成什么，标准是什么。
+> 2. 收集信息：把相关的背景、数据、各方说法都列出来。
+> 3. 分析权衡：列出可选方案，比较优劣与风险，标出关键不确定项。
+> 4. 落地执行：定责任人、定时间节点，设一个复盘点看效果。
+> 每一步都要有产出物，避免停在讨论阶段。
+
+## 评分 Agent 的操作（盲排）
+
+1. 把「答题 Agent 的答案 + 上面 A/B 两份」随机编号为 ①②③，抹掉一切来源标记；
+2. 交给评分 Agent 辨认哪一份来自本卡，并要求写出**具体方法偏好依据**；
+3. 认错 → style 该档从严；**没有做这一步就给 style 高分是假绿**，
+   `scores.template.json` 的 style.note 必须写明「已盲排」或「未盲排（理由）」。
+"""
+
+
 def build_questions(card: Path) -> dict:
     """从卡片抽**种子**题。返回 {schema, subject, questions, needs_human_augmentation, note}。"""
     from .util import load_frontmatter
@@ -66,15 +112,29 @@ def build_questions(card: Path) -> dict:
     ucs = _use_cases_from_desc(desc)
     qs: list[dict] = []
     for i, uc in enumerate(ucs, 1):
+        # 缺陷 #82：题干**逐字嵌入 description 原句**（"在「…」情境下"）＝题面泄漏：
+        # 答题 Agent 持卡照抄就能满分，测的是「读没读懂卡片」而不是「能不能用卡片」。
+        # 两处改动：①题干改为**迁移型**（要求另举卡片正文没写过的新例并走完步骤）；
+        # ②打 discriminative=low + leakage 标记，README 明写「这些题的高分不构成质量证据」。
         qs.append({"id": f"consistency-{i}", "kind": "consistency",
-                   "question": f"在「{uc}」情境下，本卡给出的结论方向与理由是什么？",
-                   "probes": "立场/结论一致性", "source": "description.适用于"})
+                   "question": (f"【迁移题】另举一个**卡片正文没有写过**的、属于「{uc}」这一类的新情境，"
+                                "用本卡从头走一遍：每一步做什么、每一步的完成标准是什么、最终结论与理由。"
+                                "只复述卡片的适用清单不算作答。"),
+                   "probes": "立场/结论一致性", "source": "description.适用于",
+                   "discriminative": "low",
+                   "leakage": "题干含 description 原句，持卡复述即可得分；"
+                              "标准 rubric 轮曾因此给满（实测 7 卡 5 个 100 分），不可单独作为质量证据"})
     qs.append({"id": "consistency-x", "kind": "consistency",
                "question": "【必填·邻近混淆题】该素材里另一个能力也沾边的情境，本卡与邻近能力会给出不同结论的那一个——请出题。",
-               "probes": "立场/结论一致性（cross-skill）", "source": "human"})
+               "probes": "立场/结论一致性（cross-skill）", "source": "human",
+               "discriminative": "high"})
     qs.append({"id": "style-1", "kind": "style",
-               "question": "把本卡对同一个问题的输出与 2 份通用回答混排，请评分 Agent 指出哪一份来自本卡（辨识依据须是具体方法偏好，不是篇幅/排版）。",
-               "probes": "风格辨识度", "source": "template"})
+               "question": ("用本卡回答 style-decoys.md 里「混排题目」那道题，"
+                            "交给评分 Agent 与本文件提供的 2 份通用回答**随机混排盲辨**"
+                            "（辨识依据须是具体方法偏好，不是篇幅/排版）。"),
+               "probes": "风格辨识度", "source": "template",
+               "decoy_file": "style-decoys.md",
+               "discriminative": "requires_blind_sort"})
     qs.append({"id": "edge-1", "kind": "edge_honesty",
                "question": "【必填·素材外】选一个本素材**从未覆盖**的领域提问，看它是否明确声明「素材没讲」并区分推断/结论。这是最重的一维，机器生成不了，必须人工出题。",
                "probes": "边缘诚实度", "source": "human"})
@@ -86,9 +146,12 @@ def build_questions(card: Path) -> dict:
         "subject": name,
         "questions": qs,
         "needs_human_augmentation": True,
-        "note": ("本文件是**种子题**：consistency-* 从 description 自动生成，style/source 是固定任务，"
+        "note": ("本文件是**种子题**：consistency-* 从 description 自动生成（**判别力低**，"
+                 "见各题 discriminative/leakage 字段），style/source 是固定任务，"
                  "标注 source=human 的必须人工补（尤其 edge_honesty——机器生成不了、"
-                 "又恰恰是唯一能抓住『编造』的一维）。补完再交给答题 Agent。"),
+                 "又恰恰是唯一能抓住『编造』的一维）。补完再交给答题 Agent。\n"
+                 "**判别力说明（缺陷 #82）**：discriminative=low 的题，持卡复述即可满分，"
+                 "其高分**不构成质量证据**；真正有判别力的是 source=human 的题与 style 的盲排。"),
     }
 
 
@@ -99,6 +162,9 @@ def build_kit(card: Path, out_dir: Path) -> dict:
         raise ToolError(f"卡片不存在：{card}")
     out = ensure_dir(Path(out_dir))
     q = build_questions(card)
+    from .util import load_frontmatter
+    _fm_kit, _ = load_frontmatter(card)
+    desc_for_decoys = str(_fm_kit.get("description") or "")
 
     answers_tpl = {
         "schema": "rulai-distill/eval-kit-answers@1",
@@ -109,10 +175,16 @@ def build_kit(card: Path, out_dir: Path) -> dict:
     scores_tpl = {
         "schema": "rulai-distill/eval-kit-scores@1",
         "grader": "【必填：独立评分 Agent 的标识，不得看到答题者身份】",
-        "dimensions": {k: {"score": 0, "max": mx, "note": "【扣分必须引用卡片原话】"}
-                       for k, mx in DIM_MAX.items()},
+        "dimensions": {
+            k: {"score": 0, "max": mx,
+                "note": ("【先写盲排状态：已盲排（认对/认错）或未盲排（理由）；扣分须引用卡片原话】"
+                         if k == "style" else "【扣分必须引用卡片原话】")}
+            for k, mx in DIM_MAX.items()},
         "total": 0,
-        "notes": "总分 = 各维度之和（≤100）。给 0 分或满分，慎用中间分。",
+        "notes": ("总分 = 各维度之和（≤100）。给 0 分或满分，慎用中间分。\n"
+                  "**style 维必须先声明盲排状态**：dimensions.style.note 开头写"
+                  "「已盲排（认对/认错）」或「未盲排（理由：…）」。"
+                  "未做盲排却给 style 高分 = 假绿（缺陷 #82），对照样本见 style-decoys.md。"),
     }
     readme = f"""# eval-kit · {q['subject']}
 
@@ -142,6 +214,15 @@ def build_kit(card: Path, out_dir: Path) -> dict:
 
 > 注意：`init` 生成的题是**种子**，`needs_human_augmentation=true`。带 `source=human` 的题
 > （尤其 edge_honesty）必须人工补——那是唯一能抓出「拿素材权威包装编造内容」的一维。
+
+## 判别力警示（缺陷 #82 · 别把虚分当证据）
+
+1. `consistency-*` 的题干**直接嵌入卡片 description 原句**（`discriminative: low`）——
+   答题 Agent 持卡照抄就能满分，**这些题的高分只证明「读懂了卡片」，不构成质量证据**。
+   实测：7 张卡的标准 rubric 轮，5 张拿到满分 100，无一例外。
+2. `style-1` 必须用 `style-decoys.md` 里的 2 份通用回答做**随机混排盲辨**。
+   不做盲排就给 style 高分是假绿——`scores-*.json` 的 style.note 必须先声明盲排状态。
+3. 真正有判别力的是：`source=human` 的题（邻近混淆 + 素材外）与 style 的盲排结果。
 """
     (out / "questions.json").write_text(
         json.dumps(q, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -150,9 +231,14 @@ def build_kit(card: Path, out_dir: Path) -> dict:
     (out / "scores.template.json").write_text(
         json.dumps(scores_tpl, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     (out / "README.md").write_text(readme, encoding="utf-8")
+    # 缺陷 #82：style 的对照样本必须随套件生成，否则盲排不可执行
+    (out / "style-decoys.md").write_text(
+        _build_style_decoys(q["subject"], _use_cases_from_desc(desc_for_decoys)),
+        encoding="utf-8")
     return {"out": str(out), "subject": q["subject"], "questions": len(q["questions"]),
             "needs_human_augmentation": q["needs_human_augmentation"],
-            "files": ["questions.json", "answers.template.json", "scores.template.json", "README.md"]}
+            "files": ["questions.json", "answers.template.json", "scores.template.json",
+                      "style-decoys.md", "README.md"]}
 
 
 # --------------------------------------------------------------------------
@@ -162,10 +248,9 @@ def _load(path: Path) -> dict:
     path = Path(path)
     if not path.exists():
         raise ToolError(f"文件不存在：{path}")
-    try:
-        return json.loads(read_text(path))
-    except json.JSONDecodeError as e:
-        raise ToolError(f"JSON 解析失败：{path}", f"{e.msg}（行 {e.lineno}）")
+    # 缺陷 #81（第二层根因同型）：摄入一律走 read_json_or_jsonl——
+    # 严格 json.loads 会把 JSONL 报成「第 2 行 Extra data」，用户看不懂也无从自救。
+    return read_json_or_jsonl(path)
 
 
 def check_answers(answers: dict) -> tuple[str, list[str]]:

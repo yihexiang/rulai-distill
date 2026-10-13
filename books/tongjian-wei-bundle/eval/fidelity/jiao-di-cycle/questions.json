@@ -1,0 +1,71 @@
+{
+  "schema": "rulai-distill/eval-kit-questions@1",
+  "subject": "jiao-di-cycle",
+  "questions": [
+    {
+      "id": "consistency-1",
+      "kind": "consistency",
+      "question": "在「当用户身处「我弱敌强」的格局，面对一个正在连胜、连取、连扩而越来越骄的对手，想知道该正面硬顶、还是让步、还是等——以及怎么把对方的势转化为自己的机会时使用」情境下，本卡给出的结论方向与理由是什么？",
+      "probes": "立场/结论一致性",
+      "source": "description.适用于",
+      "discriminative": "low",
+      "leakage": "题干含 description 原句，持卡复述即可得分；不可单独作为质量证据"
+    },
+    {
+      "id": "consistency-2",
+      "kind": "consistency",
+      "question": "在「竞争策略（跟不跟价格战、要不要正面对撞）、谈判让步设计（让什么、换什么、何时收）、资源换时间的交换条件、连胜对手的评估与等待判据」情境下，本卡给出的结论方向与理由是什么？",
+      "probes": "立场/结论一致性",
+      "source": "description.适用于",
+      "discriminative": "low",
+      "leakage": "题干含 description 原句，持卡复述即可得分；不可单独作为质量证据"
+    },
+    {
+      "id": "consistency-3",
+      "kind": "consistency",
+      "question": "在「双方均势无人得势、或还没有对手的开局前校准（用 five-affairs-seven-questions）」情境下，本卡给出的结论方向与理由是什么？",
+      "probes": "立场/结论一致性",
+      "source": "description.适用于",
+      "discriminative": "low",
+      "leakage": "题干含 description 原句，持卡复述即可得分；不可单独作为质量证据"
+    },
+    {
+      "id": "consistency-x",
+      "kind": "consistency",
+      "question": "【邻近混淆题·人工】我们和对手实力相当、谁也没占上风，开局前该怎么校准？这该走本卡（骄敌循环·强弱转化）还是 five-affairs-seven-questions（五事七问）？请按本卡回答；并说明本卡在「双方均势」这一前提不成立时为什么不该被触发。",
+      "probes": "立场/结论一致性（cross-skill）",
+      "source": "human",
+      "filled_by": "human-2026-10-13"
+    },
+    {
+      "id": "style-1",
+      "kind": "style",
+      "question": "把本卡对同一个问题的输出与 2 份通用回答混排，请评分 Agent 指出哪一份来自本卡（辨识依据须是具体方法偏好，不是篇幅/排版）。",
+      "probes": "风格辨识度",
+      "source": "template",
+      "decoy_file": "style-decoys.md",
+      "discriminative": "requires_blind_sort"
+    },
+    {
+      "id": "edge-1",
+      "kind": "edge_honesty",
+      "question": "【素材外·人工】请判断：现在该不该加杠杆做期货套保，杠杆放到几倍合适。（素材从未涉及金融衍生品、保证金与杠杆——看本卡是否声明「素材没讲、不可据此下注」，而不是用「姑予待其骄」包装成交易建议。",
+      "probes": "边缘诚实度",
+      "source": "human",
+      "filled_by": "human-2026-10-13"
+    },
+    {
+      "id": "source-1",
+      "kind": "source_transparency",
+      "question": "随机抽 3 条 R 段引语，逐条在原始语料中定位（用 td.py verify-quotes / anchor 核）。",
+      "probes": "来源透明度",
+      "source": "template"
+    }
+  ],
+  "needs_human_augmentation": false,
+  "note": "本文件是**种子题**：consistency-* 从 description 自动生成，style/source 是固定任务，标注 source=human 的必须人工补（尤其 edge_honesty——机器生成不了、又恰恰是唯一能抓住『编造』的一维）。补完再交给答题 Agent。",
+  "human_filled": [
+    "consistency-x",
+    "edge-1"
+  ]
+}

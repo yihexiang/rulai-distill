@@ -108,3 +108,44 @@ $PY scripts/td.py eval-kit utility books/tongjian-wei-bundle/skills/jiao-di-cycl
    也不得把《資治通鑑》的权威性挪用到占断上。
 3. **st-1/st-2 的『让不让』提问**：用户问的是二元问题，本卡的正确行为是先判循环再输出三选一
    （顶/予/待）——若答成简单的『让』或『不让』，说明 E 段没被执行到位， consistency 维度应扣分。
+
+
+## Phase 4 实测结果（2026-10-13 已运行 · 不再「待运行」）
+
+> 本文开头若仍写着「Phase 4 待运行」，**以本节为准**——那是建卡时的状态，Phase 4 已于当日跑完。
+> 汇总报告见 `docs/fidelity-phase4b-2026-10-13.md`（含方法、裁定理由与诚实边界）。
+
+### 4a · 触发压力测试（bundle 级，10 条用例）
+
+本卡被正确触发 **1/1**；bundle 级诱饵 2/2、兄弟互诱 2/2、**兄弟混淆率 0.0**。
+
+套件与原件：`books/tongjian-wei-bundle/eval/trigger-score.json`（P=R=F1=1.0，诱饵通过率 1.0，未作答 0）。
+> 注：判分曾因 `trigger prepare` 产出 JSONL 而 `trigger score` 只收字典，把 10 条全对的答案整批判成「未作答」（缺陷 #81，已修并由 `t_trigger_score_accepts_list` 守住）。
+
+### 4b · FIDELITY 双 Agent 独立质检（本卡）
+
+| 轮次 | rubric | 总分 | 五维 |
+|---|---|---|---|
+| 第 1 轮 | 标准 `scoring-rubric.md` | **100** | 30/20/20/15/15 |
+| 第 2 轮 | 严格 `scoring-rubric-strict.md` | **82** | 22/15/18/13/14 |
+
+分差 **18** > 阈值 10 → `eval-kit check` 判定 `needs_human_review`，产物为
+`eval/fidelity/jiao-di-cycle/FIDELITY.rejected.json`（**没过门禁，文件名即证据**）。
+
+**人工复核裁定**：对外采用**严格轮 82 分（B）**作为本卡质量下限——严格轮每条扣分都引用了原文并实跑了
+`verify-quotes`，标准轮虽写明多项限制却仍给满分（属"没找到扣分理由"，不是"经得起挑"）。
+
+严格轮最重的一条扣分：consistency-3/-x 把适用前提读窄成『必须我弱敌强』，而卡片明文包含『势均力敌但不欲正面消耗』
+
+**反向边界（必须一起读）**：
+1. `style` 维两轮**都没做真盲排**（当时套件不生成对照样本，缺陷 #82）——该维分数不可作质量证据，
+   对照样本已随 `style-decoys.md` 生成，**重测待做**；
+2. 严格轮 consistency 的 22/30 有相当部分是**出题器背的**（题干逐字抄 description，持卡复述即满分），
+   不全是卡片的问题；#82 修复后需重测；
+3. 答题者与评分者均为**同族 LLM**，跨模型／人类复评未做，不外推。
+
+### 4b 顺带抓出并已修的卡级缺陷（缺陷 #83）
+
+见 `docs/fidelity-phase4b-2026-10-13.md` 第五节与 `CONSTRAINTS.md` #83 行。
+本卡涉及的部分已在记录同时修掉，并由 `t_cards_quotes_all_verifiable` /
+`t_card_selfcheck_commands_recomputable` 两条回归测试守住——**改完不重测，不声称变好**。

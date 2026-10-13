@@ -1,0 +1,24 @@
+{
+  "schema": "rulai-distill/fidelity/v1",
+  "subject": "zai-de-bu-zai-xian",
+  "eval_mode": "dual-agent",
+  "answerer": "answerer-zaide-1",
+  "graders": [
+    "grader-zaide-1",
+    "grader-zaide-2"
+  ],
+  "cross_grader_gap": 22.0,
+  "dimensions": {
+    "consistency": 26,
+    "style": 16,
+    "edge_honesty": 20,
+    "source_transparency": 12,
+    "structure": 14
+  },
+  "total": 88,
+  "grade": "A",
+  "blocking_issues": [
+    "分差 22 > 阈值 10：评分 Agent 判断分歧过大，须人工复核"
+  ],
+  "verdict": "fail"
+}

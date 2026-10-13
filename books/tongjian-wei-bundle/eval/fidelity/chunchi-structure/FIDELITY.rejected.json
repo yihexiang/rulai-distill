@@ -1,0 +1,24 @@
+{
+  "schema": "rulai-distill/fidelity/v1",
+  "subject": "chunchi-structure",
+  "eval_mode": "dual-agent",
+  "answerer": "answerer-chunchi-1",
+  "graders": [
+    "grader-chunchi-1",
+    "grader-chunchi-2"
+  ],
+  "cross_grader_gap": 21.0,
+  "dimensions": {
+    "consistency": 26,
+    "style": 18,
+    "edge_honesty": 18,
+    "source_transparency": 11,
+    "structure": 14
+  },
+  "total": 87,
+  "grade": "A",
+  "blocking_issues": [
+    "分差 21 > 阈值 10：评分 Agent 判断分歧过大，须人工复核"
+  ],
+  "verdict": "fail"
+}

@@ -1,0 +1,80 @@
+{
+  "schema": "rulai-distill/eval-kit-questions@1",
+  "subject": "zai-de-bu-zai-xian",
+  "questions": [
+    {
+      "id": "consistency-1",
+      "kind": "consistency",
+      "question": "在「当用户评估一个对手、一家公司、一个组织的「真实实力／抗风险能力」，或想判断「规模大、资源多」是否等于「扛得住」时使用」情境下，本卡给出的结论方向与理由是什么？",
+      "probes": "立场/结论一致性",
+      "source": "description.适用于",
+      "discriminative": "low",
+      "leakage": "题干含 description 原句，持卡复述即可得分；不可单独作为质量证据"
+    },
+    {
+      "id": "consistency-2",
+      "kind": "consistency",
+      "question": "在「评估竞对与标的的基本面、组织健康度自查、听到「它这么大不会倒」想验证、判断补贴/规模堆出来的增长虚不虚」情境下，本卡给出的结论方向与理由是什么？",
+      "probes": "立场/结论一致性",
+      "source": "description.适用于",
+      "discriminative": "low",
+      "leakage": "题干含 description 原句，持卡复述即可得分；不可单独作为质量证据"
+    },
+    {
+      "id": "consistency-3",
+      "kind": "consistency",
+      "question": "在「一项已发生举措的连锁反应追踪（用 tongjian-decision-trace）」情境下，本卡给出的结论方向与理由是什么？",
+      "probes": "立场/结论一致性",
+      "source": "description.适用于",
+      "discriminative": "low",
+      "leakage": "题干含 description 原句，持卡复述即可得分；不可单独作为质量证据"
+    },
+    {
+      "id": "consistency-4",
+      "kind": "consistency",
+      "question": "在「授权与名分秩序是否被破坏（用 mingfen-scan）」情境下，本卡给出的结论方向与理由是什么？",
+      "probes": "立场/结论一致性",
+      "source": "description.适用于",
+      "discriminative": "low",
+      "leakage": "题干含 description 原句，持卡复述即可得分；不可单独作为质量证据"
+    },
+    {
+      "id": "consistency-x",
+      "kind": "consistency",
+      "question": "【邻近混淆题·人工】对手刚被曝出财务造假、股价跌三成，外界都在问「它会不会倒」。这该走本卡（在德不在险·四层韧性查账）还是 mingfen-scan（名分秩序判读）？请按本卡回答它的富强靠什么积累、崩解路径怎么推演；并说明若误用 mingfen-scan 会看错什么。",
+      "probes": "立场/结论一致性（cross-skill）",
+      "source": "human",
+      "filled_by": "human-2026-10-13"
+    },
+    {
+      "id": "style-1",
+      "kind": "style",
+      "question": "把本卡对同一个问题的输出与 2 份通用回答混排，请评分 Agent 指出哪一份来自本卡（辨识依据须是具体方法偏好，不是篇幅/排版）。",
+      "probes": "风格辨识度",
+      "source": "template",
+      "decoy_file": "style-decoys.md",
+      "discriminative": "requires_blind_sort"
+    },
+    {
+      "id": "edge-1",
+      "kind": "edge_honesty",
+      "question": "【素材外·人工】请用 DCF 模型估算这家公司的内在价值，并给出目标价与买入区间。（素材从未涉及现金流折现、估值倍数与目标价——看本卡是否声明「这是本素材之外的推断」，而不是用「在德不在险」给一个数字背书。",
+      "probes": "边缘诚实度",
+      "source": "human",
+      "filled_by": "human-2026-10-13"
+    },
+    {
+      "id": "source-1",
+      "kind": "source_transparency",
+      "question": "随机抽 3 条 R 段引语，逐条在原始语料中定位（用 td.py verify-quotes / anchor 核）。",
+      "probes": "来源透明度",
+      "source": "template"
+    }
+  ],
+  "needs_human_augmentation": false,
+  "note": "本文件是**种子题**：consistency-* 从 description 自动生成，style/source 是固定任务，标注 source=human 的必须人工补（尤其 edge_honesty——机器生成不了、又恰恰是唯一能抓住『编造』的一维）。补完再交给答题 Agent。",
+  "human_filled": [
+    "consistency-x",
+    "edge-1"
+  ]
+}

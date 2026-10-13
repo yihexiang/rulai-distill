@@ -1,0 +1,24 @@
+{
+  "schema": "rulai-distill/fidelity/v1",
+  "subject": "zhiren-five-looks",
+  "eval_mode": "dual-agent",
+  "answerer": "answerer-zhiren-1",
+  "graders": [
+    "grader-zhiren-1",
+    "grader-zhiren-2"
+  ],
+  "cross_grader_gap": 24.0,
+  "dimensions": {
+    "consistency": 26,
+    "style": 16,
+    "edge_honesty": 20,
+    "source_transparency": 12,
+    "structure": 14
+  },
+  "total": 88,
+  "grade": "A",
+  "blocking_issues": [
+    "分差 24 > 阈值 10：评分 Agent 判断分歧过大，须人工复核"
+  ],
+  "verdict": "fail"
+}

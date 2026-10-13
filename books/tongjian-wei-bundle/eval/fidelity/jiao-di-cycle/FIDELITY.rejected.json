@@ -1,0 +1,24 @@
+{
+  "schema": "rulai-distill/fidelity/v1",
+  "subject": "jiao-di-cycle",
+  "eval_mode": "dual-agent",
+  "answerer": "answerer-jiaodi-1",
+  "graders": [
+    "grader-jiaodi-1",
+    "grader-jiaodi-2"
+  ],
+  "cross_grader_gap": 18.0,
+  "dimensions": {
+    "consistency": 26,
+    "style": 18,
+    "edge_honesty": 19,
+    "source_transparency": 14,
+    "structure": 14
+  },
+  "total": 91,
+  "grade": "A",
+  "blocking_issues": [
+    "分差 18 > 阈值 10：评分 Agent 判断分歧过大，须人工复核"
+  ],
+  "verdict": "fail"
+}

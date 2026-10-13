@@ -1821,6 +1821,161 @@ def t_trigger_score_accepts_list():
         assert rep["passed"] == rep["total"] == 2, rep
 
 
+def _fidelity_cards():
+    """随包卡的 (卡片路径, [语料路径]) 清单——Phase 4b 的被测集。"""
+    cards = []
+    bk = ROOT / "books" / "tongjian-wei-bundle" / "skills"
+    if bk.exists():
+        src01 = ROOT / "corpus" / "anchored" / "src-01-tongjian-wei.md"
+        cards += [(d / "SKILL.md", [src01]) for d in sorted(bk.iterdir())
+                  if (d / "SKILL.md").exists()]
+    zeng = ROOT / "examples" / "persona-bundle" / "skills" / "zengguofan-xiushen" / "SKILL.md"
+    if zeng.exists():
+        an = ROOT / "corpus" / "anchored"
+        # 人物卡跨两份语料：单看任一份都有"未找到"，必须取并集
+        cards.append((zeng, [an / "src-08-zengguofan-jiashu.md",
+                             an / "src-09-zengguofan-yuze-wuzhen.md"]))
+    return cards
+
+
+def _verify_quotes_missing(card: Path, corpus: Path) -> set[str]:
+    """跑 verify-quotes，返回「全篇语料中均未找到」的引语集合。"""
+    import subprocess as _sp
+    r = _sp.run([sys.executable, str(ROOT / "scripts" / "td.py"), "verify-quotes",
+                 str(card), str(corpus), "--allow-empty"],
+                capture_output=True, text=True)
+    missing = set()
+    for line in r.stdout.splitlines():
+        # 只认真正的未找到行；工具末尾的**提示行**也含「全篇语料中均未找到」字样，不能当成引语
+        if "全篇语料中均未找到" in line and "（疑似编造或转述改写）" in line:
+            # 形如「❌ 【第block条】全篇语料中均未找到（疑似编造或转述改写）：敌若胜，盟友先反」
+            missing.add(line.split("：", 1)[-1].strip())
+    return missing
+
+
+def t_cards_quotes_all_verifiable():
+    """缺陷 #83：随包卡里挂引号的引语必须**每一条都能在语料中核到**。
+
+    Phase 2 建卡自验把这些卡记为「verify-quotes 全命中」，Phase 4b 双轮独立评分
+    才抓出 chunchi-structure 有 2 条简体转述加了「」却核不到——
+    正是 C10「引用数 ≠ 核验数」的复发。本测试钉住：挂引号 = 必须可核。
+    """
+    cards = _fidelity_cards()
+    assert cards, "随包卡目录缺失，本守卫无事可守"
+    bad = []
+    for card, corpora in cards:
+        if not all(c.exists() for c in corpora):
+            continue
+        # 取交集：在**所有**语料里都核不到的，才是真「挂引号却核不到」
+        all_missing = None
+        for c in corpora:
+            m = _verify_quotes_missing(card, c)
+            all_missing = m if all_missing is None else (all_missing & m)
+        if all_missing:
+            bad.append(f"{card.parent.name}: {sorted(all_missing)}")
+    assert not bad, (
+        "以下卡片有挂引号却核不到的引语（#83）——必须先改对，不许发：\n  " + "\n  ".join(bad))
+
+
+def t_card_selfcheck_commands_recomputable():
+    """缺陷 #83：卡片里自称「命令可复跑」的 grep 计数，必须实跑一致。
+
+    zhiren-five-looks 正文写 `grep -c "使人視" src-01-tongjian-wei.md  # → 2`，
+    实跑返回 1——grep -c 数的是**行数**，两处命中落在同一行。
+    本测试把卡片里所有 `# → N` 形态的 grep 自陈命令抽出来自己数一遍。
+    """
+    import re as _re
+    CMD_RE = _re.compile(
+        r'grep\s+-(?P<flag>c|o)\s+"(?P<pat>[^"]+)"\s+(?P<file>[\w.\-]+)'
+        r'(?:\s*\|\s*wc\s+-l)?\s*#\s*→\s*(?P<n>\d+)')
+    anchored = ROOT / "corpus" / "anchored"
+    bad = []
+    checked = 0
+    for card, _ in _fidelity_cards():
+        text = card.read_text(encoding="utf-8")
+        for m in CMD_RE.finditer(text):
+            fp = anchored / m.group("file")
+            if not fp.exists():
+                continue
+            lines = fp.read_text(encoding="utf-8").splitlines()
+            pat = m.group("pat")
+            if pat.startswith("^"):
+                per_line = [len(_re.findall(pat, ln)) for ln in lines]
+            else:
+                per_line = [ln.count(pat) for ln in lines]
+            actual = (sum(1 for n in per_line if n) if m.group("flag") == "c"
+                      else sum(per_line))
+            checked += 1
+            if actual != int(m.group("n")):
+                bad.append(f"{card.parent.name}: grep -{m.group('flag')} \"{pat}\" "
+                           f"标注 → {m.group('n')}，实跑 {actual}")
+    assert checked, "没抽到任何自陈命令，本守卫形同虚设"
+    assert not bad, "卡片自陈的 grep 计数与实跑不符（#83）：\n  " + "\n  ".join(bad)
+
+
+def t_evalkit_consistency_not_verbatim_description():
+    """缺陷 #82①：consistency 题不得只是「在「description 原句」情境下…」。
+
+    修前题干逐字嵌入卡片 description，答题 Agent 持卡照抄即满分——
+    7 张卡的标准 rubric 轮 5 个 100 分全是这种虚分。
+    钉住：题干必须要求**迁移**（另举卡片没写过的新例 + 走完步骤），
+    且必须自带 discriminative=low / leakage 标记，别让后人拿它当质量证据。
+    """
+    import json as _json
+    import subprocess as _sp
+    import tempfile
+    card = ROOT / "books" / "tongjian-wei-bundle" / "skills" / "mingfen-scan" / "SKILL.md"
+    if not card.exists():
+        return
+    with tempfile.TemporaryDirectory() as td:
+        r = _sp.run([sys.executable, str(ROOT / "scripts" / "td.py"), "eval-kit", "init",
+                     str(card), "--out", td], capture_output=True, text=True)
+        assert r.returncode == 0, r.stdout[-300:]
+        qs = _json.loads((Path(td) / "questions.json").read_text(encoding="utf-8"))
+        cons = [q for q in qs["questions"] if q["id"].startswith("consistency-")
+                and q.get("source") == "description.适用于"]
+        assert cons, "应生成 description 派生的 consistency 题"
+        for q in cons:
+            assert "另举" in q["question"] and "完成标准" in q["question"], (
+                f"{q['id']} 题干须要求迁移（另举新例 + 走完完成标准），"
+                f"否则持卡复述即可满分（#82①）：{q['question']}")
+            assert q.get("discriminative") == "low", (
+                f"{q['id']} 须打 discriminative=low，明示其高分不构成质量证据（#82①）")
+            assert "leakage" in q, f"{q['id']} 须带 leakage 说明（#82①）"
+
+
+def t_evalkit_style_has_decoy_samples():
+    """缺陷 #82②：style 盲排必须有对照样本，否则「正确挑出」这一半零实测。
+
+    修前 style-1 让评分 Agent「把本卡输出与 2 份通用回答混排」，套件里却一份都没有；
+    实测 7 张卡的 style 全拿 20/20，没有一次盲辨真的发生过。
+    钉住：init 必须生成 style-decoys.md（≥2 份通用回答），且 scores 模板要求先声明盲排状态。
+    """
+    import json as _json
+    import subprocess as _sp
+    import tempfile
+    card = ROOT / "books" / "tongjian-wei-bundle" / "skills" / "mingfen-scan" / "SKILL.md"
+    if not card.exists():
+        return
+    with tempfile.TemporaryDirectory() as td:
+        tdp = Path(td)
+        r = _sp.run([sys.executable, str(ROOT / "scripts" / "td.py"), "eval-kit", "init",
+                     str(card), "--out", str(tdp)], capture_output=True, text=True)
+        assert r.returncode == 0, r.stdout[-300:]
+        decoys = tdp / "style-decoys.md"
+        assert decoys.exists(), "init 必须生成 style-decoys.md（#82②）"
+        dtext = decoys.read_text(encoding="utf-8")
+        assert dtext.count("通用回答样本") >= 2, "对照样本须 ≥2 份（#82②）"
+        assert "盲" in dtext, "对照样本须写明盲排操作（#82②）"
+        qs = _json.loads((tdp / "questions.json").read_text(encoding="utf-8"))
+        style = [q for q in qs["questions"] if q["id"] == "style-1"]
+        assert style and style[0].get("decoy_file") == "style-decoys.md", (
+            "style-1 须指向对照样本文件（#82②）")
+        scores = _json.loads((tdp / "scores.template.json").read_text(encoding="utf-8"))
+        assert "盲排" in scores["dimensions"]["style"]["note"], (
+            "scores 模板的 style.note 须强制先声明盲排状态（#82②）")
+
+
 def t_verify_quotes_direction():
     """缺陷 3/4/5：引语核验必须向后取窗、遇到下一个引用即停、编号用位置切片。
 
@@ -4535,6 +4690,11 @@ def main() -> int:
         ("README 真实卡计数披露跨仓库口径（#80）", t_readme_card_count_disclosure),
         ("parity 表与 upstream MAPPING 一致（D1）", t_parity_table_matches_upstream_mapping),
         ("trigger score 接受 prepare 的 JSONL 列表（#81）", t_trigger_score_accepts_list),
+        ("随包卡引语全部可核·挂引号即须核到（#83）", t_cards_quotes_all_verifiable),
+        ("卡片自陈 grep 计数实跑一致（#83）", t_card_selfcheck_commands_recomputable),
+        ("eval-kit consistency 题须迁移型 + 打判别力标记（#82①）",
+         t_evalkit_consistency_not_verbatim_description),
+        ("eval-kit style 盲排须附对照样本（#82②）", t_evalkit_style_has_decoy_samples),
         ("文档数字与代码不漂移", t_docs_no_drift),
         ("schema 与 --help 完整", t_schema_and_help),
         ("错误信息人话化", t_errors_are_human),

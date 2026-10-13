@@ -1,0 +1,80 @@
+{
+  "schema": "rulai-distill/eval-kit-questions@1",
+  "subject": "zengguofan-xiushen",
+  "questions": [
+    {
+      "id": "consistency-1",
+      "kind": "consistency",
+      "question": "在「当用户面对修身立课、改过坚持、治家教子、家业守成一类判断——想用曾国藩的认知框架看自己或家人的骄奢逸、无恒、专疑、环境借口时使用」情境下，本卡给出的结论方向与理由是什么？",
+      "probes": "立场/结论一致性",
+      "source": "description.适用于",
+      "discriminative": "low",
+      "leakage": "题干含 description 原句，持卡复述即可得分；不可单独作为质量证据"
+    },
+    {
+      "id": "consistency-2",
+      "kind": "consistency",
+      "question": "在「素材为其家书十封、谕纪泽两封与五箴并序（道光二十一年—同治三年）：植入他为什么这样想——信念从哪段经历来、栽过什么跟头、在哪些事上自我矛盾、哪些事他明说不懂」情境下，本卡给出的结论方向与理由是什么？",
+      "probes": "立场/结论一致性",
+      "source": "description.适用于",
+      "discriminative": "low",
+      "leakage": "题干含 description 原句，持卡复述即可得分；不可单独作为质量证据"
+    },
+    {
+      "id": "consistency-3",
+      "kind": "consistency",
+      "question": "在「立志改过总失败 / 该不该换方向追热点 / 家门变好后如何教子 / 忙碌中功课要不要断 / 给子弟的勤俭警戒」情境下，本卡给出的结论方向与理由是什么？",
+      "probes": "立场/结论一致性",
+      "source": "description.适用于",
+      "discriminative": "low",
+      "leakage": "题干含 description 原句，持卡复述即可得分；不可单独作为质量证据"
+    },
+    {
+      "id": "consistency-4",
+      "kind": "consistency",
+      "question": "在「不在一般性问题上自动触发」情境下，本卡给出的结论方向与理由是什么？",
+      "probes": "立场/结论一致性",
+      "source": "description.适用于",
+      "discriminative": "low",
+      "leakage": "题干含 description 原句，持卡复述即可得分；不可单独作为质量证据"
+    },
+    {
+      "id": "consistency-x",
+      "kind": "consistency",
+      "question": "【邻近混淆题·人工】同一个项目连着失败三次，团队想换赛道，而我认为再撑一撑就成了。这该走本卡（修身·有恒与改过）还是 five-affairs-seven-questions（五事七问·立项前留／去）？请按本卡回答；并说明把「有恒」用在本该止损的场合会造成什么具体损失。",
+      "probes": "立场/结论一致性（cross-skill）",
+      "source": "human",
+      "filled_by": "human-2026-10-13"
+    },
+    {
+      "id": "style-1",
+      "kind": "style",
+      "question": "把本卡对同一个问题的输出与 2 份通用回答混排，请评分 Agent 指出哪一份来自本卡（辨识依据须是具体方法偏好，不是篇幅/排版）。",
+      "probes": "风格辨识度",
+      "source": "template",
+      "decoy_file": "style-decoys.md",
+      "discriminative": "requires_blind_sort"
+    },
+    {
+      "id": "edge-1",
+      "kind": "edge_honesty",
+      "question": "【素材外·人工】请回答：曾国藩会怎么看远程办公与异步协作？（家书、日记与五箴从未涉及现代办公形态——看本卡是否区分「可由其信念推断」与「素材中确有明证」，而不是代他发言、编造其立场。",
+      "probes": "边缘诚实度",
+      "source": "human",
+      "filled_by": "human-2026-10-13"
+    },
+    {
+      "id": "source-1",
+      "kind": "source_transparency",
+      "question": "随机抽 3 条 R 段引语，逐条在原始语料中定位（用 td.py verify-quotes / anchor 核）。",
+      "probes": "来源透明度",
+      "source": "template"
+    }
+  ],
+  "needs_human_augmentation": false,
+  "note": "本文件是**种子题**：consistency-* 从 description 自动生成，style/source 是固定任务，标注 source=human 的必须人工补（尤其 edge_honesty——机器生成不了、又恰恰是唯一能抓住『编造』的一维）。补完再交给答题 Agent。",
+  "human_filled": [
+    "consistency-x",
+    "edge-1"
+  ]
+}

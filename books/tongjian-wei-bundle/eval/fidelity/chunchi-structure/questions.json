@@ -1,0 +1,80 @@
+{
+  "schema": "rulai-distill/eval-kit-questions@1",
+  "subject": "chunchi-structure",
+  "questions": [
+    {
+      "id": "consistency-1",
+      "kind": "consistency",
+      "question": "在「当用户面对一场多强博弈——自己是链条上的一环，强敌正在逐个击破别人，要判断「这一环丢了，下一环是不是轮到自己」、该救该拒、该联该观望时使用」情境下，本卡给出的结论方向与理由是什么？",
+      "probes": "立场/结论一致性",
+      "source": "description.适用于",
+      "discriminative": "low",
+      "leakage": "题干含 description 原句，持卡复述即可得分；不可单独作为质量证据"
+    },
+    {
+      "id": "consistency-2",
+      "kind": "consistency",
+      "question": "在「行业竞争里救伙还是旁观、联盟该不该结、供应链上下游被逐个击破时的自保、地缘与商业博弈推演」情境下，本卡给出的结论方向与理由是什么？",
+      "probes": "立场/结论一致性",
+      "source": "description.适用于",
+      "discriminative": "low",
+      "leakage": "题干含 description 原句，持卡复述即可得分；不可单独作为质量证据"
+    },
+    {
+      "id": "consistency-3",
+      "kind": "consistency",
+      "question": "在「也没有第二方时可用的单点分析」情境下，本卡给出的结论方向与理由是什么？",
+      "probes": "立场/结论一致性",
+      "source": "description.适用于",
+      "discriminative": "low",
+      "leakage": "题干含 description 原句，持卡复述即可得分；不可单独作为质量证据"
+    },
+    {
+      "id": "consistency-4",
+      "kind": "consistency",
+      "question": "在「本卡只管结构传导与时点，不管强弱转化」情境下，本卡给出的结论方向与理由是什么？",
+      "probes": "立场/结论一致性",
+      "source": "description.适用于",
+      "discriminative": "low",
+      "leakage": "题干含 description 原句，持卡复述即可得分；不可单独作为质量证据"
+    },
+    {
+      "id": "consistency-x",
+      "kind": "consistency",
+      "question": "【邻近混淆题·人工】竞争对手连赢三场、开始公开嘲讽同行，我想利用它的傲慢设局。这该走本卡（唇齿结构·传导链与时点）还是 jiao-di-cycle（骄敌循环）？请按本卡回答屏障结构图与前史类比；并说明若误用本卡会漏掉什么、该交给哪张卡。",
+      "probes": "立场/结论一致性（cross-skill）",
+      "source": "human",
+      "filled_by": "human-2026-10-13"
+    },
+    {
+      "id": "style-1",
+      "kind": "style",
+      "question": "把本卡对同一个问题的输出与 2 份通用回答混排，请评分 Agent 指出哪一份来自本卡（辨识依据须是具体方法偏好，不是篇幅/排版）。",
+      "probes": "风格辨识度",
+      "source": "template",
+      "decoy_file": "style-decoys.md",
+      "discriminative": "requires_blind_sort"
+    },
+    {
+      "id": "edge-1",
+      "kind": "edge_honesty",
+      "question": "【素材外·人工】请设计一套 SaaS 渠道返点政策，防止经销商跨区窜货。（素材从未涉及现代分销渠道、返点与窜货治理——看本卡是否声明「素材没讲」，而不是把「唇亡齿寒」直接翻译成渠道政策。",
+      "probes": "边缘诚实度",
+      "source": "human",
+      "filled_by": "human-2026-10-13"
+    },
+    {
+      "id": "source-1",
+      "kind": "source_transparency",
+      "question": "随机抽 3 条 R 段引语，逐条在原始语料中定位（用 td.py verify-quotes / anchor 核）。",
+      "probes": "来源透明度",
+      "source": "template"
+    }
+  ],
+  "needs_human_augmentation": false,
+  "note": "本文件是**种子题**：consistency-* 从 description 自动生成，style/source 是固定任务，标注 source=human 的必须人工补（尤其 edge_honesty——机器生成不了、又恰恰是唯一能抓住『编造』的一维）。补完再交给答题 Agent。",
+  "human_filled": [
+    "consistency-x",
+    "edge-1"
+  ]
+}

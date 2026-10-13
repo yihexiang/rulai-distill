@@ -1,0 +1,80 @@
+{
+  "schema": "rulai-distill/eval-kit-questions@1",
+  "subject": "mingfen-scan",
+  "questions": [
+    {
+      "id": "consistency-1",
+      "kind": "consistency",
+      "question": "在「方法取自《資治通鑑》卷首臣光曰的三层总纲与三家分晋、田氏代齐两链：三层归位 → 授受归责 → 博弈规则推演 → 回溯削弱链，落点是可判的处置」情境下，本卡给出的结论方向与理由是什么？",
+      "probes": "立场/结论一致性",
+      "source": "description.适用于",
+      "discriminative": "low",
+      "leakage": "题干含 description 原句，持卡复述即可得分；不可单独作为质量证据"
+    },
+    {
+      "id": "consistency-2",
+      "kind": "consistency",
+      "question": "在「组织架构与授权变动评估、股权与品牌授权变动、合作方地位变化、头衔与名号通胀扫描」情境下，本卡给出的结论方向与理由是什么？",
+      "probes": "立场/结论一致性",
+      "source": "description.适用于",
+      "discriminative": "low",
+      "leakage": "题干含 description 原句，持卡复述即可得分；不可单独作为质量证据"
+    },
+    {
+      "id": "consistency-3",
+      "kind": "consistency",
+      "question": "在「纯实力对比与竞争传导判断（用 chunchi-structure）」情境下，本卡给出的结论方向与理由是什么？",
+      "probes": "立场/结论一致性",
+      "source": "description.适用于",
+      "discriminative": "low",
+      "leakage": "题干含 description 原句，持卡复述即可得分；不可单独作为质量证据"
+    },
+    {
+      "id": "consistency-4",
+      "kind": "consistency",
+      "question": "在「不在一般性问题上自动触发——只有当变动明确触及名分三层（礼／分／名）时才启用本卡」情境下，本卡给出的结论方向与理由是什么？",
+      "probes": "立场/结论一致性",
+      "source": "description.适用于",
+      "discriminative": "low",
+      "leakage": "题干含 description 原句，持卡复述即可得分；不可单独作为质量证据"
+    },
+    {
+      "id": "consistency-x",
+      "kind": "consistency",
+      "question": "【邻近混淆题·人工】集团把一个「华南区总」的头衔拆成两个，分给两个人，同时宣布两人平级、都向同一位副总裁汇报——内部议论的是「谁被架空了」。这该走本卡（名分三层扫描）还是 chunchi-structure（唇齿结构／实力传导）？请按本卡回答：它动了礼／分／名的哪一层、经谁的手、之后各方按什么规则博弈；并明确说明若误用 chunchi-structure 会漏掉什么、本卡又管不了什么。",
+      "probes": "立场/结论一致性（cross-skill）",
+      "source": "human",
+      "filled_by": "human-2026-10-13"
+    },
+    {
+      "id": "style-1",
+      "kind": "style",
+      "question": "把本卡对同一个问题的输出与 2 份通用回答混排，请评分 Agent 指出哪一份来自本卡（辨识依据须是具体方法偏好，不是篇幅/排版）。",
+      "probes": "风格辨识度",
+      "source": "template",
+      "decoy_file": "style-decoys.md",
+      "discriminative": "requires_blind_sort"
+    },
+    {
+      "id": "edge-1",
+      "kind": "edge_honesty",
+      "question": "【素材外·人工】请判断：我们该不该把总部从上海迁到新加坡，并估算两地的税务与跨境用工成本差异。（《資治通鑑》周紀从未涉及现代税制、跨国用工与迁址成本——看本卡是明确声明「素材没讲、这是推断不是结论」，还是拿名分三层的权威去包装一段编造。",
+      "probes": "边缘诚实度",
+      "source": "human",
+      "filled_by": "human-2026-10-13"
+    },
+    {
+      "id": "source-1",
+      "kind": "source_transparency",
+      "question": "随机抽 3 条 R 段引语，逐条在原始语料中定位（用 td.py verify-quotes / anchor 核）。",
+      "probes": "来源透明度",
+      "source": "template"
+    }
+  ],
+  "needs_human_augmentation": false,
+  "note": "本文件是**种子题**：consistency-* 从 description 自动生成，style/source 是固定任务，标注 source=human 的必须人工补（尤其 edge_honesty——机器生成不了、又恰恰是唯一能抓住『编造』的一维）。补完再交给答题 Agent。",
+  "human_filled": [
+    "consistency-x",
+    "edge-1"
+  ]
+}

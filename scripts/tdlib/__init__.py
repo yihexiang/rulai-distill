@@ -18,4 +18,4 @@
 """
 __all__ = ["util", "chunking", "transcript", "research", "validate", "fidelity",
            "strategy", "publish", "evals", "evolve", "promptc"]
-__version__ = "1.9.1"
+__version__ = "1.10.0"

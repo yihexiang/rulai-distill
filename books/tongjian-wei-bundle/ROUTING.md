@@ -47,9 +47,28 @@ chunchi-structure ──contrasts── jiao-di-cycle    （看结构 vs 看转�
   本 bundle 的 6 卡回答「**用什么镜片看**」。`zhiren-five-looks`/`cai-de-two-column` 的诱饵测试已引用它做跨技能分界。
 - 共同纪律：全部卡引语经 `td.py anchor`/`verify-quotes` 锚定到 `corpus/anchored/src-01-tongjian-wei.md` 的【第N段】。
 
-## 五、已知缺口（诚实声明）
+## 五、状态与已知缺口（2026-10-13 更新）
 
-1. `mingfen-scan` 与 `zhiren-five-looks` 缺 `SOURCES.md`（规范 §6 要求，其余 4 张已有）——待补；
-2. F06⑤/F12⑤ 两处框架内容引用未列入段号定位的段落（第66/78段），建对应卡时须补锚；
-3. E4（反例候选）有单字引文失配（「燕雀顏色不變」应为「燕雀顏不變」）+ 一处语料外推断，已降级登记，未进任何卡；
-4. bundle.json（Phase 5 编译入口）未建；Phase 4 触发/盲测/FIDELITY 均待运行（命令在各卡 test-results.md）。
+**已闭合**（此前标「待运行」的，现已跑完，原件在仓内）：
+
+1. `bundle.json`（编译入口）已建；6 张卡 validate error 0 / warn 0。
+2. **Phase 4a 触发评测已跑**：10 条用例 **10/10**，P=R=F1=1.0，诱饵 2/2、兄弟互诱 2/2、兄弟混淆率 0.0
+   （`eval/trigger-score.json`）。过程中撞出缺陷 #81（prepare 产 JSONL、score 只收字典）并已修。
+3. **Phase 4b FIDELITY 双 Agent 已跑**：7 张卡（本 bundle 6 张 + 人物卡 1 张）两轮独立评分，
+   汇总报告 `docs/fidelity-phase4b-2026-10-13.md`。
+   **7/7 分差 > 10 未过门禁**，产物为各卡 `eval/fidelity/<slug>/FIDELITY.rejected.json`；
+   人工复核后**对外采用严格轮 76–86 / B 作为质量下限**，不采用标准轮（7 张里 5 张满分 100，属系统性虚高）。
+4. 三张卡缺的 `SOURCES.md`（`mingfen-scan` / `zhiren-five-looks` / `chunchi-structure`）已补齐，
+   至此 6 张卡全部有来源声明。
+
+**仍然存在的缺口（不粉饰）**：
+
+1. F06⑤/F12⑤ 两处框架内容引用未列入段号定位的段落（第66/78段），建对应卡时须补锚；
+2. E4（反例候选）有单字引文失配（「燕雀顏色不變」应为「燕雀顏不變」）+ 一处语料外推断，
+   已降级登记，**未进任何卡**；
+3. **Phase 4b 的 `style` 维两轮都没做真盲排**——当时套件不生成对照样本（缺陷 #82）。
+   对照样本现已随 `style-decoys.md` 生成，但**重测尚未做**，该维分数不可作质量证据；
+4. 严格轮 consistency 的 22/30 有相当部分是**出题器背的**（题干逐字抄 description，持卡复述即满分），
+   #82 修复后需重测才能更新这些分数；
+5. 6 个 router 卡仍未单发（F06/F07/F09/F10/F11/F12），候选留痕在 `verified/framework.md`；
+6. 跨模型／人类复评未做，全部评测均为同族 LLM，不做跨模型外推。
