@@ -8,16 +8,17 @@
     "xunzi",
     "lunyu",
     "bazi-paipan",
-    "quming-xue"
+    "quming-xue",
+    "zhouyi-yili"
   ],
   "runs": [
     "run-1",
     "run-2",
     "run-3"
   ],
-  "total_runs": 24,
+  "total_runs": 27,
   "all_positive": false,
-  "none_count": 3,
+  "none_count": 4,
   "locator_citation_invariant": {
     "with_hit": 18,
     "without_hit": 0,
@@ -74,6 +75,13 @@
       "moderate": 2,
       "none": 1,
       "cross_repo": "guoxue-skills/skills/quming-xue"
+    },
+    "zhouyi-yili": {
+      "subject": "zhouyi-yili",
+      "significant": 0,
+      "moderate": 2,
+      "none": 1,
+      "cross_repo": "guoxue-skills/skills/zhouyi-yili"
     }
   },
   "rows": [
@@ -292,6 +300,33 @@
       "without": 3,
       "delta": 1,
       "gain": "moderate"
+    },
+    {
+      "card": "zhouyi-yili",
+      "subject": "zhouyi-yili",
+      "run": "run-1",
+      "with": 3,
+      "without": 3,
+      "delta": 0,
+      "gain": "none"
+    },
+    {
+      "card": "zhouyi-yili",
+      "subject": "zhouyi-yili",
+      "run": "run-2",
+      "with": 4,
+      "without": 2,
+      "delta": 2,
+      "gain": "moderate"
+    },
+    {
+      "card": "zhouyi-yili",
+      "subject": "zhouyi-yili",
+      "run": "run-3",
+      "with": 4,
+      "without": 2,
+      "delta": 2,
+      "gain": "moderate"
     }
   ],
   "boundaries": [
@@ -304,13 +339,14 @@
   "cross_repo_finding": {
     "card": "bazi-paipan",
     "repo": "guoxue-skills",
-    "result": "bazi: 1 moderate + 2 none；quming: 2 moderate + 1 none（2 卡一致：基线在 locator/verbatim 持平，卡最多净 +1）",
+    "result": "bazi: 1 moderate + 2 none；quming: 2 moderate + 1 none；zhouyi: 2 moderate + 1 none（3 卡一致：基线近乎持平，卡最多净 +2）",
     "root_cause": "八字为常识领域，no-skill 基线亦能引来源/声明边界/用术语，locator_citation 失去区分力",
     "implication": "locator_citation 唯一稳定区分信号仅对本仓典籍卡成立，不外推到常识领域卡；none 是既成事实",
     "guard_scope": "t_utility_n3_runs_complete 只覆盖 6 本仓典籍卡；bazi 由 t_utility_n3_crossrepo_caveat 钉住披露",
     "cards_confirmed": [
       "bazi-paipan",
-      "quming-xue"
+      "quming-xue",
+      "zhouyi-yili"
     ]
   }
 }
