@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "suite_id": "suite-zai-de-bu-zai-xian-trigger",
+  "target": "zai-de-bu-zai-xian",
+  "split_seed": 42,
+  "train_ratio": 0.6,
+  "trigger_cases": [
+    {
+      "case_id": "t-01",
+      "prompt": "这家公司护城河是牌照还是用户信任，怎么评估它扛不扛得住周期？",
+      "expected": "should_trigger",
+      "target_slug": "zai-de-bu-zai-xian",
+      "difficulty": "easy",
+      "why": "明示触发：护城河归因（险 vs 德）+ 抗风险能力评估，正中四层查账的第一层与输出档位"
+    },
+    {
+      "case_id": "t-02",
+      "prompt": "竞对资金雄厚渠道强，我们的真正差距在哪？怎么判断谁先撑不住？",
+      "expected": "should_trigger",
+      "target_slug": "zai-de-bu-zai-xian",
+      "difficulty": "medium",
+      "why": "隐形触发：用户没点名任何方法，只描述对手硬资源强 + 想判断韧性排序；考的是靠情境而非关键词识别"
+    },
+    {
+      "case_id": "t-03",
+      "prompt": "我们这两年靠补贴增长很快，但我说不清底子虚不虚，有没有一套查法看看是真扎实还是烧钱烧出来的？",
+      "expected": "should_trigger",
+      "target_slug": "zai-de-bu-zai-xian",
+      "difficulty": "medium",
+      "why": "术语错配韧性：用户说「虚不虚」不说「韧性」，且自带积累方式线索（补贴）；考第一层账「富强靠什么积累」的定位"
+    },
+    {
+      "case_id": "d-01",
+      "prompt": "把《资治通鉴》里吴起跟魏武侯说「在德不在险」那段原文给我找出来，逐字就行，不用解释。",
+      "expected": "should_not_trigger",
+      "difficulty": "medium",
+      "why": "书摘/原文检索需求 ≠ 蒸馏出的能力卡；正确应答是直接给原文，不是起查账法"
+    },
+    {
+      "case_id": "d-02",
+      "prompt": "帮我给刚出生的孩子起个名，生辰八字五行喜木，要既补命局又好看。",
+      "expected": "should_not_trigger",
+      "difficulty": "medium",
+      "why": "诱饵必须是真实需求：起名与《资治通鉴》韧性查账完全无关（应导向 quming-xue 类技能，不是本卡）"
+    },
+    {
+      "case_id": "x-01",
+      "prompt": "集团要把品牌授权收回去自营，这变动了什么秩序？原来的被授权方以后还能凭什么约束集团？",
+      "expected": "sibling",
+      "sibling_target": "mingfen-scan",
+      "difficulty": "hard",
+      "why": "跨卡诱饵（硬性）：问题同样能联想到本卡（「收回之后谁更扛得住」），但真正该答的是名分/秩序线——授出了什么只能由某个位置授出的东西、谁自坏；指向 mingfen-scan",
+      "pairwise_with": ["zai-de-bu-zai-xian"]
+    },
+    {
+      "case_id": "x-02",
+      "prompt": "对手赖以起家的特许牌照刚被吊销了。这是不是说明它其实没什么真本事、长期根本扛不住？我想系统评估一下它的基本面。",
+      "expected": "sibling",
+      "sibling_target": "zai-de-bu-zai-xian",
+      "difficulty": "hard",
+      "why": "反向边界：表面是「牌照/授权秩序被打破」（易误导向 mingfen-scan），但用户要的是「吊销之后它还剩什么、积累方式是什么、扛不扛得住」——本卡的险型制标签 + 四层账；确认不是单向通过",
+      "pairwise_with": ["mingfen-scan"]
+    }
+  ],
+  "rules": [
+    "prompt 用真实用户口语，不写成规范任务书",
+    "sibling 用例两条（mingfen-scan → 本卡 与 本卡 → mingfen-scan 各一条），单向通过不算",
+    "诱饵是真实需求，只是不该由本卡回答",
+    "测试时把 skills_in_scope 全部给被测 Agent，让它做选择题而非判断题"
+  ],
+  "skills_in_scope": [
+    {
+      "name": "zai-de-bu-zai-xian",
+      "description": "评估对手/自家/标的的真实实力与抗风险能力：四层查账（富强靠什么积累→刑赏已诺是否信→治国路线义立/信立/权谋立→崩解路径推演），输出韧性三档。不用于：判断个人可信度、追踪已发生举措的连锁反应、授权与名分秩序是否被破坏。"
+    },
+    {
+      "name": "mingfen-scan",
+      "description": "名分三层扫描：礼（纪纲）→分（君臣）→名（爵位/头衔）。判断一项变动动了哪层名分、受动者坏礼还是授权者自坏、名分既乱后的博弈规则。不用于：韧性/基本面查账（那是对面积蓄方式与兑信记录的评估）。"
+    }
+  ],
+  "note": "skills_in_scope 中 mingfen-scan 的 description 为建卡时按 F01（名分三层扫描）拟定的边界描述；mingfen-scan 本体卡尚未建成，Phase 4 跑触发测试前应以该卡实际 description 替换本字段，否则 x-01/x-02 的判定基线不成立。Phase 4 结果见同目录 test-results.md。"
+}

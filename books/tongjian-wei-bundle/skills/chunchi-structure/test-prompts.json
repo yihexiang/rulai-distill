@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "suite_id": "chunchi-structure-trigger-v1",
+  "target": "chunchi-structure",
+  "split_seed": 42,
+  "train_ratio": 0.6,
+  "generated_by": "阶段2 能力构造子 Agent（建卡时出题；盲测与判分尚未运行）",
+  "note": "配比按 methodology/04-pressure-test.md：should_trigger 3 条（直白/口语/隐含）+ should_not_trigger 3 条（含 2 条跨卡诱饵，x01 指向 jiao-di-cycle、x02 指向 tongjian-decision-trace）。契约字段 expected 用枚举；字段 type 是给人看的同义标签（should_trigger / should_not_trigger），与 task 要求一一对应：本文件中 type=should_not_trigger 的用例共 3 条。x01 的对手卡 jiao-di-cycle（F08 骄敌循环）为同包计划中的姊妹卡、尚未建成，真实抢调用盲测需等该卡存在后复跑。",
+  "skills_in_scope": [
+    {
+      "name": "chunchi-structure",
+      "description": "唇齿结构 · 多强博弈的连锁传导与前史类比：多强博弈中画屏障传导链、检索前史同类结构、问敌若胜下一个是谁，落在救/不救、亲/拒的时点选择。不用于对手连胜后变骄的利用设计（那是 jiao-di-cycle）。"
+    },
+    {
+      "name": "jiao-di-cycle",
+      "description": "骄敌循环 · 将欲败之，必姑辅之（F08，同包计划卡，尚未建成）：判胜负之后的骄、拒谏、树敌循环，辅之、促其树敌、待窗口一击。"
+    },
+    {
+      "name": "tongjian-decision-trace",
+      "description": "資治通鑑文理 · 一項舉措的「勢—人—後果」追蹤（examples/open-bundle 已发布）：拆一项已发生举措的名分/人/时滞，落到撤/改/留。"
+    }
+  ],
+  "trigger_cases": [
+    {
+      "case_id": "t01",
+      "type": "should_trigger",
+      "expected": "should_trigger",
+      "target_slug": "chunchi-structure",
+      "difficulty": "easy",
+      "prompt": "上游供应商正在被巨头收购，我该救还是该找备胎？",
+      "why": "直白触发：供应商是正在被吞并的屏障方，「救还是找备胎」正是本卡救/不救的四格处置"
+    },
+    {
+      "case_id": "t02",
+      "type": "should_trigger",
+      "expected": "should_trigger",
+      "target_slug": "chunchi-structure",
+      "difficulty": "medium",
+      "prompt": "行业老二被打压，我该联盟还是观望？",
+      "why": "口语触发：用户没点名任何方法，但「联盟还是观望」对应亲/拒的时点选择，且老二正是链条上的屏障方"
+    },
+    {
+      "case_id": "t03",
+      "type": "should_trigger",
+      "expected": "should_trigger",
+      "target_slug": "chunchi-structure",
+      "difficulty": "hard",
+      "prompt": "他们先打的不是我，但我总觉得迟早轮到——啥时候轮到？",
+      "why": "隐含触发：只靠情境识别——「下一个是谁、何时轮到我」是本卡 Step 3 的原问句（§143 孔斌「魏受其師」）"
+    },
+    {
+      "case_id": "x01",
+      "type": "should_not_trigger",
+      "expected": "sibling",
+      "sibling_target": "jiao-di-cycle",
+      "pairwise_with": ["chunchi-structure"],
+      "difficulty": "hard",
+      "prompt": "对手连赢三场开始傲慢，我该怎么利用？",
+      "why": "跨卡诱饵（硬性要求）：胜负已分之后的骄、拒谏、树敌与「将欲败之，必姑辅之」是强弱转化题；本卡只管结构传导与时点，不管强弱转化"
+    },
+    {
+      "case_id": "d01",
+      "type": "should_not_trigger",
+      "expected": "should_not_trigger",
+      "difficulty": "medium",
+      "prompt": "帮我整理一下《资治通鉴》都讲了什么，做成一份读书笔记",
+      "why": "书摘需求 ≠ 蒸馏技能需求：没有任何多强博弈结构要拆，本卡四步一步都用不上"
+    },
+    {
+      "case_id": "x02",
+      "type": "should_not_trigger",
+      "expected": "sibling",
+      "sibling_target": "tongjian-decision-trace",
+      "pairwise_with": ["chunchi-structure"],
+      "difficulty": "medium",
+      "prompt": "我刚答应一个客户延期交付，这事之后会不会给我惹麻烦？",
+      "why": "跨卡诱饵：只有一项举措、没有屏障方与传导链，不满足本卡「至少三方」的适用前提"
+    }
+  ]
+}

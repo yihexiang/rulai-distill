@@ -1,0 +1,50 @@
+{
+  "schema": "rulai-distill/card-test-prompts@1",
+  "subject": "cai-de-two-column",
+  "card": "books/tongjian-wei-bundle/skills/cai-de-two-column/SKILL.md",
+  "created": "2026-10-13",
+  "note": "Phase 4 触发测试的题库（卡级）。判分口径：should_trigger 的期望行为 = 走本卡两栏打分（才栏列事实 / 德栏单列缺口 / 四选定档 / 问谁能制之 / 三选一处置）；should_not_trigger 的期望行为 = 不调用本卡，并指出该归谁。sibling 诱饵用于测跨卡抢调用。作答方式见 test-results.md 的复跑命令。",
+  "should_trigger": [
+    {
+      "id": "trigger-1",
+      "prompt": "技术合伙人能力极强，但最近两次在数据上动手脚。下一轮融资前，我该给他多少权限？",
+      "expected_behavior": "触发本卡：才栏列可验证事实（技术贡献、交付），德栏单列可指名事件（两次数据动手脚：哪次、什么行为、损害了谁）；定档才胜德 → 小人；问「若其以才行不仁，谁能制之」——答不出具名约束则处置落「不用」或「限用（拆权+复查时点）」，不许「先试试」",
+      "target": "cai-de-two-column"
+    },
+    {
+      "id": "trigger-2",
+      "prompt": "要提拔一个业绩最好但口碑很差的销售主管，提不提？",
+      "expected_behavior": "触发本卡：才栏列业绩事实（数字+证据来源），德栏把「口碑差」落到可指名事件（抢单、甩锅、虚报哪次）；按德胜才/才胜德定档；问谁能制之；处置三选一（托付/限用/不用），并说明「口碑」不经采证不进德栏",
+      "target": "cai-de-two-column"
+    },
+    {
+      "id": "trigger-3",
+      "prompt": "两个联合创始人，一个技术最强但独断，一个技术平平但处事公。融资前必须定 CEO，怎么定？",
+      "expected_behavior": "触发本卡：对两个候选人各列两栏（技术强+独断可指名事件 vs 技术平平+处事公的可指名事件），分别定档后排 聖人>君子>愚人>小人；问谁能制之；给出托付/限用/不用的处置与理由",
+      "target": "cai-de-two-column"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "id": "no-trigger-1",
+      "prompt": "新来的经理简历漂亮但我不了解他，怎么判断他靠不靠谱？",
+      "expected_behavior": "不触发本卡——这是「怎么观察人」的采证题，不是分栏评估题（没有可打分的德栏事实，也没有托付决策点）；应转 zhiren-five-looks（知人五视：居视其所亲、富视其所与、达视其所举、穷视其所不为、贫视其所不取）",
+      "target": "zhiren-five-looks",
+      "kind": "sibling"
+    },
+    {
+      "id": "no-trigger-2",
+      "prompt": "公司上个月破格提拔了业绩最好但资历最浅的人，现在团队议论纷纷。这事会怎么收场？",
+      "expected_behavior": "不触发本卡——这是读一项已发生举措的连锁反应（名分/人/时滞），不是给一个人打分定档；应转 tongjian-decision-trace",
+      "target": "tongjian-decision-trace",
+      "kind": "sibling"
+    },
+    {
+      "id": "no-trigger-3",
+      "prompt": "智伯之亡反映了什么历史规律？给我讲讲这段。",
+      "expected_behavior": "不触发本卡——这是历史阐释/读后感题，不是把一个具体人选放进两栏打分的决策题；本卡不做历史点评、不讲规律、不翻案",
+      "target": null,
+      "kind": "decoy"
+    }
+  ]
+}

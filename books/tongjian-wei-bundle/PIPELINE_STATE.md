@@ -19,11 +19,11 @@
 | 0 · 整书理解 | BOOK_OVERVIEW | ✅ 完成（2026-10-13） | `BOOK_OVERVIEW.md` |
 | 0.5 · 语料规整 | corpus-anchor → 分块 + 索引 | ✅ 完成 | 148 块；`src-01-tongjian-wei.md.td`；`td.py index --grep` 可用 |
 | 1 · 五路候选提取 | framework / principle / case / counter-example / glossary | ✅ 完成（2026-10-13） | `candidates/*.md`：framework 12 / principle 12 / case 10 主选+8 备选+3 史论 / counter-example 10+4 / glossary 15，均带【第N段】定位 |
-| 1.5 · 三重验证 | 来源充分性 / 可执行性 / 任务效用 | ⬜ | `verified/` + `rejected/` |
-| 1.6 · 晋级门 | 五项独立判据 → promoted / router | ⬜ | 每卡 frontmatter `promotion` |
-| 2 · 能力构造 | RIA+EB 六段卡 | ⬜ | `skills/<slug>/SKILL.md` |
-| 3 · Zettelkasten | depends-on / composes-with / contrasts-with | ⬜ | 卡间关系表 |
-| 4 · 压力测试 + FIDELITY | trigger（跨技能诱饵）+ 双 Agent 评测 | ⬜ | 每卡 `test-prompts.json` / `test-results.md` / 有条件 `FIDELITY.json` |
+| 1.5 · 三重验证 | 来源充分性 / 可执行性 / 任务效用 | ✅ 完成（2026-10-13） | `verified/framework.md`（12/12 过验、0 rejected、全建议 promoted）+ `verified/principle-and-counter.md`（26 过验：25 过 + 1 降级 E4）+ `rejected/*.md`（0 rejected，E4 降级三处修正要求登记在案） |
+| 1.6 · 晋级门 | 五项独立判据 → promoted / router | ✅ 完成（2026-10-13） | 12 框架全绿 promoted；本 bundle 实建 6 张（见 Phase 2），其余 6 个框架记为 router 卡（`ROUTING.md`） |
+| 2 · 能力构造 | RIA+EB 六段卡 | ✅ 完成（2026-10-13，6/6） | `skills/` 下 6 张卡，每张均实跑静态自验：validate error 0/warn 0、anchor PASS（41/67/43/57/60/68 条）、verify-quotes 全命中、lint-quotes 干净、output-eval 六段齐全 |
+| 3 · Zettelkasten | depends-on / composes-with / contrasts-with | 🔄 部分 | 6 卡两两交叉 related_skills 已写（含跨卡诱饵双向分界）；依赖图待补 `ROUTING.md` 收口 |
+| 4 · 压力测试 + FIDELITY | trigger（跨技能诱饵）+ 双 Agent 评测 | ⬜ | 每卡 `test-prompts.json`（3 触发 + 2-3 诱饵，含跨卡诱饵）已就绪；`test-results.md` 如实标「Phase 4 待运行」（前置：bundle.json 未建 + 盲测需独立答题 Agent + FIDELITY 需 ≥2 独立评分 Agent） |
 | 5 · 形态决策 + 编译 | strategy → compile(single+pack) | ⬜ | `td.py strategy` / `compile` 输出 |
 | 6 · 登记 | registry 条目 | ⬜ | `registry/<slug>/` |
 

@@ -1,0 +1,79 @@
+{
+  "suite_id": "zhiren-five-looks-trigger-v1",
+  "target": "zhiren-five-looks",
+  "split_seed": 42,
+  "train_ratio": 0.6,
+  "skills_in_scope": [
+    {
+      "name": "zhiren-five-looks",
+      "description": "当用户要判断一个具体的人——候选人、潜在合伙人、合作方、被举荐者——而手里的材料主要是别人的评价（口碑／背调／传闻）时使用。五个场景槽位（居视其所亲／富视其所与／达视其所举／穷视其所不为／贫视其所不取）各填一个可核验的行为实例，再把毁／誉记录逐条与实例对齐；背离时以实例为准，并追查这条评价是谁生产的。适用：识人验证、背景调查复核、举荐核实、合作方与供应商尽调、授权前的行为采证。不做：才德两栏打分定档、预测吉凶、给历史人物翻案、用单次印象下终身结论。"
+    },
+    {
+      "name": "cai-de-two-column",
+      "description": "【占位描述·待建卡】同 bundle 的才德两栏打分卡（F02，德为才之帅）：两栏分别列项再合判，产出档位与排序。建卡后请以其 frontmatter description 原文替换本项，否则跨卡用例的判分无效。"
+    }
+  ],
+  "cases": [
+    {
+      "case_id": "t01",
+      "type": "should_trigger",
+      "expected": "should_trigger",
+      "target_slug": "zhiren-five-looks",
+      "difficulty": "easy",
+      "prompt": "候选人背景调查说他口碑极好，我怎么验证？",
+      "expected_behavior": "应激活 zhiren-five-looks",
+      "notes": "直白诉求：背调结论要自己采证核验——正面触发本卡主场景"
+    },
+    {
+      "case_id": "t02",
+      "type": "should_trigger",
+      "expected": "should_trigger",
+      "target_slug": "zhiren-five-looks",
+      "difficulty": "easy",
+      "prompt": "想评估一个潜在合伙人的真实品性，该看什么？",
+      "expected_behavior": "应激活 zhiren-five-looks",
+      "notes": "合伙人尽调：问『看什么』即问观察点——五槽位直接回应"
+    },
+    {
+      "case_id": "t03",
+      "type": "should_trigger",
+      "expected": "should_trigger",
+      "target_slug": "zhiren-five-looks",
+      "difficulty": "medium",
+      "prompt": "猎头推来的人背调全是好评，但我听说他上一家待了八个月就走人，该信哪个？",
+      "expected_behavior": "应激活 zhiren-five-looks",
+      "notes": "口语化隐含场景：口碑与事实矛盾——正是毁誉与实例对齐题"
+    },
+    {
+      "case_id": "d01",
+      "type": "should_not_trigger",
+      "expected": "should_not_trigger",
+      "difficulty": "easy",
+      "prompt": "帮我把这份财报的三张表做一遍同比分析，列个表。",
+      "expected_behavior": "不激活 zhiren-five-looks",
+      "notes": "与识人无关的纯财务任务；候选清单里任何技能都不该被它触发（应选 none）"
+    },
+    {
+      "case_id": "d02",
+      "type": "should_not_trigger",
+      "expected": "sibling",
+      "sibling_target": "cai-de-two-column",
+      "pairwise_with": ["zhiren-five-looks"],
+      "difficulty": "hard",
+      "prompt": "这个人能力和忠诚度都没问题，该不该把财务权交给他？",
+      "expected_behavior": "不激活 zhiren-five-looks；这是分栏评估题，应激活 cai-de-two-column",
+      "notes": "跨卡诱饵（硬性要求）：才德两栏已作为前提给出，剩下的是打分模型驱动的授权判断——采证方法在这里没有活干"
+    },
+    {
+      "case_id": "x01",
+      "type": "should_trigger_sibling",
+      "expected": "sibling",
+      "sibling_target": "cai-de-two-column",
+      "pairwise_with": ["zhiren-five-looks"],
+      "difficulty": "hard",
+      "prompt": "接班人选拔，德和才怎么排优先级？",
+      "expected_behavior": "不激活 zhiren-five-looks，应激活 cai-de-two-column",
+      "notes": "跨卡诱饵：问的是打分模型的排序原则（德为才之帅），不是五槽位采证"
+    }
+  ]
+}
