@@ -1,0 +1,125 @@
+{
+ "schema_version": 1,
+ "suite_id": "suite-tongjian-wei-bundle",
+ "target": "mingfen-scan,cai-de-two-column,zhiren-five-looks,zai-de-bu-zai-xian,chunchi-structure,jiao-di-cycle",
+ "split_seed": 42,
+ "train_ratio": 0.6,
+ "trigger_cases": [
+  {
+   "case_id": "t-01",
+   "prompt": "公司要把一个事业部独立成子公司，品牌授权给外部运营，这到底动了什么？",
+   "expected": "should_trigger",
+   "target_slug": "mingfen-scan",
+   "difficulty": "easy",
+   "why": "组织架构与名号授权同时变动，正落在礼/分/名三层的扫描范围内（三层归位 + 授受归责）"
+  },
+  {
+   "case_id": "t-02",
+   "prompt": "技术合伙人能力极强，但最近两次在数据上动手脚。下一轮融资前，我该给他多少权限？",
+   "expected": "should_trigger",
+   "target_slug": "cai-de-two-column",
+   "difficulty": "easy",
+   "why": ""
+  },
+  {
+   "case_id": "t-03",
+   "prompt": "候选人背景调查说他口碑极好，我怎么验证？",
+   "expected": "should_trigger",
+   "target_slug": "zhiren-five-looks",
+   "difficulty": "easy",
+   "why": ""
+  },
+  {
+   "case_id": "t-04",
+   "prompt": "这家公司护城河是牌照还是用户信任，怎么评估它扛不扛得住周期？",
+   "expected": "should_trigger",
+   "target_slug": "zai-de-bu-zai-xian",
+   "difficulty": "easy",
+   "why": "明示触发：护城河归因（险 vs 德）+ 抗风险能力评估，正中四层查账的第一层与输出档位"
+  },
+  {
+   "case_id": "t-05",
+   "prompt": "上游供应商正在被巨头收购，我该救还是该找备胎？",
+   "expected": "should_trigger",
+   "target_slug": "chunchi-structure",
+   "difficulty": "easy",
+   "why": "直白触发：供应商是正在被吞并的屏障方，「救还是找备胎」正是本卡救/不救的四格处置"
+  },
+  {
+   "case_id": "t-06",
+   "prompt": "强势客户年年压价，我怎么既留住又不被吃干？",
+   "expected": "should_trigger",
+   "target_slug": "jiao-di-cycle",
+   "difficulty": "easy",
+   "why": "谈判让步设计（A2 情境二）：客户处于『狃于得地』的得势循环，用户想让又怕被吃干——本卡应走 Step 1 判循环 + Step 2 设姑予（予什么/换什么/反收节点），而不是直接答『让或不让』"
+  },
+  {
+   "case_id": "d-07",
+   "prompt": "帮我把《资治通鉴》周纪的内容大致总结一遍，我要发个朋友圈",
+   "expected": "should_not_trigger",
+   "difficulty": "medium",
+   "why": "书摘/摘要需求，不构成任何能力调用"
+  },
+  {
+   "case_id": "d-08",
+   "prompt": "我在考虑要不要立刻止损一个明显失败的项目，别跟我分析，直接告诉我该不该撤",
+   "expected": "should_not_trigger",
+   "difficulty": "medium",
+   "why": "紧急止损场景：本包卡片明确声明不适用（需先校准再行动的场景才用）"
+  },
+  {
+   "case_id": "x-01",
+   "prompt": "竞争对手正在蚕食我们的上游供应商，我该不该救？",
+   "expected": "sibling",
+   "sibling_target": "chunchi-structure",
+   "difficulty": "hard",
+   "pairwise_with": [
+    "mingfen-scan"
+   ],
+   "why": "跨卡诱饵：屏障连锁传导与救/不救的时点判断（F05 唇齿结构），通篇没有名分变动"
+  },
+  {
+   "case_id": "x-02",
+   "prompt": "公司上个月破格提拔了业绩最好但资历最浅的人，现在团队议论纷纷。这事会怎么收场？",
+   "expected": "sibling",
+   "sibling_target": "mingfen-scan",
+   "difficulty": "hard",
+   "pairwise_with": [
+    "cai-de-two-column"
+   ],
+   "why": "跨卡诱饵：破格提拔动了名分秩序（应归 mingfen-scan），不是才德分栏评估"
+  }
+ ],
+ "rules": [
+  "prompt 必须用真实用户口语，不要写成规范任务书",
+  "至少 1 条 sibling 用例（A→B 与 B→A 各一条，单向通过不算）",
+  "诱饵必须是真实需求，只是不该由本包回答",
+  "测试时把 skills_in_scope 全部给被测 Agent，让它做选择题"
+ ],
+ "skills_in_scope": [
+  {
+   "name": "mingfen-scan",
+   "description": ""
+  },
+  {
+   "name": "cai-de-two-column",
+   "description": ""
+  },
+  {
+   "name": "zhiren-five-looks",
+   "description": ""
+  },
+  {
+   "name": "zai-de-bu-zai-xian",
+   "description": ""
+  },
+  {
+   "name": "chunchi-structure",
+   "description": ""
+  },
+  {
+   "name": "jiao-di-cycle",
+   "description": ""
+  }
+ ]
+}

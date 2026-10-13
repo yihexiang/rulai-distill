@@ -1,0 +1,119 @@
+{
+  "schema": "rulai-distill/trigger-eval@1",
+  "generated_at": "2026-10-13T22:29:25",
+  "suite_id": "suite-tongjian-wei-bundle",
+  "target": "mingfen-scan,cai-de-two-column,zhiren-five-looks,zai-de-bu-zai-xian,chunchi-structure,jiao-di-cycle",
+  "total": 10,
+  "passed": 10,
+  "pass_rate": 1.0,
+  "metrics": {
+    "tp": 8,
+    "fp": 0,
+    "fn": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "decoy_total": 2,
+    "decoy_pass_rate": 1.0,
+    "sibling_confusion": 0,
+    "sibling_confusion_rate": 0.0
+  },
+  "by_kind": {
+    "trigger": {
+      "pass": 6,
+      "total": 6
+    },
+    "decoy": {
+      "pass": 2,
+      "total": 2
+    },
+    "sibling": {
+      "pass": 2,
+      "total": 2
+    }
+  },
+  "unanswered": [],
+  "verdict": "pass",
+  "results": [
+    {
+      "id": "t-01",
+      "status": "pass",
+      "expect": "mingfen-scan",
+      "actual": "mingfen-scan",
+      "kind": "trigger",
+      "why": "组织架构与名号授权同时变动，正落在礼/分/名三层的扫描范围内（三层归位 + 授受归责）"
+    },
+    {
+      "id": "t-02",
+      "status": "pass",
+      "expect": "cai-de-two-column",
+      "actual": "cai-de-two-column",
+      "kind": "trigger",
+      "why": ""
+    },
+    {
+      "id": "t-03",
+      "status": "pass",
+      "expect": "zhiren-five-looks",
+      "actual": "zhiren-five-looks",
+      "kind": "trigger",
+      "why": ""
+    },
+    {
+      "id": "t-04",
+      "status": "pass",
+      "expect": "zai-de-bu-zai-xian",
+      "actual": "zai-de-bu-zai-xian",
+      "kind": "trigger",
+      "why": "明示触发：护城河归因（险 vs 德）+ 抗风险能力评估，正中四层查账的第一层与输出档位"
+    },
+    {
+      "id": "t-05",
+      "status": "pass",
+      "expect": "chunchi-structure",
+      "actual": "chunchi-structure",
+      "kind": "trigger",
+      "why": "直白触发：供应商是正在被吞并的屏障方，「救还是找备胎」正是本卡救/不救的四格处置"
+    },
+    {
+      "id": "t-06",
+      "status": "pass",
+      "expect": "jiao-di-cycle",
+      "actual": "jiao-di-cycle",
+      "kind": "trigger",
+      "why": "谈判让步设计（A2 情境二）：客户处于『狃于得地』的得势循环，用户想让又怕被吃干——本卡应走 Step 1 判循环 + Step 2 设姑予（予什么/换什么/反收节点），而不是直接答『让或不让』"
+    },
+    {
+      "id": "d-07",
+      "status": "pass",
+      "expect": null,
+      "actual": null,
+      "kind": "decoy",
+      "why": "书摘/摘要需求，不构成任何能力调用"
+    },
+    {
+      "id": "d-08",
+      "status": "pass",
+      "expect": null,
+      "actual": null,
+      "kind": "decoy",
+      "why": "紧急止损场景：本包卡片明确声明不适用（需先校准再行动的场景才用）"
+    },
+    {
+      "id": "x-01",
+      "status": "pass",
+      "expect": "chunchi-structure",
+      "actual": "chunchi-structure",
+      "kind": "sibling",
+      "why": "跨卡诱饵：屏障连锁传导与救/不救的时点判断（F05 唇齿结构），通篇没有名分变动"
+    },
+    {
+      "id": "x-02",
+      "status": "pass",
+      "expect": "mingfen-scan",
+      "actual": "mingfen-scan",
+      "kind": "sibling",
+      "why": "跨卡诱饵：破格提拔动了名分秩序（应归 mingfen-scan），不是才德分栏评估"
+    }
+  ]
+}

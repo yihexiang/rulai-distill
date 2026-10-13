@@ -408,6 +408,39 @@ def read_json(path: Path) -> dict:
         raise ToolError(f"JSON 解析失败：{path}", f"{e.msg}（行 {e.lineno} 列 {e.colno}）")
 
 
+def read_json_or_jsonl(path):
+    """读 JSON **或** JSONL（每行一个 JSON）。
+
+    缺陷 #81：`trigger prepare` 产出的 answers-template 是 **JSONL 列表**，
+    而 `read_json` 严格解析整个文件——它不会报"这是 JSONL"，而是报"第 2 行有
+    多余数据"，用户按提示流程走必然整批判「未作答」。
+    严格 JSON 的调用方继续用 `read_json`；摄入答案这类"可能是列表"的用本函数。
+    """
+    p = Path(path)
+    try:
+        txt = p.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        raise ToolError(f"文件不存在：{path}")
+    try:
+        return json.loads(txt)
+    except json.JSONDecodeError as e:
+        items = []
+        for lineno, line in enumerate(txt.splitlines(), 1):
+            s = line.strip()
+            if not s:
+                continue
+            try:
+                items.append(json.loads(s))
+            except json.JSONDecodeError as e2:
+                raise ToolError(
+                    f"JSON/JSONL 解析失败：{path}",
+                    f"第 {lineno} 行：{e2.msg}（既不是完整 JSON，也不是合法 JSONL）",
+                )
+        if items:
+            return items
+        raise ToolError(f"JSON 解析失败：{path}", f"{e.msg}（行 {e.lineno} 列 {e.colno}）")
+
+
 def write_json(path: Path, data) -> None:
     ensure_dir(Path(path).parent)
     Path(path).write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

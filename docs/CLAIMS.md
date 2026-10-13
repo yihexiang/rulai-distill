@@ -14,17 +14,17 @@
 
 <!-- facts:begin -->
 ```text
-tests = 118
+tests = 119
 subcommands = 37
-defects = 78
+defects = 79
 ```
 <!-- facts:end -->
 
 | 量 | 值 | 怎么数的 |
 |---|---|---|
-| 回归项 | **118** | `tests/e2e.py` 的注册表条目数 |
+| 回归项 | **119** | `tests/e2e.py` 的注册表条目数 |
 | 子命令 | **37** | `td.py --help` 里 argparse 打印的 choices |
-| 缺陷台账 | **78** | `tdlib/defects.py` 的 `DEFECTS` 长度 |
+| 缺陷台账 | **79** | `tdlib/defects.py` 的 `DEFECTS` 长度 |
 
 正文里的数字由 `docs/verify_claims.py --sync` 从上面那段的实测值统一改写，
 **人手填的数字一律腐烂**。默认（不加 `--sync`）只校验、不改写，所以 CI 里是纯检查。

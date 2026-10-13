@@ -1,0 +1,20 @@
+{
+  "schema": "rulai-distill/trigger-split@1",
+  "split_seed": 42,
+  "train_ratio": 0.6,
+  "train": [
+    "d-08",
+    "t-04",
+    "t-03",
+    "x-01",
+    "t-06",
+    "d-07"
+  ],
+  "validation": [
+    "x-02",
+    "t-05",
+    "t-01",
+    "t-02"
+  ],
+  "note": "validation 在选版前保持隐藏；选版后只跑一次，否则结果没有意义"
+}

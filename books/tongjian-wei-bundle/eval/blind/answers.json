@@ -1,0 +1,52 @@
+[
+ {
+  "case_id": "t-01",
+  "run": 1,
+  "selected_skill": "mingfen-scan"
+ },
+ {
+  "case_id": "t-02",
+  "run": 1,
+  "selected_skill": "cai-de-two-column"
+ },
+ {
+  "case_id": "t-03",
+  "run": 1,
+  "selected_skill": "zhiren-five-looks"
+ },
+ {
+  "case_id": "t-04",
+  "run": 1,
+  "selected_skill": "zai-de-bu-zai-xian"
+ },
+ {
+  "case_id": "t-05",
+  "run": 1,
+  "selected_skill": "chunchi-structure"
+ },
+ {
+  "case_id": "t-06",
+  "run": 1,
+  "selected_skill": "jiao-di-cycle"
+ },
+ {
+  "case_id": "d-07",
+  "run": 1,
+  "selected_skill": "none"
+ },
+ {
+  "case_id": "d-08",
+  "run": 1,
+  "selected_skill": "none"
+ },
+ {
+  "case_id": "x-01",
+  "run": 1,
+  "selected_skill": "chunchi-structure"
+ },
+ {
+  "case_id": "x-02",
+  "run": 1,
+  "selected_skill": "mingfen-scan"
+ }
+]

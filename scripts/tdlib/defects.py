@@ -620,6 +620,22 @@ DEFECTS = [
      "musk-mental-models 与第 2 视频卡无实体",
      ["t_readme_card_count_disclosure",
       "README「真实战绩」补跨仓库计数口径披露行"]),
+    ("td.py trigger score（答案格式口径，根因两层）",
+     "trigger score 吃不下 trigger prepare 自己产出的 JSONL 列表。"
+     "第一层：score 分支只做 {case_id: 值} 字典归一化；"
+     "第二层（更深）：摄入走 read_json 严格整文件解析，JSONL 连解析都过不去，"
+     "报的是「第 2 行 Extra data」——不提示这是 JSONL，用户无从自救",
+     "book-bundle Phase 4a 首次真实盲跑：按提示「把作答按格式填好后交给 score」走，"
+     "10 条答案整批判「未作答」（通过 0%）——工具文档流程自相矛盾，"
+     "把一次成功的盲测显示成彻底失败",
+     "prepare 的产物格式与 score 的摄入格式必须一致：①摄入改用 read_json_or_jsonl"
+     "（JSON 失败即按 JSONL 逐行解析，报错指名行号与两种格式）；"
+     "②列表 → {case_id: 值}（认 selected_skill/actual/choice 三种键名）",
+     "major", "tool_gap",
+     "2026-10-13 旗舰 book-bundle Phase 4a：盲答 10 条全部正确，score 却报 0/10 未作答；"
+     "补回归测试时发现只改归一化不够——read_json 先把整个 JSONL 拒了，"
+     "是「先写测试再改代码」抓到的第二层根因",
+     ["t_trigger_score_accepts_list"]),
 ]
 
 

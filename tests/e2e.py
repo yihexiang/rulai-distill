@@ -1781,6 +1781,46 @@ def t_parity_table_matches_upstream_mapping():
     assert not missing, f"MAPPING 声明但 vendored 缺失：{missing}"
 
 
+def t_trigger_score_accepts_list():
+    """缺陷 #81：trigger score 必须接受 trigger prepare 产出的 JSONL 列表格式。
+
+    `trigger prepare` 的 answers-template.jsonl 是 [{case_id, run, selected_skill}]，
+    而 score 分支原来只吃 {case_id: 值} 字典——按提示「填好后交给 score」走，
+    必然整批判「未作答」假失败（book-bundle Phase 4a 首次真实盲跑踩中）。
+    本测试钉住归一化行为：JSONL 列表喂进去必须正常判分、0 条未作答。
+    """
+    import json as _json
+    import subprocess as _sp
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        tdp = Path(td)
+        suite = {
+            "schema_version": 1, "suite_id": "t81", "target": "a", "split_seed": 1,
+            "train_ratio": 0.6,
+            "trigger_cases": [
+                {"case_id": "t-01", "prompt": "x", "expected": "should_trigger",
+                 "target_slug": "a"},
+                {"case_id": "d-02", "prompt": "y", "expected": "should_not_trigger",
+                 "why": "decoy"},
+            ],
+            "rules": [], "skills_in_scope": [{"name": "a", "description": "A"}],
+        }
+        (tdp / "suite.json").write_text(_json.dumps(suite, ensure_ascii=False), encoding="utf-8")
+        # trigger prepare 的真实产物形态：JSONL 列表（修前 score 拒吃 → 整类"未作答"）
+        (tdp / "ans.jsonl").write_text(
+            '{"case_id": "t-01", "run": 1, "selected_skill": "a"}\n'
+            '{"case_id": "d-02", "run": 1, "selected_skill": "none"}\n', encoding="utf-8")
+        r = _sp.run([sys.executable, str(ROOT / "scripts" / "td.py"), "trigger", "score",
+                     str(tdp / "suite.json"), str(tdp / "ans.jsonl"),
+                     "--out", str(tdp / "score.json")],
+                    capture_output=True, text=True)
+        assert r.returncode == 0, (
+            f"score 应接受 JSONL 列表（#81 修复），实际 exit={r.returncode}: {r.stdout[-300:]}")
+        rep = _json.loads((tdp / "score.json").read_text(encoding="utf-8"))
+        assert rep["unanswered"] == [], f"仍有未作答（#81 未修好）：{rep['unanswered']}"
+        assert rep["passed"] == rep["total"] == 2, rep
+
+
 def t_verify_quotes_direction():
     """缺陷 3/4/5：引语核验必须向后取窗、遇到下一个引用即停、编号用位置切片。
 
@@ -4494,6 +4534,7 @@ def main() -> int:
         ("跨仓库卡 n=3 诚实披露（bazi-paipan none 不外推）", t_utility_n3_crossrepo_caveat),
         ("README 真实卡计数披露跨仓库口径（#80）", t_readme_card_count_disclosure),
         ("parity 表与 upstream MAPPING 一致（D1）", t_parity_table_matches_upstream_mapping),
+        ("trigger score 接受 prepare 的 JSONL 列表（#81）", t_trigger_score_accepts_list),
         ("文档数字与代码不漂移", t_docs_no_drift),
         ("schema 与 --help 完整", t_schema_and_help),
         ("错误信息人话化", t_errors_are_human),

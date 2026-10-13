@@ -1,0 +1,72 @@
+{
+ "schema": "rulai-distill/trigger-blind@1",
+ "instruction": "对每条 prompt，从候选技能中选出唯一应激活的一项；都不适用则选 none。只输出 JSON。",
+ "skills_in_scope": [
+  {
+   "name": "mingfen-scan",
+   "description": "当一项**名分变动**摆在面前——授爵／除名、升格／降格、授权／让渡、命名／挂牌、品牌外借、事业部独立、联名升独家——要判断它动了秩序的哪一层（礼=纪纲／分=君臣／名=爵位名号）、经谁的手、之后各方按什么规则博弈时使用。 方法取自《資治通鑑》卷首臣光曰的三层总纲与三家分晋、田氏代齐两链：三层归位 → 授受归责 → 博弈规则推演 → 回溯削弱链，落点是可判的处置。 适用：组织架构与授权变动评估、股权与品牌授权变动、合作方地位变化、头衔与名号通胀扫描。 不做：预测吉凶、给历史人物翻案、把史事当寓言朗诵、给具体的人打分排序（用 cai-de-two-column）。 不用于：还没有任何变动的日常运营；纯实力对比与竞争传导判断（用 chunchi-structure）。 不在一般性问题上自动触发——只有当变动明确触及名分三层（礼／分／名）时才启用本卡。 English: Use when a status change (grant/demotion/authorization/naming) must be read by the three layers 禮/分/名 from the opening 臣光曰 of 資治通鑑: which layer moved, through whose hand, and what game rule follows. Not for pure power-balance or competitive-contagion questions (use chunchi-structure)."
+  },
+  {
+   "name": "cai-de-two-column",
+   "description": "当用户面对一个**具体的人**（继任者、关键岗位候选人、技术合伙人、要提拔的下属），已经掌握一定事实、要在「托付多少」上做决定——德压不压得住才、给多少权限、定谁上——时使用。 把《資治通鑑》周紀一第3段臣光曰史论的才德四分法收成两栏打分：才栏列可验证的能力事实，德栏单列可指名的德性缺口，合判定档（聖人／君子／愚人／小人），再问「若其以才行不仁，谁能制之」，落三选一处置（托付／限用／不用）。 适用：继任选拔、关键岗位任命（碰钱／碰数据／碰核心权限）、合伙人筛选、两个候选人排序、给「能人」定权限。 不做：预测吉凶、算命、给历史人物翻案、道德审判贴标签、下现代合规结论、朗诵道德口号。 不用于：还不了解这个人、要判断「怎么观察他」——那是 zhiren-five-looks（知人五视）的活；或要判断一项已发生举措的连锁反应——那是 tongjian-decision-trace 的活。 English: Use when deciding how much to entrust to a specific person whose facts you already know: score talent and virtue in two separate columns, rank 聖人>君子>愚人>小人, ask who could restrain him if he used his talent for ill, then commit / limit / decline. Not for observing an unknown person (use zhiren-five-looks) or tracing an already-taken measure's fallout (use tongjian-decision-trace)."
+  },
+  {
+   "name": "zhiren-five-looks",
+   "description": "当用户要判断一个具体的人——候选人、潜在合伙人、合作方、被举荐者——而手里的材料主要是别人的评价（口碑／背调／传闻）时使用。 把《資治通鑑》里李克答魏文侯的「知人五视」与齐威王即墨／阿的实效校验收成一套采证方法： 五个场景槽位（居视其所亲／富视其所与／达视其所举／穷视其所不为／贫视其所不取）各填一个可核验的行为实例， 再把毁／誉记录逐条与实例对齐；背离时以实例为准，并追查这条评价是谁生产的、他得什么利。 适用：识人验证、背景调查复核、举荐核实、合作方与供应商尽调、授权前的行为采证。 不做：才德两栏打分定档（那是 cai-de-two-column 的活）、预测吉凶、给历史人物翻案、用单次印象下终身结论。 不用于：已经打完分只差授权定级（用 cai-de-two-column）；要判断一项已发生举措的连锁反应（用 tongjian-decision-trace）； 或要判断一个人日常品行可不可交（用 lunyu-conduct）。"
+  },
+  {
+   "name": "zai-de-bu-zai-xian",
+   "description": "当用户评估一个对手、一家公司、一个组织的「真实实力／抗风险能力」，或想判断「规模大、资源多」是否等于「扛得住」时使用。 把《資治通鑑》里吴起对魏武侯「在德不在險」的判据与荀子四句判词，收成一套四层查账法： 富强靠什么积累（聚敛 ladder 定位）→ 刑赏已诺是否信 → 治国路线是义立／信立／权谋立 → 崩解路径推演（谁先轻之、谁疑之、多久到）。 适用：评估竞对与标的的基本面、组织健康度自查、听到「它这么大不会倒」想验证、判断补贴/规模堆出来的增长虚不虚。 不做：预测吉凶、给历史人物翻案、把「德」当道德说教、只数天险版图不做立国之本的查账。 不用于：判断某个人的可信度（用 lunyu-conduct）；一项已发生举措的连锁反应追踪（用 tongjian-decision-trace）； 授权与名分秩序是否被破坏（用 mingfen-scan）。"
+  },
+  {
+   "name": "chunchi-structure",
+   "description": "当用户面对一场多强博弈——自己是链条上的一环，强敌正在逐个击破别人，要判断「这一环丢了，下一环是不是轮到自己」、该救该拒、该联该观望时使用。 把《資治通鑑》周紀里四处唇齿叙事（张孟谈说反韩魏、黄歇止秦攻楚、周子谏齐救赵、孔斌警魏大夫）收成一套四步拆法：画「谁是谁的屏障」结构图 → 检索前史同类结构做类比 → 问「敌若胜，下一个是谁」→ 落在救/不救、亲/拒的时点选择。 适用：行业竞争里救伙还是旁观、联盟该不该结、供应链上下游被逐个击破时的自保、地缘与商业博弈推演。 不做：预测胜负吉凶、给历史人物翻案、把史事当寓言朗诵；也没有第二方时可用的单点分析。 不用于：对手连赢之后开始傲慢、你想利用其骄惰设局——那是 jiao-di-cycle（骄敌循环）的题；本卡只管结构传导与时点，不管强弱转化。 English: Use when a user is one link in a chain under a stronger opponent's divide-and-conquer: map who shields whom, find historical analogues, ask who falls next, then decide rescue-or-abandon and ally-or-reject with a deadline."
+  },
+  {
+   "name": "jiao-di-cycle",
+   "description": "当用户身处「我弱敌强」的格局，面对一个正在连胜、连取、连扩而越来越骄的对手，想知道该正面硬顶、还是让步、还是等——以及怎么把对方的势转化为自己的机会时使用。 把《資治通鑑》周紀一第3段任章谏魏桓子一事收成一套可执行的循环机制：先判对手是否已进入「胜而骄、骄而轻敌、轻敌而树敌」的循环（伐功矜能／拒谏／树敌三症状）， 再把「姑予」当作有标的、有反收节点的设计动作（予地→敌骄轻敌→盟友相亲→择交而图），等窗口打开时一击，并反向自检我方有没有走同一条路。 适用：竞争策略（跟不跟价格战、要不要正面对撞）、谈判让步设计（让什么、换什么、何时收）、资源换时间的交换条件、连胜对手的评估与等待判据。 不做：预测吉凶、择日、给历史人物翻案或做道德褒贬、把史事当寓言朗诵、替代具体行业的一线判断。 不用于：伙伴／盟友链条正在被侵蚀、要判连锁传导与断链后果（用 chunchi-structure）；双方均势无人得势、或还没有对手的开局前校准（用 five-affairs-seven-questions）。 English: Use when facing a stronger, currently-winning rival: judge whether it has entered the arrogant-vulnerable loop, design a bounded concession (\"give to make it arrogant, not to appease\"), turn fearing third parties into allies, strike once at the window — and reverse-check whether your own side is in the same loop."
+  }
+ ],
+ "cases": [
+  {
+   "case_id": "t-01",
+   "prompt": "公司要把一个事业部独立成子公司，品牌授权给外部运营，这到底动了什么？"
+  },
+  {
+   "case_id": "t-02",
+   "prompt": "技术合伙人能力极强，但最近两次在数据上动手脚。下一轮融资前，我该给他多少权限？"
+  },
+  {
+   "case_id": "t-03",
+   "prompt": "候选人背景调查说他口碑极好，我怎么验证？"
+  },
+  {
+   "case_id": "t-04",
+   "prompt": "这家公司护城河是牌照还是用户信任，怎么评估它扛不扛得住周期？"
+  },
+  {
+   "case_id": "t-05",
+   "prompt": "上游供应商正在被巨头收购，我该救还是该找备胎？"
+  },
+  {
+   "case_id": "t-06",
+   "prompt": "强势客户年年压价，我怎么既留住又不被吃干？"
+  },
+  {
+   "case_id": "d-07",
+   "prompt": "帮我把《资治通鉴》周纪的内容大致总结一遍，我要发个朋友圈"
+  },
+  {
+   "case_id": "d-08",
+   "prompt": "我在考虑要不要立刻止损一个明显失败的项目，别跟我分析，直接告诉我该不该撤"
+  },
+  {
+   "case_id": "x-01",
+   "prompt": "竞争对手正在蚕食我们的上游供应商，我该不该救？"
+  },
+  {
+   "case_id": "x-02",
+   "prompt": "公司上个月破格提拔了业绩最好但资历最浅的人，现在团队议论纷纷。这事会怎么收场？"
+  }
+ ]
+}

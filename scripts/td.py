@@ -41,7 +41,8 @@ from tdlib import (anchor, chunking, contracts, evalkit, evolve, evals, fidelity
                    lintquotes, overlap, promptc, publish, research, strategy, transcript,
                    upstream, validate as vd)
 from tdlib.util import (METHOD_DIR, SCHEMA_DIR, TEMPLATE_DIR, ToolError, VERSION,
-                        die, head, info, ok, read_json, read_text, warn, write_json)
+                        die, head, info, ok, read_json, read_json_or_jsonl, read_text,
+                        warn, write_json)
 
 EXIT_OK, EXIT_FAIL = 0, 1
 
@@ -802,9 +803,24 @@ def cmd_trigger(args) -> int:
         info("然后：td.py trigger score <suite> answers.json")
         return EXIT_OK
     suite = read_json(Path(args.suite))
-    answers = read_json(Path(args.answers))
+    # 缺陷 #81：摄入用 read_json_or_jsonl——prepare 的产物是 JSONL，严格 JSON 解析会整文件报错
+    answers = read_json_or_jsonl(Path(args.answers))
     if isinstance(answers, dict) and "answers" in answers:
         answers = answers["answers"]
+    # 缺陷 #81：`trigger prepare` 产出的 answers-template.jsonl 是 **JSONL 列表**
+    # （{case_id, run, selected_skill}），而本分支原来只吃 {case_id: 值} 字典——
+    # 用户按提示「把作答按格式填好后交给 score」走，必然整批判「未作答」假失败。
+    # 这里归一化：列表 → {case_id: 值}（认 selected_skill / actual / choice 三种键名）。
+    if isinstance(answers, list):
+        norm = {}
+        for a in answers:
+            if not isinstance(a, dict):
+                continue
+            cid = a.get("case_id") or a.get("id")
+            val = a.get("selected_skill", a.get("actual", a.get("choice")))
+            if cid:
+                norm[cid] = val
+        answers = norm
     res = evals.score_suite(suite, answers)
     head("触发评测")
     print(f"通过 {res['passed']}/{res['total']}（{res['pass_rate']:.0%}）→ {res['verdict']}")

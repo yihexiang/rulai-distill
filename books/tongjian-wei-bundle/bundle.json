@@ -1,0 +1,21 @@
+{
+  "schema": "rulai-distill/bundle/v1",
+  "version": "0.1.0",
+  "source": {
+    "material": "資治通鑑·周紀（维基文库公有领域，corpus/anchored/src-01-tongjian-wei.md）",
+    "material_type": "book",
+    "author": "司馬光",
+    "coverage": 100
+  },
+  "skills": [
+    {"slug": "mingfen-scan", "role": "promoted", "src": "skills/mingfen-scan/SKILL.md"},
+    {"slug": "cai-de-two-column", "role": "promoted", "src": "skills/cai-de-two-column/SKILL.md"},
+    {"slug": "zhiren-five-looks", "role": "promoted", "src": "skills/zhiren-five-looks/SKILL.md"},
+    {"slug": "zai-de-bu-zai-xian", "role": "promoted", "src": "skills/zai-de-bu-zai-xian/SKILL.md"},
+    {"slug": "chunchi-structure", "role": "promoted", "src": "skills/chunchi-structure/SKILL.md"},
+    {"slug": "jiao-di-cycle", "role": "promoted", "src": "skills/jiao-di-cycle/SKILL.md"}
+  ],
+  "publish": {
+    "allow_grade_below": "B"
+  }
+}
