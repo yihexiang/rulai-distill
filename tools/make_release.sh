@@ -57,6 +57,31 @@ fi
 # 打包**当前 HEAD**（不是工作区）——保证 zip 内容 == 那个 commit 可复算的内容
 git archive --format=zip --prefix="$NAME/" -o "$OUT/$NAME.zip" HEAD
 
+# ── BUILD_INFO：把「这个 zip 从哪个 commit 打出」写进包内（A2 · cangjie 有、rulai 补）
+# 为什么：外部用户拿到 zip 后无法回答「这是哪个 commit 的产物」；
+# 手改检测（published_hashes）只在发布目录内有效，zip 本身需要自描述。
+# 用 Python zipfile 追加（不依赖 zip 二进制；git archive 本身也不依赖）。
+STAGE="$OUT/.build-info-stage"
+mkdir -p "$STAGE/$NAME"
+{
+  echo "name: rulai-distill"
+  echo "version: $VERSION"
+  echo "commit: $(git rev-parse HEAD)"
+  echo "commit_date: $(git log -1 --format=%cI HEAD)"
+  echo "build_date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  echo "python_min: 3.10"
+  echo "vendor_sha256: $(shasum -a 256 scripts/vendor/VENDOR.sha256 | awk '{print $1}')"
+  echo "upstream: kangarooking/cangjie-skill v2.5.0（vendored 原样，见 scripts/vendor/PROVENANCE.md）"
+} > "$STAGE/$NAME/BUILD_INFO"
+python3 - "$OUT/$NAME.zip" "$STAGE/$NAME/BUILD_INFO" "$NAME/BUILD_INFO" <<'PY'
+import sys, zipfile
+zip_path, info_path, arcname = sys.argv[1], sys.argv[2], sys.argv[3]
+with zipfile.ZipFile(zip_path, "a") as z:
+    z.write(info_path, arcname)
+print("BUILD_INFO 已注入 zip：", arcname)
+PY
+rm -rf "$STAGE"
+
 # 关键：在产物目录里算 sha256 → 输出行是**相对文件名**，`shasum -c` 才能用
 cd "$OUT"
 shasum -a 256 "$NAME.zip" > "$NAME.zip.sha256"

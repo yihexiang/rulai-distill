@@ -474,7 +474,7 @@ python3 scripts/td.py overlap --new 新语料.md --old 旧语料.md
 
 ## 八、已知限制（诚实声明）
 
-1. **本项目处于 beta。** 机械可靠性已验证（117 项回归），
+1. **本项目处于 beta。** 机械可靠性已验证（118 项回归），
    但**它蒸馏产出的卡片尚未达到可发布质量**——这是两件不同的事，别混为一谈。
 2. **FIDELITY 的隔离是「结构独立」，不是「组织独立」。** 独立答题 Agent 与
    2 个独立评分 Agent 已在 **7 张卡**上真实跑通（`eval-kit`；含开放素材卡 `lunyu-conduct` 95/A），
@@ -508,3 +508,26 @@ python3 scripts/td.py overlap --new 新语料.md --old 旧语料.md
 另两个来源（`alchaincyf/nuwa-skill`、`Yeadon8888/cangjie-skill`，同为 MIT）
 只借鉴方法论、**未内置代码**。`scripts/vendor/VENDOR.sha256` 由 CI 强制校验，
 确保上游文件未被改动。
+
+---
+
+## 十、上游跟新（VENDOR bump SOP）
+
+vendored 的 `kangarooking/cangjie-skill` 会持续演进。跟新必须走这条固定路径，
+任何一步不过就停——**绝不手动改 vendored 文件**（C6：上游原样内置，要改去上游提 PR）。
+
+1. **fetch**：从上游仓库拉取目标版本的 `scripts/*.py` + `schemas/**` + `LICENSE`，
+   放进 `scripts/vendor/cangjie/`（覆盖同名文件）。
+2. **sha256 diff**：重新生成 `scripts/vendor/VENDOR.sha256`，`git diff` 逐文件看变动——
+   每个变动文件都要能在 `scripts/vendor/PROVENANCE.md` 的定位表里说清"这次升级带来了什么"。
+3. **contract-check**：跑 `python3 scripts/td.py contract list` 与 CI 的 contract-check，
+   确认上游契约（schemas / 缓存键 / run 目录结构）无不兼容变更。
+4. **全量回归**：托管 Python 跑 `python3 tests/e2e.py`（CI 双版本矩阵 3.10 + 3.13），
+   必须全绿——vendored 升级最先暴露的是适配层（`scripts/tdlib/`）的行为差异。
+5. **更新记录**：`PROVENANCE.md` 的取回时间/版本对应、`docs/parity-cangjie-*.md` 能力表
+   （新增能力要加行，`t_parity_table_matches_upstream_mapping` 会抓漏）、
+   行为有变就同步 README / CHANGELOG。
+6. **提交**：一个 commit 只做 vendored bump + 必要适配，消息写明上游版本跨度。
+
+**什么情况下不跟**：上游做了破坏性重构而本包用不到那部分 → 留在当前版本，
+在 parity 表写"不做+理由"。不为追新而追新。

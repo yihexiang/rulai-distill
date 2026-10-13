@@ -1743,6 +1743,32 @@ def t_readme_card_count_disclosure():
         assert marker in readme, f"README 须披露真实卡计数的跨仓库口径，缺标记：{marker}"
 
 
+def t_parity_table_matches_upstream_mapping():
+    """D1：parity 表（docs/parity-cangjie-2026-10-13.md）必须与 upstream.py 的 MAPPING 键集合一致。
+
+    防表腐烂：上游/vendored 增删能力而 parity 表没同步（或反之）→ 本测试即红。
+    """
+    import re as _re
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import upstream
+    mapping_keys = set(upstream.MAPPING.keys())
+    doc = (ROOT / "docs" / "parity-cangjie-2026-10-13.md").read_text(encoding="utf-8")
+    m = _re.search(r"## 二、.*?\n(.*?)(?=\n## )", doc, _re.S)
+    assert m, "parity 表缺『## 二、16 类能力逐行 parity』节"
+    rows = set()
+    for line in m.group(1).splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if cells and cells[0] in mapping_keys:
+            rows.add(cells[0])
+    assert rows == mapping_keys, (
+        f"parity 表工具行与 MAPPING 不一致：缺 {sorted(mapping_keys - rows)}；"
+        f"多 {sorted(rows - mapping_keys)}")
+    # 每个 MAPPING 键的 vendored 脚本必须真实存在（声称≠实际）
+    missing = [t for t in mapping_keys
+               if not (upstream.CANGJIE_DIR / upstream.MAPPING[t][0]).exists()]
+    assert not missing, f"MAPPING 声明但 vendored 缺失：{missing}"
+
+
 def t_verify_quotes_direction():
     """缺陷 3/4/5：引语核验必须向后取窗、遇到下一个引用即停、编号用位置切片。
 
@@ -4455,6 +4481,7 @@ def main() -> int:
         ("效用 n=3 重复实验完整 + locator_citation 恒为唯一区分信号", t_utility_n3_runs_complete),
         ("跨仓库卡 n=3 诚实披露（bazi-paipan none 不外推）", t_utility_n3_crossrepo_caveat),
         ("README 真实卡计数披露跨仓库口径（#80）", t_readme_card_count_disclosure),
+        ("parity 表与 upstream MAPPING 一致（D1）", t_parity_table_matches_upstream_mapping),
         ("文档数字与代码不漂移", t_docs_no_drift),
         ("schema 与 --help 完整", t_schema_and_help),
         ("错误信息人话化", t_errors_are_human),
