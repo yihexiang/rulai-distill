@@ -4695,6 +4695,7 @@ def main() -> int:
         ("eval-kit consistency 题须迁移型 + 打判别力标记（#82①）",
          t_evalkit_consistency_not_verbatim_description),
         ("eval-kit style 盲排须附对照样本（#82②）", t_evalkit_style_has_decoy_samples),
+        ("verify-quotes 识别 (src-XX §N) 段号标注（#84）", t_verify_quotes_srcxx_section_format),
         ("文档数字与代码不漂移", t_docs_no_drift),
         ("schema 与 --help 完整", t_schema_and_help),
         ("错误信息人话化", t_errors_are_human),
@@ -4725,6 +4726,40 @@ def main() -> int:
         return 1
     print("🎉 全部通过")
     return 0
+
+
+def t_verify_quotes_srcxx_section_format():
+    """缺陷 #84：verify-quotes 不识别人物卡用的 (src-XX §N) 行内段号标注。
+
+    人物卡（曾/王/郑）用 anchor 工具认可的 (src-XX §N) 行内定位格式标注引语，
+    但 verify-quotes 的定位词表只有【第N条】/[时间戳]/书类引用块，
+    对该格式返回「引用 0 个 / 核验 0 条」且只给一条软警告——
+    把「带有效定位、只是格式不被识别」的卡当成「完全无定位」的卡。
+    本测试钉住：**绝不允许在「有 (src-XX §N) 标注却核到 0 条」的状态出现静默绿**
+    （无警告、exit 0、verdict 通过）。当前诚实状态是「警告空集 / 指向 anchor」，
+    未来若改成识别 (src-XX §N) 并真核验，测试应顺势通过而不必改。
+    """
+    card = ROOT / "examples" / "persona-bundle" / "skills" / "zhengbanqiao-chidu" / "SKILL.md"
+    corpus = ROOT / "corpus" / "anchored" / "src-12-zhengbanqiao.md"
+    assert card.exists() and corpus.exists(), "人物卡或语料缺失，无法核验 #84"
+    # 夹具卡确实用了 (src-XX §N) 标注
+    card_text = card.read_text(encoding="utf-8")
+    assert "src-12 §" in card_text, "夹具卡须含 (src-XX §N) 标注"
+    out = subprocess.run(
+        [sys.executable, str(TD), "verify-quotes", str(card), str(corpus)],
+        capture_output=True, text=True)
+    log = out.stdout + out.stderr
+    # 不允许静默绿：核到 0 条的同时既没有空集警告、也没有指向 anchor 的指引。
+    verified_zero = ("核验 0 条" in log)
+    silent_green = verified_zero and ("空集假绿" not in log) and ("anchor" not in log)
+    assert not silent_green, (
+        "verify-quotes 对含 (src-XX §N) 标注的人物卡返回 0 核验却无警告/无 anchor 指引——"
+        "静默绿，#84 未修复")
+    # 当前诚实状态：必须至少出现空集警告或 anchor 指引（已修复的中间态），
+    # 或已能识别并核验（修复完成态）。二者居其一才算没退化为静默绿。
+    assert (("空集假绿" in log) or ("anchor" in log)
+            or ("核验 0 条" not in log)), \
+        "verify-quotes 对 (src-XX §N) 卡既未识别也未警告，覆盖缺口未留痕"
 
 
 if __name__ == "__main__":

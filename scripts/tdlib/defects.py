@@ -673,6 +673,20 @@ DEFECTS = [
      "建卡时的「全命中」记录并未逐条复核到这一层",
      ["t_cards_quotes_all_verifiable",
       "t_card_selfcheck_commands_recomputable"]),
+    ("verify-quotes 不识别 (src-XX §N) 行内段号标注",
+     "人物卡用 (src-XX §N) 行内段号标注引语（anchor 工具认可该格式），"
+     "verify-quotes 的定位词表只有【第N条】/[时间戳]/书类引用块，"
+     "对该格式返回「引用 0 个 / 核验 0 条」且只给一条软警告",
+     "把「带有效定位、只是格式不被识别」的卡当成「完全无定位」的卡；"
+     "三张人物卡（曾/王/郑）均触发，只能走 --allow-empty（警告本身说「不推荐」）"
+     "或改用 anchor 工具，两套工具定位词表不一致",
+     "verify-quotes 应识别 (src-XX §N) 行内段号，要么做段落级核验、"
+     "要么显式把卡片路由到 anchor 命令（当前警告已指向 anchor，识别缺失仍是覆盖缺口）",
+     "major", "eval_gap",
+     "2026-10-13 建三张人物卡实测：zhengbanqiao 卡 71 条 (src-12 §N) 标注引语，"
+     "anchor 全锚定，verify-quotes 却报「引用 0 个 / 核验 0 条」加空集警告；"
+     "已在各卡 test-results.md 显式留痕",
+     ["t_verify_quotes_srcxx_section_format"]),
 ]
 
 

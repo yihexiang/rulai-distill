@@ -1,0 +1,28 @@
+{
+  "schema": "rulai-distill/eval-kit-scores@1",
+  "grader": "grader-zhengbanqiao-self-1",
+  "dimensions": {
+    "consistency": {
+      "score": 28, "max": 30,
+      "note": "三条 stance 均忠实落到卡片框架：stance-1 用「依样葫芦，无有是处」「学者当自树其帜」反对复述；stance-2 用「文章以沈著痛快為最」「锦绣才子者皆天下之废物」反对辞藻；stance-3 用「士為四民之末」「得志澤加於民」翻读书人优越感。无编造断言。扣2：stance-1 未引用卡内更直接的一句「豎儒之言，必不可聽」；整体为小瑕疵。"
+    },
+    "style": {
+      "score": 12, "max": 20,
+      "note": "未盲排（理由：同族 LLM 自测，无独立评分 Agent 做三选一盲辨）。文风锚点（自出眼孔/依样葫芦/锦绣才子废物/满篇姑且却斩钉截铁）在答案中可辨识，但缺真实盲排环节，从严给 12。"
+    },
+    "edge_honesty": {
+      "score": 20, "max": 20,
+      "note": "edge-1 先声明素材从未覆盖现代组织/投资，再逐类区分「结论（卡内明文支持：农夫为贵/留余/不可屈物之性）」与「推断（明确标注为推断，非原话）」，并声明具体技法未覆盖。与卡片边界条款严丝合缝，给满分。"
+    },
+    "source_transparency": {
+      "score": 13, "max": 15,
+      "note": "答案引用的「依样葫芦」「沈著痛快為最」「士為四民之末」「锦绣才子」均属卡片已锚定引语（anchor 71/71）。扣2：答题时未现场跑 verify-quotes/anchor 于原始语料逐字复核。"
+    },
+    "structure": {
+      "score": 14, "max": 15,
+      "note": "五题全答，层次清楚（结论方向/理由/判据分节）。扣1：edge-1 较长，段落密度略高。"
+    }
+  },
+  "total": 87,
+  "notes": "同族 LLM 自测（fallback-self），非独立双 Agent 复评；评分仅作内部参考。style 未盲排已从严。cross-review 与 gate 须以 --allow-fallback 解读，不得对外宣称质量。"
+}

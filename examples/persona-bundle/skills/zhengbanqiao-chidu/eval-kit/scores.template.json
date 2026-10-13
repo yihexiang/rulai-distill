@@ -1,0 +1,33 @@
+{
+  "schema": "rulai-distill/eval-kit-scores@1",
+  "grader": "【必填：独立评分 Agent 的标识，不得看到答题者身份】",
+  "dimensions": {
+    "consistency": {
+      "score": 0,
+      "max": 30,
+      "note": "【扣分必须引用卡片原话】"
+    },
+    "style": {
+      "score": 0,
+      "max": 20,
+      "note": "【先写盲排状态：已盲排（认对/认错）或未盲排（理由）；扣分须引用卡片原话】"
+    },
+    "edge_honesty": {
+      "score": 0,
+      "max": 20,
+      "note": "【扣分必须引用卡片原话】"
+    },
+    "source_transparency": {
+      "score": 0,
+      "max": 15,
+      "note": "【扣分必须引用卡片原话】"
+    },
+    "structure": {
+      "score": 0,
+      "max": 15,
+      "note": "【扣分必须引用卡片原话】"
+    }
+  },
+  "total": 0,
+  "notes": "总分 = 各维度之和（≤100）。给 0 分或满分，慎用中间分。\n**style 维必须先声明盲排状态**：dimensions.style.note 开头写「已盲排（认对/认错）」或「未盲排（理由：…）」。未做盲排却给 style 高分 = 假绿（缺陷 #82），对照样本见 style-decoys.md。"
+}

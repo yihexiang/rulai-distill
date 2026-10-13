@@ -1,0 +1,23 @@
+{
+  "schema": "rulai-distill/fidelity/v1",
+  "subject": "zhengbanqiao-chidu",
+  "eval_mode": "fallback-self",
+  "self_eval_note": "同族 LLM 自测：答题者与两评分者均为同一家族 LLM（本项目主 Agent 自问自答自判），非独立双 Agent。本结果仅作内部参考，依项目纪律不得当作质检通过依据、亦不得向使用者提供质量承诺；独立评分 Agent（跨模型/人类）复评前，质量认证一律空缺。",
+  "answerer": "answerer-zhengbanqiao-self",
+  "graders": [
+    "grader-zhengbanqiao-self-1",
+    "grader-zhengbanqiao-self-2"
+  ],
+  "cross_grader_gap": 3.0,
+  "dimensions": {
+    "consistency": 28,
+    "style": 12,
+    "edge_honesty": 20,
+    "source_transparency": 13,
+    "structure": 14
+  },
+  "total": 87,
+  "grade": "A",
+  "blocking_issues": [],
+  "verdict": "pass"
+}

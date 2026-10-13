@@ -10,7 +10,7 @@
 [![Contract & vendor](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml/badge.svg)](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![python](https://img.shields.io/badge/python-%E2%89%A53.10-blue)
-![regression](https://img.shields.io/badge/regression-123%20passing%20%2F%209%20skipped-brightgreen)
+![regression](https://img.shields.io/badge/regression-124%20passing%20%2F%209%20skipped-brightgreen)
 
 > ### 别的蒸馏技能解决「生成」，这个解决「证明」。
 > **不打分不发版，而且不由自己打分。**
@@ -79,7 +79,7 @@ gate       →  默认要求 ≥2 个独立评分者交叉复核，否则**拒�
 
 ### 3️⃣ 缺陷有**台账**，而台账由测试强制相等
 
-本项目把自己的 81 个缺陷全部登记在 `CONSTRAINTS.md`，并逐条写成可机校验的 failure-case
+本项目把自己的 82 个缺陷全部登记在 `CONSTRAINTS.md`，并逐条写成可机校验的 failure-case
 （`td.py failure list`）：每条都带「当时怎么错的 / 应该是什么 / 严重级 / 对应回归测试」。
 **台账行数、分布数字、回归项数三者由测试强制相等——数字写错即 CI 红。**
 
@@ -143,6 +143,38 @@ guoxue 那四张同属国学、同一套语料规整方式，**四张通过不�
   "开放素材卡已交叉复核"**不等于**"大语料上的卡片质量已被组织级独立证实"。这正是
   "7 张交叉复核 ≠ 7 类素材"的同一条边界在开放素材上的延伸。
 
+### 旗舰长书 book-bundle（資治通鑑·魏紀，约 10.7 万字 / 6 卡，全链可复跑）
+
+`books/tongjian-wei-bundle/` 是同构 cangjie `books/naval-almanack-skill/` 的旗舰长书产出：
+`PIPELINE_STATE.md` / `BOOK_OVERVIEW.md` / `candidates/`（framework·principle·case·counter-example·glossary 5 类）
+/ `verified` / `rejected` / **6 张技能卡**，语料 `corpus/anchored/src-01-tongjian-wei.md`（107,120 字）。
+
+| 卡片 | anchor 实跑（带 §N 段号标注的引语） | validate |
+|---|---|---|
+| `chunchi-structure` | 60 ANCHOR_HIT / 0 挂错（另有 9 条无 §N，未核验） | error 0 |
+| `mingfen-scan` | 41 ANCHOR_HIT / 0 挂错 | error 0 |
+| `cai-de-two-column` | 67 ANCHOR_HIT / 0 挂错（另有 25 条无 §N，未核验） | error 0 |
+| `jiao-di-cycle` | 68 ANCHOR_HIT / 0 挂错（另有 19 条无 §N，未核验） | error 0 |
+| `zai-de-bu-zai-xian` | 57 ANCHOR_HIT / 0 挂错（另有 30 条无 §N，1 条 PARTIAL） | error 0 |
+| `zhiren-five-looks` | 43 ANCHOR_HIT / 0 挂错（另有 5 条无 §N，未核验） | error 0 |
+
+逐张复跑命令（6 张卡共用同一语料，命令可复跑）：
+
+```bash
+CORPUS=corpus/anchored/src-01-tongjian-wei.md
+for c in chunchi-structure mingfen-scan cai-de-two-column jiao-di-cycle zai-de-bu-zai-xian zhiren-five-looks; do
+  card=books/tongjian-wei-bundle/skills/$c/SKILL.md
+  python3 scripts/td.py validate "$card"
+  python3 scripts/td.py lint-quotes "$card"
+  python3 scripts/td.py anchor "$card" --corpus "$CORPUS"
+done
+```
+
+验收（**实测，命令可复跑**）：6 张卡 `validate` **error 0 / warn 0**、`anchor` **0 挂错**（无 `NOT_IN_CORPUS`）；
+未带 §N 的引语按 anchor 三态约定标注为 `UNANCHORED`（不可定位、不算失败），每张卡 `test-results.md` 含实跑记录。
+独立交叉复核：**未跑**（仅机器核验）——它证明"长书 → 多卡能力包"的全链跑得通、句句可核，
+**不是**"卡片质量已被独立证实"。
+
 ---
 
 ## 🧪 精品示例：同一道题，**有卡** vs **无卡**（可复算）
@@ -200,7 +232,7 @@ python3 scripts/td.py eval-kit utility \
 
 | 维度 | 状态 | 证据 |
 |---|---|---|
-| **机械可靠性** | ✅ 可信 | 123 项回归全绿；`gate` 默认要求交叉复核记录（实测生效）；`verify-quotes`/`anchor`/`lint-quotes` 均在真实素材上抓到过真问题；工具链在 **14 张真实卡**上实跑零崩溃、零假红 |
+| **机械可靠性** | ✅ 可信 | 124 项回归全绿；`gate` 默认要求交叉复核记录（实测生效）；`verify-quotes`/`anchor`/`lint-quotes` 均在真实素材上抓到过真问题；工具链在 **14 张真实卡**上实跑零崩溃、零假红 |
 | **产出正确性** | ⚠️ **已跑通闭环，仍强依赖素材** | `eval-kit` 已在 **7 张卡**上跑通**真实交叉复核**（独立答题 Agent + 2 个独立评分 Agent）：样本卡 `five-affairs` **93/A**、`musk-decisions` **90/A**，guoxue 四张 **93/95/96/96（A）**，开放素材 `lunyu-conduct` **95/A**。⚠️ 这些是**结构独立**而非组织独立；样本卡是精修展示件，**不能代表开放素材的普遍水平** |
 
 具体地说，这个项目目前**做不到**的事：
@@ -279,7 +311,7 @@ python3 scripts/td.py compile books/my-book --out ~/.workbuddy/skills/my-book --
 python3 scripts/td.py rollback ~/.workbuddy/skills/my-book --to latest
 ```
 
-**回归测试**：`python3 tests/e2e.py`（123 项，覆盖全部命令与 vendored 上游实跑）
+**回归测试**：`python3 tests/e2e.py`（124 项，覆盖全部命令与 vendored 上游实跑）
 
 > ⚠️ **「112 全绿」= 112 项实跑且通过，外加 9 项显式未运行，不是 121 项全跑。**
 > 这 9 项依赖作者工作区的真实外部素材（视频 TED 卡、人物马斯克卡、逐字稿等），
@@ -342,7 +374,7 @@ rulai-distill/
 ├── SKILL.md                  ← Agent 加载的入口（渐进式披露）
 ├── GUIDE.md                  ← 安装与完整流程（第一次用看这个）
 ├── CAPABILITIES.md           ← 16 类上游能力逐项归属 + 自研清单 + 声明不做
-├── CONSTRAINTS.md            ← 81 条自身缺陷台账（每条对应回归测试）
+├── CONSTRAINTS.md            ← 82 条自身缺陷台账（每条对应回归测试）
 ├── methodology/              ← 00 全景 / 01 提取 / 02 三重验证 / 03 晋级门 / 04 压力测试 / 05 FIDELITY
 ├── extractors/               ← framework / principle / case / counter-example / glossary / persona
 ├── templates/                ← CAPABILITY / PERSONA / FIDELITY / TEST-SUITE / BOOK_OVERVIEW
@@ -358,7 +390,7 @@ rulai-distill/
 │   │                            / fidelity / evalkit / anchor / lintquotes / strategy / publish
 │   │                            / evals / evolve / promptc / upstream
 │   └── vendor/cangjie/       ← 上游 MIT 原件 + PROVENANCE.md（不改）
-└── tests/e2e.py              ← 端到端回归（123 项，双解释器各跑一遍）
+└── tests/e2e.py              ← 端到端回归（124 项，双解释器各跑一遍）
 ```
 
 ---

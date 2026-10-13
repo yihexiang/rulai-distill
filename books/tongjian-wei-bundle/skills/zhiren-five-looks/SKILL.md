@@ -164,7 +164,7 @@ grep -o "使人視" src-01-tongjian-wei.md | wc -l   # → 2（均在 §48，同
 grep -c "毀言日至"        src-01-tongjian-wei.md   # → 1（§48）
 grep -c "譽言日至"        src-01-tongjian-wei.md   # → 1（§48）
 grep -c "出諸袖中而奏之"  src-01-tongjian-wei.md   # → 1（§3）
-grep -c "^【第"           src-01-tongjian-wei.md   # → 147 个段块
+grep -c "^【第"           src-01-tongjian-wei.md   # → 514 个段块
 ```
 
 **案例一 · 齐威王封即墨、烹阿（§48）**

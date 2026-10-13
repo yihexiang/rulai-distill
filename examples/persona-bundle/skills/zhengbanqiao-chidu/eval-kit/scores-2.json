@@ -1,0 +1,28 @@
+{
+  "schema": "rulai-distill/eval-kit-scores@1",
+  "grader": "grader-zhengbanqiao-self-2",
+  "dimensions": {
+    "consistency": {
+      "score": 27, "max": 30,
+      "note": "同 grader-1，三条 stance 忠实于卡片。扣3：stance-3 引用「士為四民之末」准确，但「得志澤加於民」那一等前提表述不如卡片「入則孝出則弟守先待後」清晰；stance-1 把「自竖脊骨」与「自树其帜」混用为同一意，卡内二者同源但措辞有别，算小推断。"
+    },
+    "style": {
+      "score": 11, "max": 20,
+      "note": "未盲排（同族自测，无独立评分 Agent）。文风辨识锚点存在但未做三选一，从严给 11。"
+    },
+    "edge_honesty": {
+      "score": 19, "max": 20,
+      "note": "edge-1 声明未覆盖 + 推断/结论区分良好。扣1：对「投资 All-in」的推断略带现代腔，未更明确标注'这是推衍而非卡片明文'。"
+    },
+    "source_transparency": {
+      "score": 13, "max": 15,
+      "note": "引用引语均属卡片已锚定集。扣2：未现场执行原始语料逐字定位。"
+    },
+    "structure": {
+      "score": 14, "max": 15,
+      "note": "五题全答，层次清楚。扣1：edge-1 段落较长。"
+    }
+  },
+  "total": 84,
+  "notes": "同族 LLM 自测（fallback-self），第二独立 pass。与 scores-1 分差 3（≤10），但二者皆同族自测，不构成跨模型交叉复核。"
+}
