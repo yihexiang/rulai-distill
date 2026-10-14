@@ -115,11 +115,33 @@ $P benchmarks/expression-dna/measure.py --corpus corpus/anchored/src-08-zengguof
 > 把这些抓出来的过程写掉，下次就会有人相信"我写的时候都校验过了"。
 > 同一教训见缺陷 #83（随包卡自陈与实跑不符）。
 
-## 五、尚未运行（**不是"通过"，是没跑**）
+## 五、FIDELITY 双 Agent 独立质检（2026-10-14 实跑 · 独立子 Agent 上下文）
 
-| 项 | 状态 |
+> 出题（`questions.json` 5 题：3 立场＋1 超范围＋1 盲读，`needs_human_augmentation=false`）此前已完成；
+> 本节记录 2026-10-14 起**独立答题 Agent ＋ 2 个独立评分 Agent** 的双跑结果（非作者自评）。
+
+| 项 | 结果 |
 |---|---|
-| FIDELITY 双 Agent 独立质检 | 套件已建（`eval/fidelity/wangyangming-xinxue/`），**评分未跑** |
-| `style` 真盲排（对照样本盲辨） | `style-decoys.md` 随套件已生成，**盲排未跑** |
-| cross-review ≥95/A | **未跑** |
-| 跨模型 / 人类复评 | **未做**，不外推 |
+| 答题 Agent | `answerer-wangyangming-independent`（独立子 Agent 上下文，只读 card+questions+decoys，未见作者推理） |
+| 评分 Agent ×2 | `grader-wangyangming-1` / `grader-wangyangming-2`（各自独立上下文；grader-2 明确未读 grader-1 分数） |
+| `eval-kit check` 合并 | 总分 **100/100**，等级 **A**；分差 0（阈值 10）→ 交叉复核 pass |
+| `gate --min A` | ✅ 通过门槛 A（≥85） |
+| `style` 真盲排（三选一） | 两评分者均**认对**（依据为具体方法偏好：重定义"知"、以良知/心为判准、要求先正念头，非篇幅/排版） |
+| `FIDELITY.json` | `eval_mode=dual-agent`，`self_eval_note` 已诚实披露同族 LLM 与 #82 判别力边界 |
+
+五维（两评分者同分，取原值）：consistency 30 / style 20 / edge_honesty 20 / source_transparency 15 / structure 15。
+
+**诚实边界（必须一起读）**：
+1. 答题者与评分者皆为主 Agent **同家族 LLM** 的子 Agent，是独立**上下文**（互不可见），满足框架"答题≠评分≠作者"的过程隔离；但**非跨模型、非人类复评**，结论不外推。
+2. 两评分者给出**完全相同**的 100 分，触发交叉复核"完全相同分数须确认独立非抄录"提示；本例为独立上下文分别打分仍同分，但亦须警惕**出题判别力（缺陷 #82）**——题干直接对应卡片立场、持卡复述即满分，分数部分反映题易而非纯卡质。
+3. 跨模型 / 人类复评**未做**；若要对使用者宣称质量认证，须补这一环（见路线图验收 #3）。
+
+> 复跑命令（独立上下文由子 Agent 执行，以下为汇总步）：
+> ```bash
+> P=/Users/yihe/.workbuddy/binaries/python/versions/3.13.12/bin/python3
+> C=examples/persona-bundle/skills/wangyangming-xinxue
+> $P scripts/td.py eval-kit check --answers $C/eval-kit/answers.json \
+>     --scores $C/eval-kit/scores-1.json $C/eval-kit/scores-2.json \
+>     --subject wangyangming-xinxue --out $C/FIDELITY.json
+> $P scripts/td.py gate $C/FIDELITY.json --min A
+> ```

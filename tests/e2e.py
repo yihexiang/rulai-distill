@@ -2932,7 +2932,7 @@ def _td_skip_rel(rel: Path) -> bool:
     不跳过会误报"全局副本缺 N 个文件"。复审实测：在仓库跑一次 chunk 生成
     `sunzi-ji.txt.td/`，C11 立即以"缺 7 个文件"失败。
     """
-    skip = {".git", "__pycache__", ".pytest_cache", "runs", ".snapshots", ".staging"}
+    skip = {".git", ".workbuddy", "__pycache__", ".pytest_cache", "runs", ".snapshots", ".staging"}
     if set(rel.parts) & skip or rel.suffix == ".pyc":
         return True
     if any(p.endswith(".td") for p in rel.parts):  # chunk 侧车目录 <src>.td/

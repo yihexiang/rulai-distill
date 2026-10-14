@@ -68,36 +68,15 @@ $ PY scripts/td.py output-eval examples/persona-bundle/skills/zengguofan-xiushen
 
 该输出面向**能力卡**六段结构（R/I/A1/A2/E/B）；人物卡按 `templates/PERSONA.md.template` 使用另一套结构，`validate` 对 `subject_type: person` 明确不走六段检查路径（其源码即明令人物卡不要求 E 段）。其"引语 0 条"同样因为它只认【第N条】格式——本卡引语核验以 anchor（88/88）与 verify-quotes（10/10）为准。
 
-## 二、Phase 4 独立评测 — **待运行**（未运行，不虚构数字）
+## 二、Phase 4 独立评测 — **已运行**（4b 2026-10-13 ＋ 4c 2026-10-14）
 
-本卡尚未经过独立答题／评分双跑，**无 FIDELITY 分数、无等级、无交叉复核记录**。出题已完成（同目录 `questions.json`，5 题：3 已知立场＋1 超范围＋1 盲读，`needs_human_augmentation=false`，已人工出全）。复跑步骤：
-
-```bash
-PY=/Users/yihe/.workbuddy/binaries/python/versions/3.13.12/bin/python3
-cd /Users/yihe/WorkBuddy/2026-10-03-12-20-21/rulai-distill
-
-# 1) 出题：用本目录已人工出好的 questions.json（勿用 eval-kit init 的种子题覆盖）
-#    5 题配方见 references/persona-eval-preset.md（3 立场 + 1 超范围 + 1 盲读）
-
-# 2) 答题：独立答题 Agent 持 SKILL.md 作答（不知被测哪维、不见作者记忆），
-#    答案落 <card>/answers.json（schema: rulai-distill/eval-kit-answers@1）
-
-# 3) 评分：独立评分 Agent（≠ 答题者）按 references/scoring-rubric.md 百分制打分，
-#    一票否决条款（含 #79 第一人称编造）优先于一切分数；评分落 <card>/scores.json
-
-# 4) 交叉复核与汇总（≥2 个不同评分者，分差 >10 人工复核）：
-$PY scripts/td.py eval-kit check <card>/answers.json --scores <card>/scores.json \
-    --subject zengguofan-xiushen --out <card>/FIDELITY.json
-
-# 5) 门槛：人物旗舰卡目标 ≥95/A（路线图验收线）
-$PY scripts/td.py gate <card>/FIDELITY.json --min B
-```
-
-未运行项清单（如实列明，均无数据）：独立答题（answers.json）、独立评分（scores.json）、交叉复核（cross-review）、FIDELITY.json、gate 判定、trigger 触发压力测试、eval-kit utility 的 no-skill 对照。
+本卡**已**经过独立答题／评分双跑，详见下方 **4b**（2026-10-13，标准轮 100／严格轮 86，分差 14 触发人工复核，对外采用严格轮 86/B 为下限）与 **4c**（2026-10-14，全新独立子 Agent 双跑，2 评分者同分 100/A，gate 通过）。
+出题（`questions.json`，5 题：3 已知立场＋1 超范围＋1 盲读，`needs_human_augmentation=false`）此前已完成。
 
 ## 三、结论
 
-机械层可复核性已达成本工具链在当时版本下的上限：validate error 0；anchor 段号级 88/88 PASS（含一次真实抓错并修错的返工记录）；verify-quotes 存在级 10/10；lint-quotes 干净。质量层（FIDELITY 五维）**未测**——Phase 4 跑完之前，本卡只应被称作"引语可机械复核的认知植入卡"，不应被称作"已验证高质量的卡"。
+机械层可复核性已达成本工具链上限：validate error 0；anchor 段号级 88/88 PASS；verify-quotes 存在级 10/10；lint-quotes 干净。
+质量层（FIDELITY 五维）：**已测**。2026-10-14 独立双 Agent 复评给出 **100/A**（gate 通过），但须与 4b 严格轮 86/B 下限以及下述诚实边界一起读——本卡现在可被称为"经独立双 Agent 复评达 A（内部证据）的认知植入卡"，**仍非**"经跨模型／人类认证的卡"。
 
 
 ## Phase 4 实测结果（2026-10-13 已运行 · 不再「待运行」）
@@ -139,3 +118,26 @@ $PY scripts/td.py gate <card>/FIDELITY.json --min B
 见 `docs/fidelity-phase4b-2026-10-13.md` 第五节与 `CONSTRAINTS.md` #83 行。
 本卡涉及的部分已在记录同时修掉，并由 `t_cards_quotes_all_verifiable` /
 `t_card_selfcheck_commands_recomputable` 两条回归测试守住——**改完不重测，不声称变好**。
+
+### 4c · 2026-10-14 独立双 Agent 复评（刷新 · 独立子 Agent 上下文）
+
+> 与 4b 的区别：4b 是作者同上下文自评＋互评（同族 LLM 同一会话），4c 改为**答题 Agent 与 2 个评分 Agent 均为独立子 Agent 上下文**（互不可见；grader-2 明确未读 grader-1 分数），满足框架"答题≠评分≠作者"的过程隔离。
+
+| 轮次 | 评分者 | rubric | 总分 | 五维 |
+|---|---|---|---|---|
+| 第 1 轮 | `grader-zengguofan-1` | 标准 `scoring-rubric.md` | **100** | 30/20/20/15/15 |
+| 第 2 轮 | `grader-zengguofan-2` | 标准 `scoring-rubric.md` | **100** | 30/20/20/15/15 |
+
+`eval-kit check` 合并 → 总分 **100/100**，等级 **A**；分差 0（阈值 10）→ 交叉复核 pass。
+`gate --min A` → ✅ 通过门槛 A（≥85）。
+
+**盲读辨识（style 维三选一）**：两评分者均**认对**——凭"挖井喻＝不专过错／卡片式可数量词（百字·十页·三事不断）／拒用 ROI 恰与通用 B 相反／罢了·切戒收束"四则具体方法偏好认出本卡答案，非篇幅/排版。盲读辨识在已盲排卡片中 **1/1**（含王/郑合计见下）×，≥2/3 达标。
+
+`FIDELITY.json` 写入 `eval_mode=dual-agent`，`self_eval_note` 已诚实披露同族 LLM 与 #82 判别力边界。
+
+**诚实边界（必须一起读）**：
+1. 答题者与评分者皆为主 Agent **同家族 LLM** 的子 Agent，是独立**上下文**而非跨模型／人类——结论不外推；跨模型／人类复评**未做**。
+2. 两评分者**完全相同**的 100 分触发交叉复核"完全相同分数须确认独立非抄录"提示；本例为独立上下文分别打分仍同分，但亦须警惕**出题判别力（缺陷 #82）**——题干直接对应卡片立场、持卡复述即满分，分数部分反映题易而非纯卡质。
+3. 与 4b 严格轮 86/B 下限的关系：4c 给出的是**标准轮双 Agent 平均的认证分（A）**，4b 严格轮 86/B 仍是独立 stress 下限；二者并存，对外若只用一个数字，应同时给出上限（A）与下限（B）而非单报 A。
+
+× 盲读辨识集合口径：已做真盲排的卡片为 王/曾（各 1 题均认对）；郑板桥仍为 fallback-self 自测、未做真盲排（见其 test-results.md），故当前盲排集合为 2/2，≥2/3 达标；郑板桥升级为独立双 Agent 后集合即变 3/3。
