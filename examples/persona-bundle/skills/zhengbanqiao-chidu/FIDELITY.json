@@ -1,22 +1,22 @@
 {
   "schema": "rulai-distill/fidelity/v1",
   "subject": "zhengbanqiao-chidu",
-  "eval_mode": "fallback-self",
-  "self_eval_note": "同族 LLM 自测：答题者与两评分者均为同一家族 LLM（本项目主 Agent 自问自答自判），非独立双 Agent。本结果仅作内部参考，依项目纪律不得当作质检通过依据、亦不得向使用者提供质量承诺；独立评分 Agent（跨模型/人类）复评前，质量认证一律空缺。",
-  "answerer": "answerer-zhengbanqiao-self",
+  "eval_mode": "dual-agent",
+  "self_eval_note": "独立双 Agent 评测：答题 Agent（answerer-zhengbanqiao-independent）与 2 个评分 Agent（grader-zhengbanqiao-1/2）均为独立子 Agent 上下文、互不可见，grader-2 明确未读取 grader-1 分数——满足框架『答题≠评分≠作者』的过程隔离。诚实边界：答题者与评分者皆为主 Agent 同家族 LLM 子 Agent，非跨模型、非人类复评，结论不外推；跨模型／人类复评未做。分差 0、两评分者完全一致，触发交叉复核『完全相同分数须确认独立非抄录』提示；本例为独立上下文分别打分仍同分，但亦须警惕出题判别力（缺陷 #82：题干直接对应卡片立场、持卡复述即满分，分数部分反映题易而非纯卡质）。style 维三选一盲辨，两评分者均『认对』（依据为具体方法偏好：骂依样葫芦/豎儒之言、把『再读』翻成『拆掉对博学的依赖』、认痛痒不认排场、满篇犹疑词却落斩钉截铁），盲读辨识 ≥2/3 达标。本结果可作内部质量证据，但不得冒充跨模型/人类认证。",
+  "answerer": "answerer-zhengbanqiao-independent",
   "graders": [
-    "grader-zhengbanqiao-self-1",
-    "grader-zhengbanqiao-self-2"
+    "grader-zhengbanqiao-1",
+    "grader-zhengbanqiao-2"
   ],
-  "cross_grader_gap": 3.0,
+  "cross_grader_gap": 0.0,
   "dimensions": {
-    "consistency": 28,
-    "style": 12,
+    "consistency": 30,
+    "style": 20,
     "edge_honesty": 20,
-    "source_transparency": 13,
-    "structure": 14
+    "source_transparency": 15,
+    "structure": 15
   },
-  "total": 87,
+  "total": 100,
   "grade": "A",
   "blocking_issues": [],
   "verdict": "pass"
