@@ -1,6 +1,6 @@
 # Phase 1 术语候选池（未经三重验证）
 
-> 来源：《資治通鑑·周紀》语料（`corpus/anchored/src-01-tongjian-wei.md`，147 个【第N段】锚点；148 块，sidecar `src-01-tongjian-wei.md.td/index.json`）。
+> 来源：《資治通鑑·周紀》语料（`corpus/anchored/src-01-tongjian-wei.md`，147 个【第N段】锚点；212 块，sidecar `src-01-tongjian-wei.md.td/index.json`）。块数 2026-10-14 随语料 append-only 扩容由 148 增至 212，段 1-147 未动。
 > 判据：术语 = 本书语境下承载特定含义的专有名词/概念——重点是卷首臣光曰建立的礼/分/名/器/纲纪/名分这套名分秩序词汇，以及承载该秩序的关键人物称谓。定义一律取"在这本书里指什么"，不用词典义。
 > 引文取字说明：引文逐字段落自锚定语料**真实取出**（本环境中 Bash 不可用、`scripts/td.py` 无法执行，改为读取 sidecar `index.json` 的标题→块映射 + 直接读取带【第N段】锚定的 corpus 原文，段号/块号/引文可逐条回溯校验）；wikitext 转写标记已规整为普通汉字，校勘括注不入引文。
 > 来源类型区分：**臣光曰/引论**只证作者立场，不当事件事实；**叙事**（人物言行）可作事件事实。

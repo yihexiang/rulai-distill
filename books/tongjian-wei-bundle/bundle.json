@@ -2,10 +2,10 @@
   "schema": "rulai-distill/bundle/v1",
   "version": "0.1.0",
   "source": {
-    "material": "資治通鑑·周紀（维基文库公有领域，corpus/anchored/src-01-tongjian-wei.md）",
+    "material": "資治通鑑·周紀·秦紀·漢紀（维基文库公有领域，corpus/anchored/src-01-tongjian-wei.md；本 bundle 提取范围为周紀段 1-147，段 148-514 的秦紀/漢紀未入卡）",
     "material_type": "book",
     "author": "司馬光",
-    "coverage": 100
+    "coverage": 28.6
   },
   "skills": [
     {"slug": "mingfen-scan", "role": "promoted", "src": "skills/mingfen-scan/SKILL.md"},

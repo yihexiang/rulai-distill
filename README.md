@@ -20,7 +20,8 @@
 ## 🆕 v1.10.0 · 这一版把「旗舰证据」补齐，也把自家评分器抓了个现行
 
 1. **旗舰长书 book-bundle 全链跑通**（`books/tongjian-wei-bundle/`）：
-   《資治通鑑·周紀》147 段 → 五路候选 → 三重验证 → **6 张 promoted 卡 + 6 个 router 卡 + ROUTING 表**；
+   《資治通鑑·周紀·秦紀·漢紀》514 段 → 五路候选 → 三重验证 → **6 张 promoted 卡 + 6 个 router 卡 + ROUTING 表**
+   （**提取范围为周紀段 1-147**；段 148-514 的秦紀/漢紀 未入卡，命名口径见下方 book-bundle 小节的注）；
    Phase 4a 触发评测 **10/10**（P=R=F1=1.0，诱饵 2/2、兄弟混淆 0）。
 2. **首张随包人物卡**（`examples/persona-bundle/skills/zengguofan-xiushen/`）：
    公版家书/日记素材，6 个心智模型**全部过三重验证**，降级/丢弃/合并如实留痕。
@@ -83,7 +84,7 @@ gate       →  默认要求 ≥2 个独立评分者交叉复核，否则**拒�
 （`td.py failure list`）：每条都带「当时怎么错的 / 应该是什么 / 严重级 / 对应回归测试」。
 **台账行数、分布数字、回归项数三者由测试强制相等——数字写错即 CI 红。**
 
-其中 56 条是**验证/度量工具自身**的错（占 78%）——这个比例本身就是结论：
+其中 63 条是**验证/度量工具自身**的错（占 77%）——这个比例本身就是结论：
 **错得最多的往往不是东西，是尺子。**
 
 ---
@@ -120,15 +121,17 @@ guoxue 那四张同属国学、同一套语料规整方式，**四张通过不�
 | 卡片 | 素材形态 | anchor 实跑 | 交叉复核 |
 |---|---|---|---|
 | `lunyu-conduct` | 論語 · 语录体 | 13 条 ANCHOR_HIT / 0 挂错 | ✅ **95 / A**（94/95，分差 1） |
-| `tongjian-decision-trace` | 資治通鑑 · 编年叙事史（5.9 万字） | 69 条 ANCHOR_HIT / 0 挂错 | **未跑**（仅机器核验） |
-| `mengzi-refutation` | 孟子 · 对话体辩说 | 34 条 ANCHOR_HIT / 0 挂错 | **未跑**（仅机器核验） |
-| `hanfei-upward-advice` | 韓非子 · 论说体 | 86 条 ANCHOR_HIT / 0 挂错 | **未跑**（仅机器核验） |
-| `xunzi-learning-order` | 荀子·勸學篇 · 论说体短篇 | 94 条 ANCHOR_HIT / 0 挂错 | **未跑**（仅机器核验） |
+| `tongjian-decision-trace` | 資治通鑑 · 编年叙事史（5.9 万字） | 69 条 ANCHOR_HIT / 0 挂错 | ✅ **100 / A**（双评分均 100，gap 0）⚠️ 同分，按质量下限 |
+| `mengzi-refutation` | 孟子 · 对话体辩说 | 34 条 ANCHOR_HIT / 0 挂错 | ✅ **98 / A**（99 / 98，分差 1） |
+| `hanfei-upward-advice` | 韓非子 · 论说体 | 86 条 ANCHOR_HIT / 0 挂错 | ✅ **100 / A**（双评分均 100，gap 0）⚠️ 同分，按质量下限 |
+| `xunzi-learning-order` | 荀子·勸學篇 · 论说体短篇 | 94 条 ANCHOR_HIT / 0 挂错 | ✅ **100 / A**（双评分均 100，gap 0）⚠️ 同分，按质量下限 |
 
 **5 张卡覆盖 4 类文本形态、合计 239 段 / 91,338 字、296 条带段号引语全部锚定成功且 0 挂错**
 （逐张命令可复跑，`t_open_material_distribution` 会把报告表格里的数字与实跑**逐张对账**）。
-⚠️ 其中只有 `lunyu-conduct` 走过独立交叉复核，其余 4 张**只有机器核验**——
-它们证明的是"管线跑得通、句句可核"，**不是"卡片质量已被独立证实"**。
+⚠️ 5 张**均已跑独立交叉复核**（`lunyu-conduct` 95/A、`mengzi-refutation` 98/A，
+`tongjian-decision-trace` / `hanfei-upward-advice` / `xunzi-learning-order` 100/A；后三张双评分者**同分 100**，
+按**质量下限**对待）——它们证明的是"管线跑得通、句句可核、独立评分未查出偏离"，
+**不是"已被组织级独立证实"**（评分者为同族 LLM，人类复评仍未做）。
 
 分布明细、复跑命令与边界见 [`docs/open-material-distribution-2026-10-10.md`](./docs/open-material-distribution-2026-10-10.md)；
 规模证据见 [`docs/scale-evidence-open-material-2026-10-10.md`](./docs/scale-evidence-open-material-2026-10-10.md)。
@@ -142,12 +145,19 @@ guoxue 那四张同属国学、同一套语料规整方式，**四张通过不�
   同一运行环境的不同会话完成——**结构独立 ≠ 组织独立**，答题者与评分者没有跨模型/跨机构隔离。
   "开放素材卡已交叉复核"**不等于**"大语料上的卡片质量已被组织级独立证实"。这正是
   "7 张交叉复核 ≠ 7 类素材"的同一条边界在开放素材上的延伸。
+  （2026-10-14 起人物卡三张已有 DeepSeek 跨模型复评，台账 `docs/independent-recheck/`；**开放素材这 5 张尚无跨模型复评**。）
 
-### 旗舰长书 book-bundle（資治通鑑·魏紀，约 10.7 万字 / 6 卡，全链可复跑）
+### 旗舰长书 book-bundle（資治通鑑·周紀·秦紀·漢紀，约 10.7 万字 / 提取范围周紀 147 段 / 6 卡，全链可复跑）
 
 `books/tongjian-wei-bundle/` 是同构 cangjie `books/naval-almanack-skill/` 的旗舰长书产出：
 `PIPELINE_STATE.md` / `BOOK_OVERVIEW.md` / `candidates/`（framework·principle·case·counter-example·glossary 5 类）
-/ `verified` / `rejected` / **6 张技能卡**，语料 `corpus/anchored/src-01-tongjian-wei.md`（107,120 字）。
+/ `verified` / `rejected` / **6 张技能卡**，语料 `corpus/anchored/src-01-tongjian-wei.md`（107,120 字 / **514 段**）。
+
+> ⚠️ **命名口径（2026-10-14 校正，与缺陷 #80 同源）**：目录名 `tongjian-wei-bundle` 与语料文件名
+> `src-01-tongjian-wei.md` 沿用历史命名 `wei`，但**语料实际内容是《資治通鑑·周紀·秦紀·漢紀》**
+> （维基文库卷001–009，语料标题行即此），**并非魏紀**。本 bundle 的**提取范围是周紀段 1-147**
+> （段 148-514 为秦紀一至漢紀一，2026-10-14 append-only 扩入，**未入卡**）。改目录/文件名会牵动
+> 全部路径与回归测试，故**保留旧名并在此披露**，不静默沿用错误描述。
 
 | 卡片 | anchor 实跑（带 §N 段号标注的引语） | validate |
 |---|---|---|
@@ -172,8 +182,12 @@ done
 
 验收（**实测，命令可复跑**）：6 张卡 `validate` **error 0 / warn 0**、`anchor` **0 挂错**（无 `NOT_IN_CORPUS`）；
 未带 §N 的引语按 anchor 三态约定标注为 `UNANCHORED`（不可定位、不算失败），每张卡 `test-results.md` 含实跑记录。
-独立交叉复核：**未跑**（仅机器核验）——它证明"长书 → 多卡能力包"的全链跑得通、句句可核，
-**不是**"卡片质量已被独立证实"。
+独立交叉复核：**已跑，但未过门禁**——Phase 4b（2026-10-13）对本 bundle 6 卡 + 曾国藩共 7 张跑了双 Agent
+质检：标准 rubric 轮 5 个满分 100，换严格 rubric 掉到 **76–86/B**，`gate` 全部未过，结果与逐卡依据公开在
+[`docs/fidelity-phase4b-2026-10-13.md`](./docs/fidelity-phase4b-2026-10-13.md)
+（产物 `books/tongjian-wei-bundle/eval/fidelity/*/FIDELITY.rejected.json`）。按纪律**只采用严格轮 B 作为质量下限**。
+这证明"长书 → 多卡能力包"的全链跑得通、句句可核，**不是**"卡片质量已被独立证实"——
+**不得与上面 14 张已过门禁的卡并排宣称 A**。
 
 ---
 
@@ -233,7 +247,7 @@ python3 scripts/td.py eval-kit utility \
 | 维度 | 状态 | 证据 |
 |---|---|---|
 | **机械可靠性** | ✅ 可信 | 125 项回归全绿；`gate` 默认要求交叉复核记录（实测生效）；`verify-quotes`/`anchor`/`lint-quotes` 均在真实素材上抓到过真问题；工具链在 **14 张真实卡**上实跑零崩溃、零假红 |
-| **产出正确性** | ⚠️ **已跑通闭环，仍强依赖素材** | `eval-kit` 已在 **7 张卡**上跑通**真实交叉复核**（独立答题 Agent + 2 个独立评分 Agent）：样本卡 `five-affairs` **93/A**、`musk-decisions` **90/A**，guoxue 四张 **93/95/96/96（A）**，开放素材 `lunyu-conduct` **95/A**。⚠️ 这些是**结构独立**而非组织独立（3 张人物卡另有 DeepSeek 跨模型复评，台账见 `docs/independent-recheck/`）；样本卡是精修展示件，**不能代表开放素材的普遍水平** |
+| **产出正确性** | ⚠️ **已跑通闭环，仍强依赖素材** | `eval-kit` 已在 **14 张卡**上跑通**真实交叉复核**（独立答题 Agent + 2 个独立评分 Agent）：样本卡 `five-affairs` **93/A**、`musk-decisions` **90/A**，guoxue 四张 **93/95/96/96（A）**，开放素材 `lunyu-conduct` **95/A** / `mengzi-refutation` **98/A**，视频卡三张 **100/A**，另 `tongjian-decision-trace` / `hanfei-upward-advice` / `xunzi-learning-order` **100/A**（视频卡与后三张均双评分同分 100，按**质量下限**对待）。⚠️ 这些是**结构独立**而非组织独立（3 张人物卡另有 DeepSeek 跨模型复评，台账见 `docs/independent-recheck/`）；样本卡是精修展示件，**不能代表开放素材的普遍水平**；book-bundle 的 6 张 + 曾国藩在 Phase 4b 严格轮仅 **76–86/B 未过门禁**，**不计入这 14 张** |
 
 具体地说，这个项目目前**做不到**的事：
 
@@ -243,10 +257,12 @@ python3 scripts/td.py eval-kit utility \
 2. **独立性只在「结构」层面成立，不是「组织」层面。** 这条已被真实跑通（`eval-kit`：独立答题子 Agent +
    2 个独立评分子 Agent），但它仍是同一台机器上的子 Agent —— **没有第二个人复评**，
    且子 Agent 落盘在长任务下仍不稳定（历史实测派 4 次仅 1 次可靠落盘）。
-3. **开放素材已有 5 张卡，但只有 1 张过了交叉复核。** 分布（≥5 例、4 类文本形态）
-   已建立（見上表），`anchor` 合计 **296 条引语 0 挂错**；但交叉复核仍只有
-   **7 张**（6 张封闭 / 半封闭 + 1 张开放公版卡 `lunyu-conduct` 95/A），
-   其余 4 张开放素材卡**只有机器核验，没有 FIDELITY、没有独立评分、没有效用对照**。
+3. **交叉复核覆盖面是 14 张，开放素材 5 张已全部过交叉复核。** 分布（≥5 例、4 类文本形态）
+   已建立（見上表），`anchor` 合计 **296 条引语 0 挂错**；开放素材 5 张的 FIDELITY 为
+   `lunyu-conduct` 95/A、`mengzi-refutation` 98/A、`tongjian-decision-trace` /
+   `hanfei-upward-advice` / `xunzi-learning-order` 100/A（后三张双评分同分 100，按质量下限对待），
+   与 7 张封闭 / 半封闭卡合计 **14 张**；**book-bundle 的 6 张与曾国藩**在 Phase 4b 严格轮
+   只到 **76–86/B、未过门禁**，**不得与这 14 张并排宣称 A**。
    **14 张真实卡**跑工具链零崩溃，但那证明的是「工具能跑」，**不是「卡片都好」**。
 
 **它现在适合当什么用**：流程骨架与门禁参考 —— 校验、门禁、快照、回滚、契约化产物这一层是扎实的，可以直接复用。

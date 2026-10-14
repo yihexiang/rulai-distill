@@ -1,6 +1,6 @@
 # Phase 1 案例候选池（未经三重验证）
 
-> 来源：《資治通鑑·周紀》语料（corpus/anchored/src-01-tongjian-wei.md，148 块，sidecar 索引 src-01-tongjian-wei.md.td）。
+> 来源：《資治通鑑·周紀》语料（corpus/anchored/src-01-tongjian-wei.md，212 块，sidecar 索引 src-01-tongjian-wei.md.td）。本候选池提取自**周紀段 1-147**；语料 2026-10-14 已 append-only 扩容至 514 段（秦紀/漢紀），块数由 148 增至 212，**段 1-147 字节未动，本文件引语与段号不受影响**。
 > 检索方式说明：本机 Bash/td.py CLI 与 Grep 工具本次不可用（命令被 SIGTERM / 检索超时），改用 Read 直读 sidecar 的 index.json + chunks.jsonl + 源文件完成定位；所有引语均从上述文件真实取出，未凭记忆编写。段号定位采用语料自带的【第N段】标记（与 td.py anchor 口径一致），块号（ck-XXXX）取自 index.json 的 headings 映射。
 > 判据：三要素齐全（谁 / 面对什么取舍 / 结果如何）、后果明确（成败兴亡有叙事交代）、可被后人类比。教训提炼属后续 Phase，本文件只把事实挖全。
 > 史论（臣光曰 / 太史公曰）一律不混入事实，集中列于文末「史论单独标注」。
