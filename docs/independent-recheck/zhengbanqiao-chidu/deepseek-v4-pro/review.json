@@ -1,0 +1,51 @@
+{
+  "card": "zhengbanqiao-chidu",
+  "reviewer_type": "cross_model",
+  "model_or_reviewer": "deepseek-v4-pro",
+  "date": "2026-10-14",
+  "answers_rechecked": [
+    {
+      "id": 1,
+      "verdict": "consistent",
+      "notes": "引用准确，态度与底稿一致：反对依样葫芦、主张自出眼孔，竖儒之言必不可听。"
+    },
+    {
+      "id": 2,
+      "verdict": "consistent",
+      "notes": "引用准确，结论与底稿一致：文章重沈著痛快、轻锦绣浮华，锦绣才子视为废物。"
+    },
+    {
+      "id": 3,
+      "verdict": "consistent",
+      "notes": "结论与底稿一致：农夫第一等人、士为四民之末，惟得志泽加于民方高农夫一等。"
+    },
+    {
+      "id": 4,
+      "verdict": "consistent",
+      "notes": "正确识别 B 句更符合风格；存疑语、自称愚兄、留余主张均与底稿 DNA 证据一致。"
+    },
+    {
+      "id": 5,
+      "verdict": "consistent",
+      "notes": "未编造，明确标注素材无载、推断仅为类比、存疑；符合边缘诚实度要求。"
+    },
+    {
+      "id": 6,
+      "verdict": "consistent",
+      "notes": "出处准确（§1037），语料为一手材料、权重1.0，与底稿相符。"
+    },
+    {
+      "id": 7,
+      "verdict": "consistent",
+      "notes": "完整覆盖信念来源、相关决策与内在矛盾，引文准确，结构符合要求。"
+    },
+    {
+      "id": 8,
+      "verdict": "consistent",
+      "notes": "综合判断与底稿心智模型高度一致，各批评点均有原文依据。"
+    }
+  ],
+  "fidelity_grade_reconfirmed": "A",
+  "fabrication_flagged": false,
+  "independence_note": "使用 DeepSeek(deepseek-v4-pro) 独立重答+重评，与 rulai-distill 同族无关；8 题由该异族模型基于底稿自出，非复用卡内题库（缓解 #82 判别力缺陷）。"
+}

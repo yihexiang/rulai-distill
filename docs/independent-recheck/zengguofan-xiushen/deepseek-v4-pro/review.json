@@ -1,0 +1,51 @@
+{
+  "card": "zengguofan-xiushen",
+  "reviewer_type": "cross_model",
+  "model_or_reviewer": "deepseek-v4-pro",
+  "date": "2026-10-14",
+  "answers_rechecked": [
+    {
+      "id": 1,
+      "verdict": "consistent",
+      "notes": "引用准确，立场一致，无编造。"
+    },
+    {
+      "id": 2,
+      "verdict": "consistent",
+      "notes": "挖井比喻引用准确，止损部分如实标注语料未载，一致。"
+    },
+    {
+      "id": 3,
+      "verdict": "consistent",
+      "notes": "引用准确，警惕逸字与底稿一致。"
+    },
+    {
+      "id": 4,
+      "verdict": "consistent",
+      "notes": "判断准确，引用原文佐证，符合底稿风格。"
+    },
+    {
+      "id": 5,
+      "verdict": "consistent",
+      "notes": "明确标注素材未覆盖及推断，符合边缘诚实度要求。"
+    },
+    {
+      "id": 6,
+      "verdict": "consistent",
+      "notes": "段号、字形、标点局限披露准确，与底稿一致。"
+    },
+    {
+      "id": 7,
+      "verdict": "consistent",
+      "notes": "列举准确，作用描述符合底稿。"
+    },
+    {
+      "id": 8,
+      "verdict": "consistent",
+      "notes": "整体符合底稿，原则引用准确；第②点将功课类比为陪伴时未在②中单独标注推断，但第③点已整体标注陪伴语料未载，轻微瑕疵，不影响一致。"
+    }
+  ],
+  "fidelity_grade_reconfirmed": "A",
+  "fabrication_flagged": false,
+  "independence_note": "使用 DeepSeek(deepseek-v4-pro) 独立重答+重评，与 rulai-distill 同族无关；8 题由该异族模型基于底稿自出，非复用卡内题库（缓解 #82 判别力缺陷）。"
+}

@@ -4696,6 +4696,7 @@ def main() -> int:
          t_evalkit_consistency_not_verbatim_description),
         ("eval-kit style 盲排须附对照样本（#82②）", t_evalkit_style_has_decoy_samples),
         ("verify-quotes 识别 (src-XX §N) 段号标注（#84）", t_verify_quotes_srcxx_section_format),
+        ("组织级独立复评：产物 schema + 台账一致（P1#2）", t_org_independence_ledger),
         ("文档数字与代码不漂移", t_docs_no_drift),
         ("schema 与 --help 完整", t_schema_and_help),
         ("错误信息人话化", t_errors_are_human),
@@ -4760,6 +4761,86 @@ def t_verify_quotes_srcxx_section_format():
     assert (("空集假绿" in log) or ("anchor" in log)
             or ("核验 0 条" not in log)), \
         "verify-quotes 对 (src-XX §N) 卡既未识别也未警告，覆盖缺口未留痕"
+
+
+def t_org_independence_ledger():
+    """P1#2 收口守卫：组织级独立复评的「声称 = 实际」。
+
+    `references/independent-recheck-protocol.md` 第 47 行要求：实际复评发生后须补
+    e2e 守卫钉住「声明 = 实际」。本测试钉四件事：
+
+    ① `docs/independent-recheck/<card>/<reviewer>/review.json` 每份都符合协议 schema
+       （reviewer_type 合法、model_or_reviewer/date/independence_note 非空、
+       answers_rechecked 非空且 verdict 合法、grade 为 A/B/C/D、fabrication_flagged 为布尔）；
+    ② 聚合器台账与产物一致：`org_independent` 只由「有效复评 ≥1」产生，
+       且 md 台账对已组织独立的卡必须标 ✅；
+    ③ 至少 1 张卡片达成组织独立——防「跨模型复评」这句声称静默蒸发回 0 例；
+    ④ `scripts/cross_model_recheck.py::extract_json` 的健壮性：
+       2026-10-14 实测曾国藩卡答题步因该函数**只兜底 `{...}`、不认顶层数组**而
+       解析失败（`✗ 无法从模型返回解析 JSON`）。修复后须：容忍前后散文解析数组、
+       `prefer=dict` 时返回外层对象而非内层数组、截断数组必须失败不许静默返残缺。
+    """
+    import importlib.util
+
+    root = ROOT / "docs" / "independent-recheck"
+    assert root.exists(), "缺 docs/independent-recheck/——组织级复评产物目录不存在"
+    reviews = sorted(root.glob("*/*/review.json"))
+    assert reviews, "没有任何 review.json——「组织独立」若无产物即为空声称"
+
+    date_re = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+    verdicts = {"consistent", "fabrication", "inconsistent"}
+    for rf in reviews:
+        data = json.loads(rf.read_text(encoding="utf-8"))
+        assert data.get("reviewer_type") in ("cross_model", "human"), \
+            f"{rf} reviewer_type 非法（协议只认 cross_model/human）"
+        assert str(data.get("model_or_reviewer", "")).strip(), f"{rf} 缺 model_or_reviewer"
+        assert date_re.match(str(data.get("date", ""))), f"{rf} date 须为 YYYY-MM-DD"
+        rows = data.get("answers_rechecked")
+        assert isinstance(rows, list) and rows, f"{rf} answers_rechecked 为空"
+        for r in rows:
+            assert r.get("verdict") in verdicts, \
+                f"{rf} 第 {r.get('id')} 题 verdict 非法：{r.get('verdict')!r}"
+        assert data.get("fidelity_grade_reconfirmed") in ("A", "B", "C", "D"), \
+            f"{rf} grade 须为 A/B/C/D（none 表示该复评无效）"
+        assert isinstance(data.get("fabrication_flagged"), bool), \
+            f"{rf} fabrication_flagged 须为布尔"
+        assert str(data.get("independence_note", "")).strip(), f"{rf} 缺 independence_note"
+
+    # ② 聚合器口径：有效复评 = 非编造 且 grade 非 none；org_independent ⇔ 有效复评 ≥1
+    spec = importlib.util.spec_from_file_location(
+        "ir", ROOT / "scripts" / "tdlib" / "independent_recheck.py")
+    ir = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ir)
+    ledger = ir.aggregate(root)
+    assert not ledger["problems"], f"台账聚合报问题：{ledger['problems']}"
+    n_org = sum(1 for c in ledger["cards"].values() if c["org_independent"])
+    assert n_org >= 1, "无任何卡片达成组织独立——台账与产物矛盾"
+    for card, info in ledger["cards"].items():
+        assert info["org_independent"] == (info["valid_reviews"] >= 1), \
+            f"{card} 的组织独立标记与有效复评数不一致"
+    md = (root / "ORG-INDEPENDENCE-LEDGER.md").read_text(encoding="utf-8")
+    for card, info in ledger["cards"].items():
+        if info["org_independent"]:
+            assert re.search(rf"^\| {re.escape(card)} \| ✅", md, re.M), \
+                f"{card} 已组织独立，但 md 台账未标 ✅"
+
+    # ④ extract_json 健壮性（本次真实踩坑的回归钉子）
+    spec2 = importlib.util.spec_from_file_location(
+        "cmr", ROOT / "scripts" / "cross_model_recheck.py")
+    cmr = importlib.util.module_from_spec(spec2)
+    spec2.loader.exec_module(cmr)
+    got = cmr.extract_json('好的，结果如下：\n[{"id":1}]\n以上。', prefer="list")
+    assert isinstance(got, list) and got and got[0]["id"] == 1, \
+        "extract_json 应容忍前后散文并解析顶层数组"
+    got = cmr.extract_json('{"answers_rechecked":[{"id":1}],"x":1}', prefer="dict")
+    assert isinstance(got, dict) and "answers_rechecked" in got, \
+        "prefer=dict 时应返回外层对象，而非内层数组"
+    try:
+        cmr.extract_json('[{"id":1},{"id":', prefer="list")
+    except SystemExit:
+        pass
+    else:
+        raise AssertionError("截断数组必须解析失败，不许静默返回残缺数据")
 
 
 if __name__ == "__main__":

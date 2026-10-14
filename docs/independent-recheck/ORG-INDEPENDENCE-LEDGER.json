@@ -1,5 +1,63 @@
 {
-  "cards": {},
+  "cards": {
+    "wangyangming-xinxue": {
+      "org_independent": true,
+      "valid_reviews": 1,
+      "total_reviews": 1,
+      "reviewer_types": [
+        "cross_model"
+      ],
+      "reviews": [
+        {
+          "reviewer": "deepseek-v4-pro",
+          "reviewer_type": "cross_model",
+          "model_or_reviewer": "deepseek-v4-pro",
+          "date": "2026-10-14",
+          "grade": "A",
+          "valid": true,
+          "why": "ok"
+        }
+      ]
+    },
+    "zengguofan-xiushen": {
+      "org_independent": true,
+      "valid_reviews": 1,
+      "total_reviews": 1,
+      "reviewer_types": [
+        "cross_model"
+      ],
+      "reviews": [
+        {
+          "reviewer": "deepseek-v4-pro",
+          "reviewer_type": "cross_model",
+          "model_or_reviewer": "deepseek-v4-pro",
+          "date": "2026-10-14",
+          "grade": "A",
+          "valid": true,
+          "why": "ok"
+        }
+      ]
+    },
+    "zhengbanqiao-chidu": {
+      "org_independent": true,
+      "valid_reviews": 1,
+      "total_reviews": 1,
+      "reviewer_types": [
+        "cross_model"
+      ],
+      "reviews": [
+        {
+          "reviewer": "deepseek-v4-pro",
+          "reviewer_type": "cross_model",
+          "model_or_reviewer": "deepseek-v4-pro",
+          "date": "2026-10-14",
+          "grade": "A",
+          "valid": true,
+          "why": "ok"
+        }
+      ]
+    }
+  },
   "problems": [],
-  "generated": "2026-10-12"
+  "generated": "2026-10-14"
 }

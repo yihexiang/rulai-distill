@@ -14,7 +14,7 @@
 
 <!-- facts:begin -->
 ```text
-tests = 124
+tests = 125
 subcommands = 37
 defects = 82
 ```
@@ -22,7 +22,7 @@ defects = 82
 
 | 量 | 值 | 怎么数的 |
 |---|---|---|
-| 回归项 | **124** | `tests/e2e.py` 的注册表条目数 |
+| 回归项 | **125** | `tests/e2e.py` 的注册表条目数 |
 | 子命令 | **37** | `td.py --help` 里 argparse 打印的 choices |
 | 缺陷台账 | **82** | `tdlib/defects.py` 的 `DEFECTS` 长度 |
 
@@ -40,7 +40,7 @@ defects = 82
 | 交叉复核已在 **14 张卡**上跑通（独立答题 Agent + 2 个独立评分 Agent） | `t_gate_requires_cross_review` · 逐张 `FIDELITY.json`（见下表） | 2026-10-11 |
 | 独立性的边界是「**结构独立 ≠ 组织独立**」 | `t_gate_requires_cross_review` | 2026-10-10 |
 | 效用对照已在 **2 张卡上完成 n=3 重复实验**：tongjian / mengzi 各 3 次独立会话，**6/6 次复现显著增益**（正向差 3/3/4 与 3/3/3）；其余 4 张仍为 n=1 | `t_evalkit_utility_baseline` · `docs/utility-replication-2026-10-11.md` · `docs/utility-baseline/{tongjian,mengzi}/run-{2,3}/utility-report.json` | 2026-10-11 |
-| 重复实验只解决了「单次会话的偶然性」，**没解决同族偏宽松**：`card_term` 在第二张卡的 no-skill 侧同样命中（区分度仍集中在 `locator_citation`）；跨模型复评本环境未达成（见诚实边界第 4 条） | `docs/utility-replication-2026-10-11.md`（第三节「本轮新发现」·第四节「边界」） | 2026-10-11 |
+| 重复实验只解决了「单次会话的偶然性」，**没解决同族偏宽松**：`card_term` 在第二张卡的 no-skill 侧同样命中（区分度仍集中在 `locator_citation`）；本条限于 utility 对照本身仍是**同族会话**产出——跨模型复评已于 2026-10-14 在 3 张人物卡上实跑（见下条声称），但 utility 的 with/without 对照尚未换成异族 | `docs/utility-replication-2026-10-11.md`（第三节「本轮新发现」·第四节「边界」） | 2026-10-11 |
 | 引语核验只能证明「它检查过的那一面」 | `t_verify_quotes_lang_filter_not_silent` · `t_anchor_unanchored_not_fail` | 2026-10-10 |
 | 长书分块的 token 节省：**区间 1.0×～34×**，短书/宽词几乎不省 | `t_token_savings_benchmark` · `benchmarks/token-savings/report-2026-10-10.md` | 2026-10-10 |
 | 缺陷台账里**多数错在验证工具自身**，不在卡片内容 | `t_defect_ledger_stats` | 2026-10-10 |
@@ -53,6 +53,7 @@ defects = 82
 | 开放素材**分布已达 5 例**：5 张卡覆盖 4 类文本形态（语录 / 编年叙事 / 对话辩说 / 论说×2），合计 239 段 / 91,338 字；**296 条带段号引语全部锚定成功、0 挂错**（逐张命令可复跑）。⚠️ 其余 4 张**只过机器核验，未交叉复核**（不是"已被证实"的证据） | `t_open_material_distribution`（报告表格数字与 `anchor` 实跑**逐张对账**） · `docs/open-material-distribution-2026-10-10.md` | 2026-10-10 |
 | 开放素材 4 张新卡质量分布：独立双盲 LLM 评分 64/64 A（持技能，双评分者共识）＋ eval-kit utility 机械信号对照 3/4 显著 + 1/4 中等增益（区分度主在 `locator_citation`）。⚠️ 评分者为同族 LLM、64/64 全 A 异常干净，可能偏宽松——本结论是质量下限（**收紧 rubric 复评已做，见下条**：该 64/64 **不能复现**） | `docs/quality-distribution-report-2026-10-11.md` · `docs/utility-baseline/{tongjian,mengzi,hanfei,xunzi}/utility-report.json` · `t_open_material_distribution` | 2026-10-11 |
 | **收紧 rubric 复评已跑**：A 档 85→92 + 4 条硬门槛后，64/64 全 A **不能复现**——@1 得 49/64 A、@1.1 得 24/32 A（均约 75% 维持 A），并**查出 xunzi Q7 一题编造**（标准版当时给 A、一票否决未触发）。⚠️ 收紧版自身也被查出缺陷（@1 的 A 档算术上等价于满分 100，已修为 @1.1）；@1.1 仅 1 位评分者，**与 @1 不可直接换算** | `docs/strict-rubric-recheck-2026-10-12.md` · `references/scoring-rubric-strict.md` · `docs/utility-baseline/*/grades-strict-{A,B,v11-A}.json` | 2026-10-12 |
+| **跨模型（异族）复评已实跑 3 张人物卡**：郑板桥 / 王阳明 / 曾国藩各 1 份 DeepSeek（`deepseek-v4-pro`，不同提供商家族）复评，均**重申 A、无编造**，聚合后台账标记「组织独立」；产物 `docs/independent-recheck/<card>/deepseek-v4-pro/review.json` | `t_org_independence_ledger` · `scripts/cross_model_recheck.py` · `scripts/tdlib/independent_recheck.py` | 2026-10-14 |
 
 ## 逐卡证据（不是"12 张"，实测 15 张）
 
@@ -97,11 +98,16 @@ defects = 82
 3. **卡片内容真错的有 4 条**（台账里 `卡片内容真错` 那一类：#42/#66/#72/#73），
    其余多数是工具自身的错。这**不是"卡片质量很好"的证据**——
    它只说明"我们检查的地方还没发现更多卡片错"，而检查面本身是有限的。
-4. **跨模型复评仍是 0 例（本环境未达成，不做等价替代）**。本轮尝试过「换模型档位」
-   的第三个评分者（`mengzi-refutation`：`scores-3-crosstier.json`，98 分，
-   与另两位 99/98 一致、分差 1）——但它自报的模型档位仍是**同一运行环境内的不同档位**，
-   **无法确认为不同模型家族**（GLM / DeepSeek / 其他厂商模型在本环境不可达）。
-   所以它**只算「不同档位会话的复现」，不算跨族证据**，
+4. **跨模型复评已从 0 例变为 3 例（2026-10-14），但边界仍在**。用户提供 DeepSeek
+   （`deepseek-v4-pro`，不同提供商家族）访问权后，`scripts/cross_model_recheck.py`
+   在郑板桥 / 王阳明 / 曾国藩三张人物卡上跑通「异族自出 8 题 → 第一人称作答 → 盲态重评」，
+   三份 `review.json` 均**重申 A、`fabrication_flagged=false`**，聚合后台账标记为**组织独立**。
+   仍须说清：①**这是跨模型，不是跨机构/人类**——出题/作答/判分的**内容**来自 DeepSeek，
+   但**编排与提示词仍是项目自研**，脚本本身不是"第二个人"；②**每卡仅 1 份异源**，
+   协议建议 ≥2 份（跨模型 + 人类各一）才算稳健；③#82 判别力缺陷**只被部分缓解**
+   （8 题由 DeepSeek 基于底稿自出，不复用卡内题库），但未做「对抗性/故意误导」题；
+   ④本轮之前的「换模型档位」第三个评分者（`mengzi-refutation`：`scores-3-crosstier.json`，
+   98 分）口径**不变**——仍是同一运行环境内的不同档位，**不算跨族证据**，
    **不写进任何"已被异族模型证实"口径的表述**。
 5. **「等级 A」不等于「没有编造」**。收紧复评（2026-10-12）在 `xunzi-learning-order` 第 7 题上
    查出一处**编造**：答题 Agent 把自拟的第一人称经历（含无法核验的细节）当成事实陈述、且未标注为示例，

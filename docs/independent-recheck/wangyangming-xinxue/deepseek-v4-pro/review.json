@@ -1,0 +1,51 @@
+{
+  "card": "wangyangming-xinxue",
+  "reviewer_type": "cross_model",
+  "model_or_reviewer": "deepseek-v4-pro",
+  "date": "2026-10-14",
+  "answers_rechecked": [
+    {
+      "id": 1,
+      "verdict": "consistent",
+      "notes": "引用 §8 判断知而不行为未知，与底稿知行本体不可分一致。"
+    },
+    {
+      "id": 2,
+      "verdict": "consistent",
+      "notes": "依成色非分两立论，引用 §109，符合底稿精金喻圣。"
+    },
+    {
+      "id": 3,
+      "verdict": "consistent",
+      "notes": "径引 §32/§37 事上磨练，与底稿反静坐模型一致。"
+    },
+    {
+      "id": 4,
+      "verdict": "consistent",
+      "notes": "判断风格接近但非原文，未编造引语；“风格接近”表述稍游移但未越界。"
+    },
+    {
+      "id": 5,
+      "verdict": "consistent",
+      "notes": "明确素材未覆盖，将“成色不论分两”标为推断，拒绝妄断，符合边缘诚实要求。"
+    },
+    {
+      "id": 6,
+      "verdict": "consistent",
+      "notes": "出处 §41 及一手语录性质表述准确，符合底稿来源分层。"
+    },
+    {
+      "id": 7,
+      "verdict": "consistent",
+      "notes": "回应包含知行合一判词与事上磨建议，结构完整，与底稿核心立场一致。"
+    },
+    {
+      "id": 8,
+      "verdict": "consistent",
+      "notes": "套用知行合一诊断，标明史料边界与现代排除，符合底稿适用边界纪律。"
+    }
+  ],
+  "fidelity_grade_reconfirmed": "A",
+  "fabrication_flagged": false,
+  "independence_note": "使用 DeepSeek(deepseek-v4-pro) 独立重答+重评，与 rulai-distill 同族无关；8 题由该异族模型基于底稿自出，非复用卡内题库（缓解 #82 判别力缺陷）。"
+}
