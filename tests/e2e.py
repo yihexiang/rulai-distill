@@ -4697,6 +4697,7 @@ def main() -> int:
         ("eval-kit style 盲排须附对照样本（#82②）", t_evalkit_style_has_decoy_samples),
         ("verify-quotes 识别 (src-XX §N) 段号标注（#84）", t_verify_quotes_srcxx_section_format),
         ("组织级独立复评：产物 schema + 台账一致（P1#2）", t_org_independence_ledger),
+        ("交叉复核/n=3/跨模型三计数由产物推导对账（达标复核 P1）", t_claims_counts_single_source_of_truth),
         ("文档数字与代码不漂移", t_docs_no_drift),
         ("schema 与 --help 完整", t_schema_and_help),
         ("错误信息人话化", t_errors_are_human),
@@ -4841,6 +4842,99 @@ def t_org_independence_ledger():
         pass
     else:
         raise AssertionError("截断数组必须解析失败，不许静默返回残缺数据")
+
+
+def t_claims_counts_single_source_of_truth():
+    """P1 收口守卫：「交叉复核张数 / 跨模型例数 / n=3 覆盖张数」改为**从产物推导**再与文档声明对账。
+
+    2026-10-14 达标复核一次抓出 15 处文档欠账，根因是这三个计数**只活在散文里**——
+    没有任何东西把它们与产物比对，于是改一处忘一片。本测试把三者变成
+    「产物推导值 → 文档里每一处声明都必须等于它」，任一处不符或声称整体消失即红。
+
+    ① 交叉复核张数：数 `docs/CLAIMS.md`「逐卡证据」表里**交叉复核列以 `N / A` 开头**的行。
+       `未跑（历史单次 95/A **未交叉复核**）` 必须被排除——它与 #80 是同源的计数口径问题
+       （把没跑过的算进跑过的）。
+    ② 跨模型例数：数 `docs/independent-recheck/*/*/review.json` 中协议判定**有效**的份数
+       （reviewer_type 合法 + fabrication_flagged=false + grade∈A/B/C/D）。
+    ③ n=3 覆盖张数：数 `docs/utility-baseline/<card>/` 下有 **3 份 utility-report.json** 的卡；
+       只有 `questions.json` 的 run 目录**不算**（geju-yunshi 正是这种半成品，曾被我误信过）。
+    """
+    claims = (ROOT / "docs" / "CLAIMS.md").read_text(encoding="utf-8")
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    docs = {"CLAIMS.md": claims, "README.md": readme}
+
+    # ① 交叉复核张数（产物：逐卡证据表）
+    m = re.search(r"^## 逐卡证据.*?$(.*?)(?=^## |\Z)", claims, re.M | re.S)
+    assert m, "CLAIMS.md 缺「## 逐卡证据」节，无法推导交叉复核张数"
+    cross_n = 0
+    for line in m.group(1).splitlines():
+        if not line.startswith("| `"):
+            continue
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        if len(cells) < 4:
+            continue
+        if re.match(r"^\*{0,2}\d+\s*/\s*A", cells[3]):
+            cross_n += 1
+    assert cross_n >= 10, f"交叉复核张数推导值异常小（{cross_n}）——逐卡证据表是否被改坏？"
+
+    # ② 跨模型例数（产物：review.json）
+    rroot = ROOT / "docs" / "independent-recheck"
+    cm_n = 0
+    if rroot.exists():
+        for rf in sorted(rroot.glob("*/*/review.json")):
+            try:
+                d = json.loads(rf.read_text(encoding="utf-8"))
+            except Exception:  # noqa: BLE001
+                continue
+            if (d.get("reviewer_type") in ("cross_model", "human")
+                    and not d.get("fabrication_flagged")
+                    and d.get("fidelity_grade_reconfirmed") in ("A", "B", "C", "D")):
+                cm_n += 1
+    assert cm_n >= 1, "无有效跨模型复评——「组织独立」若无产物即为空声称"
+
+    # ③ n=3 覆盖张数（产物：utility-report.json）
+    uroot = ROOT / "docs" / "utility-baseline"
+    n3_n = 0
+    if uroot.exists():
+        for d in sorted(p for p in uroot.iterdir() if p.is_dir()):
+            if len(list(d.glob("run-*/utility-report.json"))) >= 3:
+                n3_n += 1
+    assert n3_n >= 6, f"n=3 完整卡数推导值异常小（{n3_n}）"
+
+    # 对账：每一处声明都必须等于推导值
+    groups = [
+        ("交叉复核张数", cross_n, [
+            r"交叉复核[^。\n|]{0,24}?(\d+)\s*张",
+            r"(\d+)\s*张卡\*{0,2}上跑通",
+            r"交叉复核覆盖面是\s*(\d+)\s*张",
+        ]),
+        ("跨模型例数", cm_n, [
+            r"跨模型复评已从 0 例变为\s*\*{0,2}(\d+)\*{0,2}\s*例",
+            r"跨模型复评已于[^。\n]{0,30}?(\d+)\s*张人物卡",
+            r"(\d+)\s*张人物卡[^。\n]{0,40}?跨模型复评",
+            r"跨模型（异族）复评已实跑\s*(\d+)\s*张人物卡",
+        ]),
+        ("n=3 覆盖张数", n3_n, [
+            r"n=3 重复实验的卡共\s*\*{0,2}(\d+)\*{0,2}\s*张",
+            r"(\d+)\s*张卡已完成 n=3",
+        ]),
+    ]
+    problems = []
+    for label, truth, pats in groups:
+        found = []
+        for fname, body in docs.items():
+            for p in pats:
+                for mm in re.finditer(p, body):
+                    found.append((fname, int(mm.group(1))))
+        if not found:
+            problems.append(f"{label}：文档里找不到任何声明（真值 {truth}）——声称消失了")
+            continue
+        bad = sorted({(f, n) for f, n in found if n != truth})
+        if bad:
+            problems.append(
+                f"{label}：声明 {bad} 与产物推导值 {truth} 不一致——数字又漂了"
+                f"（要么改产物要么改文档，别只改一边）")
+    assert not problems, "；".join(problems)
 
 
 if __name__ == "__main__":
