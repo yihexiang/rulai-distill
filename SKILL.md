@@ -5,7 +5,7 @@ description: |
   融合 RIA-TV++ 七阶段管线（cangjie）+ FIDELITY 独立双 Agent 出厂质检（nuwa）+ 认知植入结构（yeadon）
   + 跨模型异族复评（DeepSeek：8/8 一致、重申 A、无编造，组织独立台账 docs/independent-recheck/ 可查）。
   出厂质检是**机器强制**的：validate / verify-quotes / anchor / lint-quotes / gate 五道门禁，不过不发版；
-  82 个自身缺陷公开登记在 CONSTRAINTS.md，台账行数/分布/回归项数由测试强制相等（写错即 CI 红）。
+  83 个自身缺陷公开登记在 CONSTRAINTS.md，台账行数/分布/回归项数由测试强制相等（写错即 CI 红）。
   触发词：「蒸馏」「拆书」「拆解这本书」「做成 skill」「提取方法论」「提取思维方式」「人物思维 Skill」「book to skill」「distill」「extract methodology」。
   English triggers: "distill this book", "turn this into skills", "extract methodology", "persona skill", "cognitive implant".
   不做：书摘、读后感、单纯摘要、作者语气模仿。
@@ -293,7 +293,7 @@ td.py count <dir>                                  # token 计量
 - 可选：`PyYAML`（严格 frontmatter）、`tiktoken`（精确 token 计量）、`jsonschema`
 - **无网络调用**：所有脚本纯本地，不访问任何外部 API
 - 自检：`python3 scripts/td.py doctor`
-- 回归：`python3 tests/e2e.py`（129 项，零依赖与完整依赖两种解释器各跑一遍）
+- 回归：`python3 tests/e2e.py`（130 项，零依赖与完整依赖两种解释器各跑一遍）
 - CI：`.github/workflows/pipeline-check.yml`（双版本矩阵 + 红线扫描 + Schema 校验）
 
 ## 许可

@@ -687,6 +687,21 @@ DEFECTS = [
      "anchor 全锚定，verify-quotes 却报「引用 0 个 / 核验 0 条」加空集警告；"
      "已在各卡 test-results.md 显式留痕",
      ["t_verify_quotes_srcxx_section_format"]),
+    ("CI 红线扫描（禁止硬编码密钥）",
+     "密钥扫描正则误判 env 键名解析，CI 连续两轮推送假红而本地回归全绿",
+     "正则 api[_-]?key 后随等号与引号（引号内可为空）命中了 "
+     "cross_model_recheck.py 第 90 行的 line.startswith(「DEEPSEEK_API_KEY=」)"
+     "——那是在解析 env 文件里的键名，等号后没有任何值，根本不是硬编码密钥；"
+     "且该检查只存在于 CI 的 shell 步骤里，tests/e2e.py 覆盖不到，"
+     "于是本地 129/129 全绿、CI 在两个提交上连续红",
+     "引号内必须有值且长度 ≥8 才判命中，把「键名=空串」排除；"
+     "同一口径搬进回归使本地绿与 CI 绿一致，并用负向探针证明真密钥仍被抓、"
+     "读环境变量不被误判",
+     "major", "eval_gap",
+     "2026-10-15 gh run view --log-failed：pipeline-check 在含 "
+     "cross_model_recheck.py 的两个提交上失败，唯一命中行即该文件第 90 行；"
+     "修正后新正则 7/7 样本判定正确（假阳性不命中、真密钥命中）、全仓扫描 0 命中",
+     ["t_no_hardcoded_secrets"]),
 ]
 
 

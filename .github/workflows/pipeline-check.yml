@@ -74,6 +74,13 @@ jobs:
                scripts/td.py scripts/tdlib/ \
                --include='*.py' | grep -v -e "output_eval" -e "subprocess(shell=True)"
       - name: 禁止硬编码密钥
+        # 2026-10-15 修（缺陷 #85）：原正则 `api[_-]?key\s*=\s*['"]` 会命中
+        # `line.startswith("DEEPSEEK_API_KEY=")` —— 那是在**解析 env 文件名**，
+        # 等号后面没有任何值，根本不是硬编码密钥。CI 因此连续两轮推送假红。
+        # 修法：要求引号内**有值**且长度 ≥8，把"赋值给空串/纯键名"排除在外；
+        # 真密钥（sk-…、长随机串）仍然被抓。这不是放水，是把尺子校准。
+        # 同一口径已搬进 tests/e2e.py 的 t_no_hardcoded_secrets，
+        # 本地绿与 CI 绿从此一致（含负向探针：真密钥必须仍被命中）。
         run: |
-          ! grep -rniE "api[_-]?key\s*=\s*['\"]|secret\s*=\s*['\"]|password\s*=\s*['\"]|Bearer [A-Za-z0-9]{20}" \
+          ! grep -rniE "api[_-]?key\s*=\s*['\"][^'\"]{8,}['\"]|secret\s*=\s*['\"][^'\"]{8,}['\"]|password\s*=\s*['\"][^'\"]{8,}['\"]|Bearer [A-Za-z0-9]{20}" \
                scripts/ --include='*.py' --include='*.sh'

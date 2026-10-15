@@ -111,13 +111,21 @@ step "7/8 · 跨模型异族复评台账 —— 组织独立 3/3（DeepSeek，8/
 step "8/8 · 对外声称逐条对账 —— 21 条声称必须有据、数字不许腐烂"
 "$PY" docs/verify_claims.py
 
+# 收尾横幅里的数字**从产物推导**，不手写——手写就会腐烂（本项目第 N 次）
+DEFECT_N=$("$PY" -c "import sys;sys.path.insert(0,'scripts');from tdlib.defects import build_cases;print(len(build_cases()))")
+CM_N=$("$PY" -c "
+import json,pathlib
+d=json.loads(pathlib.Path('docs/independent-recheck/ORG-INDEPENDENCE-LEDGER.json').read_text(encoding='utf-8'))
+print(sum(1 for c in d['cards'].values() if c.get('org_independent')))
+")
+
 printf '\n%s' "$C_TITLE"
-cat <<'OUTRO'
+cat <<OUTRO
  ┌──────────────────────────────────────────────────────────────┐
  │  上面每一行都是真跑出来的：                                    │
  │    · 五道门禁全部实跑，不是文档里的口号                        │
- │    · 82 个自身缺陷公开登记，数字由测试强制相等                  │
- │    · 3 张人物卡有跨模型异族复评（不同提供商家族）               │
+ │    · ${DEFECT_N} 个自身缺陷公开登记，数字由测试强制相等                  │
+ │    · ${CM_N} 张人物卡有跨模型异族复评（不同提供商家族）               │
  │    · 连 README 里的数字都有守卫盯着，写错即 CI 红               │
  │                                                              │
  │  下一步：                                                    │

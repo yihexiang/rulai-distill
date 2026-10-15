@@ -4819,6 +4819,7 @@ def main() -> int:
         ("组织级独立复评：产物 schema + 台账一致（P1#2）", t_org_independence_ledger),
         ("交叉复核/n=3/跨模型三计数由产物推导对账（达标复核 P1）", t_claims_counts_single_source_of_truth),
         ("全仓零动态执行：无 os.system/shell=True/eval/exec（P1-2）", t_no_dynamic_execution),
+        ("硬编码密钥扫描：假阳性已修 + 真密钥仍命中（#85）", t_no_hardcoded_secrets),
         ("文档数字与代码不漂移", t_docs_no_drift),
         ("schema 与 --help 完整", t_schema_and_help),
         ("错误信息人话化", t_errors_are_human),
@@ -5173,6 +5174,60 @@ def t_version_declarations_consistent():
     assert fresh[0] == truth, (
         f"README 最新小节头是 v{fresh[0]}，当前版本却是 v{truth}——"
         f"要么补写发布小节，要么把小节头改对")
+
+
+def t_no_hardcoded_secrets():
+    """缺陷 #85：硬编码密钥扫描的假阳性——把 CI 红线口径搬进回归，本地绿==CI 绿。
+
+    2026-10-15 实测：`pipeline-check.yml` 的「禁止硬编码密钥」步骤用正则
+    `api[_-]?key\\s*=\\s*['"]` 扫描 scripts/，命中了
+    `scripts/cross_model_recheck.py:90` 的 `line.startswith("DEEPSEEK_API_KEY=")`
+    ——那是在**解析 env 文件里的键名**，等号后没有任何值，根本不是硬编码密钥。
+    后果：CI 连续两轮推送假红，而**本地 e2e 全绿**（这个检查只存在于 CI 的
+    shell 步骤里，回归测不到）——又一次"本地绿 ≠ CI 绿"。
+
+    修法（CI 与本地同源）：引号内必须有值且长度 ≥8，把"键名=空串"排除；
+    真密钥仍然被抓。本测试把**同一条正则**搬进回归，并附负向探针证明它没被放水：
+      · 必须不命中 `"DEEPSEEK_API_KEY="`（踩过的假阳性）
+      · 必须命中 `api_key = "sk-…"` 这类真密钥
+      · 必须不命中 `os.environ.get("...")`（读环境变量是正确做法）
+    """
+    # 与 .github/workflows/pipeline-check.yml 的「禁止硬编码密钥」步骤保持同一口径。
+    # 改一边必须改另一边——这条注释就是提醒。
+    PATTERN = (r"""api[_-]?key\s*=\s*['"][^'"]{8,}['"]"""
+               r"""|secret\s*=\s*['"][^'"]{8,}['"]"""
+               r"""|password\s*=\s*['"][^'"]{8,}['"]"""
+               r"""|Bearer [A-Za-z0-9]{20}""")
+    rx = re.compile(PATTERN, re.I)
+
+    # 负向探针①：踩过的假阳性必须不再命中（否则修了等于没修）
+    fp = 'line.startswith("DEEPSEEK_API_KEY=")'
+    assert not rx.search(fp), f"假阳性复现：{fp} 又被判成硬编码密钥"
+    # 负向探针②：读环境变量必须不命中（鼓励正确做法，别把它罚成红的）
+    env_read = 'os.environ.get("DEEPSEEK_API_KEY")'
+    assert not rx.search(env_read), f"把读环境变量误判成硬编码：{env_read}"
+    # 负向探针③：真密钥必须仍然命中（证明这不是"为放水而放宽"）
+    for real in ('api_key = "sk-abcdef1234567890"',
+                 'API_KEY="sk-realsecret123456"',
+                 'password = "hunter2hunter2"',
+                 'Authorization: Bearer abcdefghijklmnopqrstuvwx'):
+        assert rx.search(real), f"真密钥漏判：{real}——扫描器被放水了"
+
+    # 正向：全仓（scripts/ 下的 .py 与 .sh）不得有命中
+    hits = []
+    for p in sorted((ROOT / "scripts").rglob("*")):
+        if not p.is_file() or p.suffix not in (".py", ".sh"):
+            continue
+        if "__pycache__" in p.parts:
+            continue
+        try:
+            body = p.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        for i, line in enumerate(body.splitlines(), 1):
+            if rx.search(line):
+                hits.append(f"{p.relative_to(ROOT)}:{i} {line.strip()[:80]}")
+    assert not hits, f"发现疑似硬编码密钥 {len(hits)} 处：{hits}"
 
 
 if __name__ == "__main__":
