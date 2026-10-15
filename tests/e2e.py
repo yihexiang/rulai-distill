@@ -4698,6 +4698,7 @@ def main() -> int:
         ("verify-quotes 识别 (src-XX §N) 段号标注（#84）", t_verify_quotes_srcxx_section_format),
         ("组织级独立复评：产物 schema + 台账一致（P1#2）", t_org_independence_ledger),
         ("交叉复核/n=3/跨模型三计数由产物推导对账（达标复核 P1）", t_claims_counts_single_source_of_truth),
+        ("全仓零动态执行：无 os.system/shell=True/eval/exec（P1-2）", t_no_dynamic_execution),
         ("文档数字与代码不漂移", t_docs_no_drift),
         ("schema 与 --help 完整", t_schema_and_help),
         ("错误信息人话化", t_errors_are_human),
@@ -4935,6 +4936,67 @@ def t_claims_counts_single_source_of_truth():
                 f"{label}：声明 {bad} 与产物推导值 {truth} 不一致——数字又漂了"
                 f"（要么改产物要么改文档，别只改一边）")
     assert not problems, "；".join(problems)
+
+
+def t_no_dynamic_execution():
+    """P1-2（达标复核）：把 td.py 的设计原则 3「零动态执行」变成机器守卫。
+
+    声明原文在 `scripts/td.py` 第 9 行：「零动态执行：无 eval / exec / subprocess(shell=True)」。
+    2026-10-15 逐条审计发现 `scripts/cross_model_recheck.py` 用了 `os.system(...)`
+    拉起聚合器——与该声明不符（路径为仓内固定值、用户不可注入，所以**不是安全红线**，
+    但属「声明 ≠ 实现」，正是本项目 #80 那类病）。已改为 `subprocess.run([...], check=True)`。
+
+    本测试把口径固化为**全仓（含 vendored 上游与 tests/）不允许**：
+      · `os.system(...)`
+      · `subprocess*(..., shell=True)`
+      · 直接调用 `eval(...)` / `exec(...)`
+
+    用 **AST 判定而非文本 grep**：td.py 第 9 行那句声明本身含 "shell=True" 字样，
+    文本扫描会立刻误报（守卫被自己守护的东西判红）。AST 只认真实调用节点，
+    注释、docstring、字符串字面量一律不看。
+
+    有意不在范围：`__import__`。vendored 上游 `cangjie.py` 的 `cmd_doctor` 用它做
+    依赖可用性探测，而 C6 禁止修改 `vendor/` 下文件；且声明里也未禁止它。
+    若将来要禁它，必须先改 vendor 或改声明，不能靠本测试悄悄扩大口径。
+    """
+    import ast
+
+    bad: list[str] = []
+    unparsed: list[str] = []
+    scanned = 0
+    for py in sorted(ROOT.rglob("*.py")):
+        if "__pycache__" in py.parts:
+            continue
+        rel = py.relative_to(ROOT)
+        try:
+            tree = ast.parse(py.read_text(encoding="utf-8"), filename=str(rel))
+        except (SyntaxError, UnicodeDecodeError) as e:
+            unparsed.append(f"{rel}: {e}")
+            continue
+        scanned += 1
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            f = node.func
+            # os.system(...)
+            if (isinstance(f, ast.Attribute) and f.attr == "system"
+                    and isinstance(f.value, ast.Name) and f.value.id == "os"):
+                bad.append(f"{rel}:{node.lineno} os.system()")
+            # 任意 subprocess*(..., shell=True)
+            for kw in node.keywords:
+                if (kw.arg == "shell" and isinstance(kw.value, ast.Constant)
+                        and kw.value.value is True):
+                    bad.append(f"{rel}:{node.lineno} shell=True")
+            # 直接调用 eval(...) / exec(...)（属性调用如 obj.eval() 不算）
+            if isinstance(f, ast.Name) and f.id in ("eval", "exec"):
+                bad.append(f"{rel}:{node.lineno} {f.id}()")
+
+    assert scanned >= 40, f"扫描到的 .py 只有 {scanned} 个——守卫覆盖面异常，疑似路径错"
+    assert not unparsed, f"这些 .py 解析失败（先修语法，再谈纪律）：{unparsed}"
+    assert not bad, (
+        f"违反「零动态执行」（td.py 设计原则 3）共 {len(bad)} 处：{bad}\n"
+        f"修法：改用列表参数 subprocess.run([...], check=True)；"
+        f"不要 os.system，也不要 shell=True")
 
 
 if __name__ == "__main__":

@@ -39,6 +39,7 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import sys
 import urllib.error
 import urllib.request
@@ -414,7 +415,9 @@ def main(argv: list[str] | None = None) -> int:
     if written and not args.no_aggregate:
         print("\n--- 聚合 ORG-INDEPENDENCE-LEDGER ---")
         agg = ROOT / "scripts" / "tdlib" / "independent_recheck.py"
-        os.system(f"{sys.executable} {agg}")
+        # 不用 os.system：与 `scripts/td.py` 设计原则 3「零动态执行」保持一致。
+        # 列表参数不经 shell；agg 是仓内固定路径、用户不可注入。
+        subprocess.run([sys.executable, str(agg)], check=True)
     return 0
 
 
