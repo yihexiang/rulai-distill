@@ -1,4 +1,4 @@
-# rulai-distill · The Distillation Factory v1.11.0
+# rulai-distill · The Distillation Factory v1.11.1
 
 [中文版](./README.md) · [Install & Usage Guide](./GUIDE.md) · [Capability inventory](./CAPABILITIES.md)
 

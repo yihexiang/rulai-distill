@@ -1,4 +1,4 @@
-# rulai-distill · 蒸馏工厂 v1.11.0
+# rulai-distill · 蒸馏工厂 v1.11.1
 
 把书籍 / 长视频 / 播客 / 访谈 / 人物素材，蒸馏成**可执行、可验证、可追溯**的 Agent Skills。
 
@@ -23,6 +23,26 @@
 > 想自己跑就 `bash demo/demo.sh`——只用随包分发的真实产物，全程离线、只读、不造数据。
 
 ---
+
+## 🆕 v1.11.1 · 修掉 CI 假红 + 补上推广基建（demo / 社区文件 / 发版流水线）
+
+1. **CI 密钥扫描假阳性已修（缺陷 #85）**：原正则 `api[_-]?key\s*=\s*['"]` 引号内可为空，
+   把 `cross_model_recheck.py` 里**解析 env 键名**的 `line.startswith("DEEPSEEK_API_KEY=")`
+   当成硬编码密钥，导致本地 129/129 全绿而 CI 连续两轮推送假红。已收紧为「引号内必须有值且
+   ≥8 字符」，并把**同一条口径搬进回归**（`t_no_hardcoded_secrets`，AST 判定）——
+   「只写在 CI 里的检查等于没有回归」。
+2. **30 秒 demo**（`demo/demo.sh`）：一条命令真跑八步——五道出厂门禁 → 引擎对齐 →
+   跨模型台账 → 声称逐条对账。只用随包分发的真实产物，全程离线只读。
+   输出快照在 `demo/README.md`；横幅里的数字从产物推导，不手写。
+3. **社区文件齐了**：`CODE_OF_CONDUCT.md`（含「欢迎质疑且要求举证」两条）、`SECURITY.md`、
+   3 类 issue 模板 + PR 模板。其中 **quality_evidence 模板**把「报声明失实」做成一等公民工单，
+   并按证据来源分级（本仓实跑 / 跨模型 / 人类 / 同族 LLM）。
+4. **发版流水线**（`.github/workflows/release.yml`）：tag 推送 → 两轮回归（零依赖 + 含
+   PyYAML/tiktoken）→ 声称对账 → 打包 → **按下载用户的方式校验 sha256** → 自动建 Release。
+   动机：缺陷 #76 正是「手工打包」导致 sha256 里写进绝对路径。
+5. **推广元信息**：仓库描述露出「跨模型异族复评」卖点、topics 补满、社交预览图
+   （`docs/social-preview.png`，数字全部从真实产物推导）、徽章加 Release/stars/缺陷数/跨模型例数
+   ——徽章里的静态数字已纳入 `t_docs_no_drift` 对账，写错即红。
 
 ## 🆕 v1.11.0 · 跨模型异族复评闭环，把「组织独立」从口号变成台账
 
@@ -372,7 +392,7 @@ python3 scripts/td.py rollback ~/.workbuddy/skills/my-book --to latest
 
 `rulai-distill` 融合了三个开源项目的长处，并把它们的**契约**升格为权威标准。
 
-| 能力 | 来源 | rulai-distill v1.11.0 |
+| 能力 | 来源 | rulai-distill v1.11.1 |
 |---|---|---|
 | 结构感知分块 + 缓存 | cangjie `build_chunks` | **上游内置** `td.py upstream run chunk`；本包 `td.py chunk` 兜底 |
 | SQLite FTS5 词法索引 + 邻接块 | cangjie `build_index` | **上游内置** `td.py upstream run lexindex` |

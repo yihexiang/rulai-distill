@@ -16,7 +16,7 @@ compatibility: >-
   Runs fully offline otherwise. Follows the open Agent Skills spec, so it loads in
   Claude Code, Codex CLI, Cursor, Gemini CLI, GitHub Copilot, OpenCode, Hermes, WorkBuddy.
 metadata:
-  version: "1.11.0"
+  version: "1.11.1"
   lineage: "cangjie-skill(2.5.0) 全套工程能力 + nuwa-skill FIDELITY/字幕/六路调研 + yeadon 认知植入/prompt 编译"
   license: MIT
 ---
