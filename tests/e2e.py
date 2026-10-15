@@ -3008,8 +3008,14 @@ def _td_skip_rel(rel: Path) -> bool:
     .staging/ 也是运行留痕——这些已 gitignore，但 C11 比对的是磁盘实际文件，
     不跳过会误报"全局副本缺 N 个文件"。复审实测：在仓库跑一次 chunk 生成
     `sunzi-ji.txt.td/`，C11 立即以"缺 7 个文件"失败。
+
+    2026-10-15 补 `dist`：`tools/make_release.sh` 的打包输出（zip + sha256）也在
+    gitignore 里、也是生成物，但漏在了跳过集外。后果不只是误报——**每次发版都会让
+    已安装副本永久落后一个版本**，而 C11 会因此红，逼着人把一个几百 KB 的 zip
+    同步进技能安装目录（那里根本不需要它）。同类病：跳过集本身也会腐烂。
     """
-    skip = {".git", ".workbuddy", "__pycache__", ".pytest_cache", "runs", ".snapshots", ".staging"}
+    skip = {".git", ".workbuddy", "__pycache__", ".pytest_cache", "runs",
+            ".snapshots", ".staging", "dist"}
     if set(rel.parts) & skip or rel.suffix == ".pyc":
         return True
     if any(p.endswith(".td") for p in rel.parts):  # chunk 侧车目录 <src>.td/
@@ -3416,6 +3422,41 @@ def t_docs_no_drift():
     assert RUNTIME_VERSION == ver, (
         f"运行时版本号 {RUNTIME_VERSION} 与 SKILL.md 的 {ver} 不一致"
         "——`td.py doctor` 会打印错的版本")
+
+    # 2026-10-15：README 顶部的徽章是**访客第一眼看到的东西**，但其中的静态数字
+    # （回归项数 / 缺陷数 / 跨模型复评例数）此前没有任何守卫——verify_claims 的 ⑤ 只扫
+    # 「N 项回归」「N 个缺陷」这类中文写法，扫不到 shields.io 徽章里的
+    # `regression-129%20passing` / `self--found%20defects-82`。
+    # 于是最显眼的位置反而最容易腐烂。这里把徽章数字也纳入对账。
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib.defects import DEFECTS as _DEFECTS
+    _n_defects = len(_DEFECTS)
+    _cross = 0
+    _rroot = ROOT / "docs" / "independent-recheck"
+    if _rroot.exists():
+        import json as _json
+        for _rf in sorted(_rroot.glob("*/*/review.json")):
+            try:
+                _d = _json.loads(_rf.read_text(encoding="utf-8"))
+            except Exception:  # noqa: BLE001
+                continue
+            if (_d.get("reviewer_type") in ("cross_model", "human")
+                    and not _d.get("fabrication_flagged")
+                    and _d.get("fidelity_grade_reconfirmed") in ("A", "B", "C", "D")):
+                _cross += 1
+    _badge_expect = [
+        (r"regression-(\d+)%20passing", n_tests, "回归项数"),
+        (r"self--found%20defects-(\d+)", _n_defects, "缺陷数"),
+        (r"cross--model%20reviews-(\d+)%2F3", _cross, "跨模型复评例数"),
+    ]
+    for pat, truth, label in _badge_expect:
+        got = re.findall(pat, rd)
+        if not got:
+            continue  # 徽章还没加就不查；加了就必须对
+        bad = sorted({int(g) for g in got if int(g) != truth})
+        assert not bad, (
+            f"README 徽章里的{label}是 {bad}，实际 {truth}——最显眼的位置腐烂了。"
+            f"改法：更新徽章 URL 里的数字，或跑 docs/verify_claims.py --sync 后手工同步")
 
     # 2026-10-05 第二轮实测：上面那条只查了 CAPABILITIES.md / CONSTRAINTS.md / 两处版本号，
     # 结果 SKILL.md 自己写着「回归 29 项」、README 写着「25 项」（实际 63）都没被抓到，

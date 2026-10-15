@@ -8,12 +8,19 @@
 [![Artifact checks](https://github.com/yihexiang/rulai-distill/actions/workflows/artifact-check.yml/badge.svg)](https://github.com/yihexiang/rulai-distill/actions/workflows/artifact-check.yml)
 [![Docs freshness](https://github.com/yihexiang/rulai-distill/actions/workflows/docs-check.yml/badge.svg)](https://github.com/yihexiang/rulai-distill/actions/workflows/docs-check.yml)
 [![Contract & vendor](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml/badge.svg)](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml)
+[![Release](https://img.shields.io/github/v/release/yihexiang/rulai-distill)](https://github.com/yihexiang/rulai-distill/releases)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![python](https://img.shields.io/badge/python-%E2%89%A53.10-blue)
 ![regression](https://img.shields.io/badge/regression-129%20passing%20%2F%209%20skipped-brightgreen)
+![self-found defects](https://img.shields.io/badge/self--found%20defects-82-blue)
+![cross-model reviews](https://img.shields.io/badge/cross--model%20reviews-3%2F3-brightgreen)
+![stars](https://img.shields.io/github/stars/yihexiang/rulai-distill?style=social)
 
 > ### 别的蒸馏技能解决「生成」，这个解决「证明」。
 > **不打分不发版，而且不由自己打分。**
+
+> 🚀 **30 秒看效果**（不用安装）：[`demo/README.md`](./demo/README.md) 是一份**真跑出来**的输出快照；
+> 想自己跑就 `bash demo/demo.sh`——只用随包分发的真实产物，全程离线、只读、不造数据。
 
 ---
 

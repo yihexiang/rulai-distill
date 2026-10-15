@@ -1,0 +1,91 @@
+name: Release
+
+# 发版自动化：tag 推送 → 回归 → 打包 → 建 Release 并附资产。
+#
+# 为什么要有这个 workflow（2026-10-15）：
+# 此前 `tools/make_release.sh` 与 `gh release create` 是**手工**跑的。手工步骤的问题
+# 在本项目里反复出现过：缺陷 #76 就是「zip 与 sha256 手工打包」导致 sha256 里写进了
+# 绝对路径，文档教用户的命令对下载来的人必然失败。把发版也变成流水线，
+# 是为了让「发版」这件事本身也可复跑、可审计。
+#
+# 触发方式：
+#     git tag v1.12.0 && git push origin v1.12.0
+# 前置条件（都在仓库里有守卫盯着，不靠人记）：
+#   · 版本号六处一致（t_version_declarations_consistent）
+#   · 回归全绿（t_no_external_fixture_deps 保证干净 clone 也能跑）
+#   · vendored 上游 sha256 未变（t_vendor_integrity）
+#
+# 权限最小化：只给 contents: write（建 Release 需要），不给 issue/PR 权限。
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '要发布的 tag（如 v1.12.0）'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: 打包并发布
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      # ① 门禁：回归必须全绿才允许发版。零依赖模式下跑一次（干净 clone 的默认状态），
+      #    再装可选依赖跑一次（覆盖 PyYAML 严格解析与 tiktoken 计量路径）。
+      - name: 回归（零依赖模式）
+        run: python tests/e2e.py
+
+      - name: 安装可选依赖
+        run: python -m pip install --quiet --disable-pip-version-check pyyaml tiktoken
+
+      - name: 回归（含 pyyaml/tiktoken）
+        run: python tests/e2e.py --tiktoken
+
+      # ② 声称台账必须全绿——对外数字不许带着腐烂发出去
+      - name: 声称台账对账
+        run: python docs/verify_claims.py
+
+      # ③ 打包（zip + sha256）。make_release.sh 自带 <3.12 语法自检与 BUILD_INFO 注入，
+      #    sha256 在产物目录内生成（相对文件名），这是 #76 的收口，不要改回手工。
+      - name: 打包 zip + sha256
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          [ -n "${{ github.event.inputs.tag }}" ] && TAG="${{ github.event.inputs.tag }}"
+          VERSION="${TAG#v}"
+          echo "发布版本：$VERSION（tag=$TAG）"
+          bash tools/make_release.sh "$VERSION"
+          ls -l dist/
+
+      # ④ 自检：按**下载用户的方式**校验 sha256（在 dist/ 目录内跑 shasum -c），
+      #    而不是在仓库根跑——后者正是 #76 出错的方式。
+      - name: sha256 按用户方式自检
+        run: |
+          cd dist
+          shasum -c *.sha256
+
+      # ⑤ 建 Release 并附资产。--verify-tag 防止 tag 与工作区版本不一致时静默发错版本
+      #    （第六处版本声明由 t_version_declarations_consistent 在②里已经查过）。
+      - name: 创建 GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          [ -n "${{ github.event.inputs.tag }}" ] && TAG="${{ github.event.inputs.tag }}"
+          VERSION="${TAG#v}"
+          gh release create "$TAG" \
+            dist/rulai-distill-"$VERSION".zip \
+            dist/rulai-distill-"$VERSION".zip.sha256 \
+            --title "$TAG" \
+            --generate-notes \
+            --verify-tag

@@ -1,0 +1,63 @@
+name: 功能建议
+description: 建议一个新能力，或建议把某个已有能力做得更深
+title: "[feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 提建议前请先看两处
+
+        1. `CAPABILITIES.md` 的「**声明不做**」一节——那里列了本项目**有意不做**的事及理由
+           （例如不做 harness 自建站点分发）。若你的建议在其中，请先说明为什么那个理由已不成立。
+        2. `references/command-cheatsheet.md` 与 `td.py --help`——确认它真的还不存在。
+
+        > 一条判断标准（本项目自己的）：**这个建议是让"能生成"更强，还是让"能证明"更强？**
+        > 后者优先级更高——因为"能生成"已经很多了，"能证明"还很少。
+
+  - type: dropdown
+    id: axis
+    attributes:
+      label: 这个建议属于哪条轴
+      options:
+        - 能证明（质检/核验/门禁/台账）—— 高优先级
+        - 能生成（提取/建卡/编译）
+        - 能追溯（来源/版本/血缘）
+        - 工程体验（CLI/报错/性能）
+        - 生态（安装/分发/平台兼容）
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 要解决什么问题
+      description: 描述痛点，不要描述解决方案（先谈问题）
+      placeholder: "我想……的时候，不得不手工……，因为……"
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议怎么做
+      description: 若有具体方案；没有也可以，先谈问题
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 你怎么证明它有用
+      description: |
+        本项目不接受"我觉得有用"。可接受的形式：
+        - 一个 no-skill 对照（不给卡 vs 给卡，同一任务双跑）
+        - 一个真实场景的手工耗时对比
+        - 指向一个同类工具已实证的做法
+      placeholder: "若还没有证据，直接写「暂无，需先做对照实验」——这比空口更受尊重。"
+
+  - type: checkboxes
+    id: cost
+    attributes:
+      label: 成本自觉
+      options:
+        label: 我认可这可能增加依赖或联网面（本项目默认零依赖、默认离线，需充分理由）
+        label: 我认可这可能需要在 CONSTRAINTS.md 登记新约束并附回归测试

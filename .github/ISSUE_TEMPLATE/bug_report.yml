@@ -1,0 +1,82 @@
+name: 缺陷报告
+description: 报告一个可复现的问题（无复现步骤的缺陷报告无法处理）
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 提交前请先做三件事
+        1. `python3 scripts/td.py doctor` 自检通过；
+        2. 在 `docs/CLAMES.md` 与 `CONSTRAINTS.md` 里搜过，确认不是已知缺陷（82 条已登记）；
+        3. **准备好你实际运行的命令与输出**——本项目的规矩：无证据不立案。
+
+        > 如果你要报的是「某条声明与实际不符」（而不是程序崩溃），
+        > 请改用 **质量证据** 模板——那类问题对本项目更重要。
+
+  - type: input
+    id: version
+    attributes:
+      label: 版本
+      description: `python3 scripts/td.py doctor` 第一行输出的版本号
+      placeholder: "v1.11.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: 操作系统
+      options:
+        - macOS
+        - Linux
+        - Windows
+        - 其他
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python 版本
+      description: `python3 -V` 的输出
+      placeholder: "3.13.12"
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: 复现步骤
+      description: 从干净目录开始的完整命令序列，越短越好
+      placeholder: |
+        git clone ... && cd rulai-distill
+        python3 scripts/td.py validate examples/sample-bundle
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际输出
+      description: 粘贴完整输出（可截断中部，但必须包含首行与最后一行）
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+      description: 你期望看到什么，以及为什么（引用文档哪一条更好）
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: optional-deps
+    attributes:
+      label: 可选依赖状态（影响是否降级）
+      options:
+        label: 已安装 PyYAML
+        label: 已安装 tiktoken
+        label: 两者都未安装（走降级路径）

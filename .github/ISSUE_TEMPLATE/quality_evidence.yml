@@ -1,0 +1,93 @@
+name: 质量证据
+description: 报告「某条声明与实际不符」/ 在卡片里发现编造或挂错段号——这类问题对本项目最重要
+title: "[质量证据] "
+labels: ["quality-evidence", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 为什么单列这一类
+
+        本项目的主线是「**声称 ≠ 实际**」。82 条自身缺陷里，多数不是程序崩溃，
+        而是**尺子自己错了**或**文档说了做不到的事**。所以这类 issue 是一等公民。
+
+        **欢迎唱反调**：如果你能用可复跑的证据说明本项目某处夸大、某张卡编造、
+        某个数字腐烂——那是你在帮它变得更可信，不是找麻烦。
+
+        > 三条硬规矩：
+        > 1. **必须附实际运行的命令与输出**。没有证据只标「待补充」，不立案；
+        > 2. **不得用同族 LLM 的结论当证据**（评分者与作者同家族 → 同族自证）；
+        > 3. 若发现的是**安全漏洞**，请改用 SECURITY.md 的私下渠道，不要开公开 issue。
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: 问题类型
+      options:
+        - 卡片编造（把素材没讲过的内容当事实 / 第一人称未标示例）
+        - 引语挂错段号（anchor 报 ANCHOR_MISS / NOT_IN_CORPUS）
+        - 文档数字腐烂（README/CLAMES 的某个数与实跑不符）
+        - 声称夸大（对外说法强于证据能支持的程度）
+        - 工具自身缺陷（校验/度量工具给出了错误结论）
+        - 其他
+    validations:
+      required: true
+
+  - type: input
+    id: where
+    attributes:
+      label: 位置
+      description: 文件路径 + 行号，或卡片 slug + 题号
+      placeholder: "examples/persona-bundle/skills/zengguofan-xiushen/SKILL.md:142  或  docs/CLAMES.md 第 42 条"
+    validations:
+      required: true
+
+  - type: textarea
+    id: claim
+    attributes:
+      label: 原文声明
+      description: 逐字引用那条声明（不要转述）
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 实测证据
+      description: |
+        你实际运行的命令 + 完整输出。例：
+        ```
+        python3 scripts/td.py anchor <卡> --corpus <语料>
+        ```
+      render: text
+    validations:
+      required: true
+
+  - type: dropdown
+    id: evidence-type
+    attributes:
+      label: 证据来源类型
+      description: 这决定证据的可信权重；如实选
+      options:
+        - 本仓工具实跑（td.py / tests/e2e.py）
+        - 跨模型复评（不同提供商家族）
+        - 人类人工核对
+        - 同族 LLM 结论（权重最低，需另找佐证）
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: 影响与建议
+      description: 这条失实会导致什么错误结论？你认为该怎么改？
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 自检
+      options:
+        label: 我已先在 `CONSTRAINTS.md` 缺陷台账搜过，不是已登记项
+        label: 我附的证据是自己真跑出来的，不是转引
+        label: 我核对的是当前 main 分支

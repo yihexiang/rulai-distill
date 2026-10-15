@@ -1,0 +1,131 @@
+# demo 输出快照
+
+> 由 `bash demo/demo.sh --ascii --no-pause` 真跑生成（2026-10-15，v1.11.0，Python 3.13.12）。
+> 不想跑脚本的人可以直接读这个文件看效果；要最新输出请自行运行（数字会随版本变）。
+> 注意：本快照在精简模式下采集，个别长输出中部有省略并已标注。
+
+```text
+ ┌──────────────────────────────────────────────────────────────┐
+ │  rulai-distill · 蒸馏工厂                                     │
+ │  把书籍/长视频/播客/访谈/人物素材，蒸馏成                      │
+ │  可执行 · 可验证 · 可追溯 的 Agent Skills                      │
+ │                                                              │
+ │  主张：不打分不发版，而且不由自己打分。                        │
+ └──────────────────────────────────────────────────────────────┘
+本演示只用随包分发的真实产物，全程离线、只读，不造数据。
+
+━━━ 0/8 · 环境自检（零第三方依赖可跑）
+td.py v1.11.0 · rulai-distill 环境自检
+
+✅ Python 3.13.12（要求 ≥3.10）
+⚠️  PyYAML（严格 frontmatter 解析） 缺失 —— 已降级，功能不受阻
+   可选安装：python3 -m pip install yaml
+⚠️  tiktoken（精确 token 计量） 缺失 —— 已降级，功能不受阻
+   可选安装：python3 -m pip install tiktoken
+✅ methodology/ 就绪（6 个文件）
+✅ templates/ 就绪（5 个文件）
+✅ schemas/ 就绪（8 个文件）
+✅ 5 个核心模板齐全
+  …（中部省略 5 行）
+   原子发布 / 快照 / 回滚 / 手改检测 ← cangjie compile_pack + compile_single
+   增量维护 diff/impact/repair/update/patch ← cangjie 五个演进脚本
+   触发评测判分 / 输出体检 / 基准  ← cangjie run_trigger_evals + run_output_evals + benchmark
+   字幕 SRT/VTT → 带时间戳逐字稿（离线）← nuwa srt_to_transcript
+   六路调研骨架 + 合并去重 + 冲突标记 ← nuwa 六路 research + merge_research
+   FIDELITY 双 Agent 质检 + 可执行门槛 ← nuwa fidelity-scorecard
+   认知植入结构 + 显式步骤禁令   ← yeadon 认知植入 + quality_check
+   单文件 prompt 编译            ← yeadon compile-prompt
+
+🎉 可以开始蒸馏。
+下一步：python3 scripts/td.py init my-bundle
+  （已截断：以上 22 / 27 行。完整输出请直接跑：python3 scripts/td.py doctor）
+
+━━━ 1/8 · 门禁① validate —— 结构 / 死链 / 完成标准 / 失败模式
+🔍 校验：examples/sample-bundle
+
+
+✅ 无问题
+统计：技能卡 1 / 文档 7 · error 0 / warn 0
+
+━━━ 2/8 · 门禁② verify-quotes —— 每条引语逐字回语料（验「存在」）
+
+引语核验 · SKILL.md
+───────────────
+   引用 3 个（条目引用 0 + 时间戳 0 + 书类引用块 3）
+   逐字引语核验 3 条 → 命中 3 条
+✅ 全部引语在语料中核到
+
+━━━ 3/8 · 门禁③ anchor —— 引语是否真在它声明的 §N 段里（验「归属」）
+
+引语段号锚定 · 引语是否真在它自己声明的 §N 段里
+───────────────────────────
+   与 verify-quotes 的区别：那个验「引语在语料里存在吗」，这个验「引语在它被引用的那一段里吗」
+   门槛：5-gram 命中率 ≥60%（与 verify-quotes 同口径，不制造两套标准）
+   引语 25 条：锚定命中 3，未标注段号 22
+   判定明细：{'UNANCHORED': 22, 'ANCHOR_HIT': 3}
+   对账：{'seen': 25, 'anchor_hit': 3, 'unanchored': 22, 'anchor_partial': 0, 'span_hit': 0, 'anchor_miss': 0, 'not_in_corpus': 0, 'too_short': 0}
+  …（中部省略 22 行）
+         第 105 行「帮我看看这个团队行不行」（语料中也未命中）
+         第 106 行「投了怕错，不投又怕错过」（语料中也未命中）
+         第 122 行「第一次做这类决策」（语料中也未命中）
+         第 140 行「主孰有道？將孰有能？天地孰得？法令孰行？兵衆孰強？士卒孰練？賞罰孰明？」（在语料 §1 命中）
+         第 147 行「有据可依的条数 / 七」（语料中也未命中）
+         第 148 行「缺哪一条、为什么缺」（语料中也未命中）
+         第 174 行「决策点在投入之前」（语料中也未命中）
+✅ 判定 PASS：3 条带段号标注的引语全部锚定在声明的段号内；另有 22 条无 §N 标注、不可定位（未核验）
+  （已截断：以上 16 / 38 行。完整输出请直接跑：python3 scripts/td.py anchor examples/sample-bundle/skills/five-affairs-seven-questions/SKILL.md --corpus examples/sample-bundle/sources/sunzi-ji.txt）
+
+━━━ 4/8 · 门禁④ lint-quotes —— 简繁混用 / 省略号 / 归属可疑
+
+引语体检 · 简繁不一致 / 省略号 / 归属可疑
+─────────────────────────
+   提示器：glyph（简繁/用字）确证判失败；省略号与归属可疑是启发式，只提示
+   检查引语 23 条（未给 --corpus：只做省略号检查）
+✅ 未发现用字不一致（简繁/异体）
+
+━━━ 5/8 · 门禁⑤ gate —— 默认要求 ≥2 个独立评分者，否则拒绝放行
+📋 FIDELITY gate · FIDELITY.json
+   总分 93/100   等级 A   评测模式 dual-agent
+   分项：consistency=28  style=19  edge_honesty=19  source_transparency=12  structure=15
+   交叉复核（报告内嵌）2 个评分 → 分差 8（阈值 10）  判定 pass
+✅ 通过门槛 A（≥85）
+
+━━━ 6/8 · 引擎对齐 —— 16 类上游能力全部在位，可逐条直通
+
+vendored 上游能力（kangarooking/cangjie-skill, MIT）
+──────────────────────────────────────────────
+   vendored 上游：/Users/yihe/WorkBuddy/2026-10-03-12-20-21/rulai-distill/scripts/vendor/cangjie
+     可用工具 16/16
+  …（中部省略 16 行）
+     · trigger：可直通上游原件（td.py upstream run trigger）
+     · update：可直通上游原件（td.py upstream run update）
+     · validate：可直通上游原件（td.py upstream run validate）
+
+   注意：日常 `td.py <cmd>` 走的是本包 tdlib 实现（契约对齐、零依赖可跑）；上游原件只经 `upstream run` 直通。两者能力等价，不是同一条代码路径。
+  （已截断：以上 10 / 26 行。完整输出请直接跑：python3 scripts/td.py upstream list）
+
+━━━ 7/8 · 跨模型异族复评台账 —— 组织独立 3/3（DeepSeek，8/8 一致、无编造）
+已聚合 3 张卡片；达成组织独立 3 张；问题 0 条
+台账：docs/independent-recheck/ORG-INDEPENDENCE-LEDGER.json
+
+━━━ 8/8 · 对外声称逐条对账 —— 21 条声称必须有据、数字不许腐烂
+事实：回归 129 项 · 子命令 37 个 · 缺陷台账 82 条
+声称台账：21 条
+
+✅ 每条声称都有真实存在的证据，数字与仓库一致
+
+ ┌──────────────────────────────────────────────────────────────┐
+ │  上面每一行都是真跑出来的：                                    │
+ │    · 五道门禁全部实跑，不是文档里的口号                        │
+ │    · 82 个自身缺陷公开登记，数字由测试强制相等                  │
+ │    · 3 张人物卡有跨模型异族复评（不同提供商家族）               │
+ │    · 连 README 里的数字都有守卫盯着，写错即 CI 红               │
+ │                                                              │
+ │  下一步：                                                    │
+ │    git clone https://github.com/yihexiang/rulai-distill.git   │
+ │    cd rulai-distill && ./install.sh                           │
+ │    python3 scripts/td.py doctor                               │
+ └──────────────────────────────────────────────────────────────┘
+演示完成。要自己改一张卡试试？看 GUIDE.md 的完整流程。
+注：本演示在精简模式下会截断个别长输出，并明确标注截断了多少行——不悄悄截。
+```

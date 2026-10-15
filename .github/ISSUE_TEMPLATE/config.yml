@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 参与者行为准则
+    url: https://github.com/yihexiang/rulai-distill/blob/main/CODE_OF_CONDUCT.md
+    about: 参与前请读一遍——特别是「欢迎质疑，且要求举证」那两条
+  - name: 安全漏洞（私下报告）
+    url: https://github.com/yihexiang/rulai-distill/blob/main/SECURITY.md
+    about: 安全漏洞请不要开公开 issue，按 SECURITY.md 的渠道私下联系
+  - name: 30 秒看效果
+    url: https://github.com/yihexiang/rulai-distill/blob/main/demo/README.md
+    about: 不想装就想看效果？这里有一份真跑出来的输出快照
+  - name: 参与贡献指南
+    url: https://github.com/yihexiang/rulai-distill/blob/main/CONTRIBUTING.md
+    about: 提交前必读的「铁律」一节——每一条都对应真实踩过的坑
