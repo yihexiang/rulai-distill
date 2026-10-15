@@ -57,6 +57,19 @@ MAPPING = {
     "cli": ("cangjie.py", "上游统一 CLI（doctor/status 等）"),
 }
 
+# MAPPING 键 → 它在 td.py 里的**真实入口**。
+#
+# 为什么需要这张表：2026-10-15 逐条核对发现 MAPPING 有 2 个键**不是 td.py 子命令**，
+# 而 parity 表的列头写着「td.py 子命令」——读者照表敲 `td.py cli` 会直接报错。
+# 原来的守卫只比对了「parity 表 ↔ MAPPING」，没比对「MAPPING ↔ td.py 实际子命令」，
+# 所以这个不一致一直没红。别名在此显式登记，并由
+# `t_parity_table_matches_upstream_mapping` 强制：每个键要么本身是子命令，要么在此有条目，
+# 且每个别名指向的入口必须真实存在。
+ALIASES = {
+    "cli": "upstream",                 # td.py upstream run cli …
+    "compile-single": "compile --mode single",   # td.py compile <bundle> --mode single
+}
+
 OPTIONAL_DEPS = {
     "count_tokens.py": ("tiktoken", "pip install tiktoken"),
     "validate_skill_pack.py": ("yaml", "pip install pyyaml"),
@@ -129,11 +142,16 @@ def run_upstream(tool: str, args: list[str], dry: bool = False) -> int:
 
 
 def prefer_upstream(tool: str) -> bool:
-    """该能力是否应优先走上游实现。
+    """该能力当前是否**实际上**会走到上游实现。
 
-    规则：上游脚本存在 + 依赖满足 → 优先上游；否则用本包实现兜底。
-    这样既保住契约深度，又不会因缺依赖而卡死。
+    2026-10-15 修正：原实现自己重复了一遍「脚本存在 + 依赖满足」的判断，
+    而全仓 **0 个调用点**（死代码），`td.py upstream list` 里的
+    「能用上游就用上游」是一句硬编码文本——建议是静态的，不反映每个工具的真实状态。
+
+    现在改为从 `doctor()` 推导（单一真源，不与 `blocked` 逻辑分叉），
+    并由 `td.py upstream list` 逐工具打印，使这句建议成为**计算结果**而非口号。
     """
-    if not (CANGJIE_DIR / MAPPING.get(tool, ("",))[0] if tool in MAPPING else "").exists():
+    d = doctor()
+    if tool not in d["present"]:
         return False
-    return deps_ok(tool)[0]
+    return tool not in d["blocked"]

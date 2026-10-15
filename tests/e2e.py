@@ -1780,6 +1780,83 @@ def t_parity_table_matches_upstream_mapping():
                if not (upstream.CANGJIE_DIR / upstream.MAPPING[t][0]).exists()]
     assert not missing, f"MAPPING 声明但 vendored 缺失：{missing}"
 
+    # ③ 2026-10-15 补：MAPPING 键必须是**真实的 td.py 子命令**，或在 ALIASES 里登记别名。
+    #    原守卫只比对了「parity 表 ↔ MAPPING」与「MAPPING → vendored 脚本存在」，
+    #    漏了「MAPPING 键 ↔ td.py 实际子命令」——实测发现 `cli` 与 `compile-single`
+    #    两个键根本不是子命令（真实入口分别是 `upstream` 与 `compile --mode single`），
+    #    而 parity 表列头写着「td.py 子命令」，读者照表敲命令会直接报错，却没有任何测试红。
+    td_src = (ROOT / "scripts" / "td.py").read_text(encoding="utf-8")
+    declared = set(_re.findall(r'sub\.add_parser\("([a-z0-9-]+)"', td_src))
+    assert declared, "没从 td.py 解析出任何子命令——正则失效，守卫变死代码"
+    aliases = getattr(upstream, "ALIASES", {})
+    unbacked = [t for t in mapping_keys if t not in declared and t not in aliases]
+    assert not unbacked, (
+        f"这些 MAPPING 键既不是 td.py 子命令、也没在 upstream.ALIASES 登记别名：{unbacked}\n"
+        f"（真实子命令集合：{sorted(declared)}）")
+    # 别名指向的入口必须真实存在，且别名不得与真子命令重名
+    for k, entry in aliases.items():
+        head_cmd = entry.split()[0]
+        assert head_cmd in declared, (
+            f"ALIASES[{k}] 指向的 `{head_cmd}` 不是 td.py 子命令")
+        assert k not in declared, f"ALIASES[{k}] 与真子命令重名，会造成双入口歧义"
+
+
+def t_upstream_passthrough_runs():
+    """2026-10-15：L2 直通路必须**真干活**，且路由建议必须是算出来的。
+
+    审计发现两个问题，本测试各钉一项：
+
+    ① **直通路没有回归守着**：`t_upstream_coverage` 只查 vendored 文件存在 +
+       CAPABILITIES 列名，从不执行上游脚本。本测试用无依赖的 `build_chunks.py`
+       在临时目录真跑一次 `td.py upstream run chunk`，断言退出码 0 且真的产出 chunks——
+       证明 L2 不止能 `--help`。
+
+    ② **`prefer_upstream()` 是死代码**：定义了「上游存在 + 依赖满足 → 优先上游」的策略，
+       但全仓 0 个调用点；`td.py upstream list` 里的「能用上游就用上游」是一句
+       硬编码文本，不反映每个工具的真实状态。现已改为从 `doctor()` 推导并逐工具打印。
+       本测试断言 list 输出含逐工具路由建议，且 `prefer_upstream` 与 `doctor().blocked`
+       口径一致——防止它再次退化成死代码或硬编码。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import upstream
+
+    # ① 真跑一次上游直通（build_chunks 无第三方依赖，适合做回归）
+    with tempfile.TemporaryDirectory() as d:
+        src = Path(d) / "probe.md"
+        src.write_text(
+            "# 标题一\n\n第一段内容，用于分块探针。\n\n"
+            "## 标题二\n\n第二段内容，长度足够被切成一块。\n",
+            encoding="utf-8")
+        sidecar = Path(d) / "side"
+        out = run(["upstream", "run", "chunk", str(src),
+                   "--sidecar", str(sidecar), "--source-id", "probe"])
+        log = out.stdout + out.stderr
+        assert out.returncode == 0, f"上游直通 chunk 失败：\n{log[-500:]}"
+        # 产物路径随上游实现而变（实测落在 <sidecar>/chunks/chunks.jsonl），
+        # 故递归查找而不是硬编码单层路径——硬编码会让守卫因自己的错假设而红。
+        found = sorted(sidecar.rglob("chunks.jsonl"))
+        assert found, (
+            f"上游跑了但没产出 chunks.jsonl（sidecar={sidecar}）——"
+            f"直通路只是看起来能跑：\n{log[-500:]}")
+        n = sum(1 for _ in found[0].open(encoding="utf-8"))
+        assert n >= 1, f"{found[0]} 为空——空集假绿"
+
+    # ② 路由建议必须是计算结果，且与 doctor() 口径一致
+    d2 = upstream.doctor()
+    listed = run(["upstream", "list"])
+    text = listed.stdout + listed.stderr
+    assert "逐工具路由建议" in text, (
+        "upstream list 没有逐工具路由建议——prefer_upstream 又变回死代码/硬编码了")
+    for tool in sorted(upstream.MAPPING):
+        want = upstream.prefer_upstream(tool)
+        # prefer_upstream 必须与 doctor() 的 present/blocked 一致（单一真源）
+        expect = (tool in d2["present"]) and (tool not in d2["blocked"])
+        assert want == expect, (
+            f"prefer_upstream({tool})={want} 与 doctor() 推导值 {expect} 不一致——"
+            f"两处逻辑分叉了")
+        marker = "可直通上游原件" if want else "走本包 tdlib 兜底"
+        assert marker in text, f"upstream list 缺 {tool} 的路由结论（应有「{marker}」）"
+
 
 def t_trigger_score_accepts_list():
     """缺陷 #81：trigger score 必须接受 trigger prepare 产出的 JSONL 列表格式。
@@ -4689,6 +4766,7 @@ def main() -> int:
         ("跨仓库卡 n=3 诚实披露（bazi-paipan none 不外推）", t_utility_n3_crossrepo_caveat),
         ("README 真实卡计数披露跨仓库口径（#80）", t_readme_card_count_disclosure),
         ("parity 表与 upstream MAPPING 一致（D1）", t_parity_table_matches_upstream_mapping),
+        ("上游直通真干活 + 路由建议非死代码（2026-10-15）", t_upstream_passthrough_runs),
         ("trigger score 接受 prepare 的 JSONL 列表（#81）", t_trigger_score_accepts_list),
         ("随包卡引语全部可核·挂引号即须核到（#83）", t_cards_quotes_all_verifiable),
         ("卡片自陈 grep 计数实跑一致（#83）", t_card_selfcheck_commands_recomputable),

@@ -1149,7 +1149,18 @@ def cmd_upstream(args) -> int:
             info(line)
         print()
         info("调用方式：td.py upstream run <tool> [args...]")
-        info("建议：能用上游就用上游（本包自研是兜底，也是上游没有的部分）")
+        # 逐工具打印**实际**路由建议（2026-10-15：原为一句硬编码「能用上游就用上游」，
+        # 不反映每个工具的真实状态；现由 upstream.prefer_upstream() 计算得出）。
+        info("逐工具路由建议（依据 vendored 在位性 + 依赖满足度计算）：")
+        for tool in sorted(upstream.MAPPING):
+            if upstream.prefer_upstream(tool):
+                info(f"  · {tool}：可直通上游原件（td.py upstream run {tool}）")
+            else:
+                why = d["blocked"].get(tool, "vendored 脚本缺失")
+                info(f"  · {tool}：走本包 tdlib 兜底（{why}）")
+        print()
+        info("注意：日常 `td.py <cmd>` 走的是本包 tdlib 实现（契约对齐、零依赖可跑）；"
+             "上游原件只经 `upstream run` 直通。两者能力等价，不是同一条代码路径。")
         return EXIT_OK
     code = upstream.run_upstream(args.tool, args.rest, dry=args.dry_run)
     if code == 0 and not args.dry_run:
