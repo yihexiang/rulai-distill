@@ -4767,6 +4767,7 @@ def main() -> int:
         ("README 真实卡计数披露跨仓库口径（#80）", t_readme_card_count_disclosure),
         ("parity 表与 upstream MAPPING 一致（D1）", t_parity_table_matches_upstream_mapping),
         ("上游直通真干活 + 路由建议非死代码（2026-10-15）", t_upstream_passthrough_runs),
+        ("版本号六处声明一致（2026-10-15）", t_version_declarations_consistent),
         ("trigger score 接受 prepare 的 JSONL 列表（#81）", t_trigger_score_accepts_list),
         ("随包卡引语全部可核·挂引号即须核到（#83）", t_cards_quotes_all_verifiable),
         ("卡片自陈 grep 计数实跑一致（#83）", t_card_selfcheck_commands_recomputable),
@@ -5091,6 +5092,46 @@ def t_no_dynamic_execution():
         f"违反「零动态执行」（td.py 设计原则 3）共 {len(bad)} 处：{bad}\n"
         f"修法：改用列表参数 subprocess.run([...], check=True)；"
         f"不要 os.system，也不要 shell=True")
+
+
+def t_version_declarations_consistent():
+    """2026-10-15：版本号声明必须六处一致（补一个此前不存在的守卫）。
+
+    版本号散落在 6 个地方且**此前无任何守卫**：`scripts/tdlib/__init__.py` 的
+    `__version__`、`SKILL.md` 的 `metadata.version`、`README.md` 标题、`README.en.md` 标题、
+    README 的能力归属表、README 的「🆕 vX」小节头。任一处漏改就会对外露出两个版本，
+    而 `verify_claims` 的 facts 段只盯 tests/subcommands/defects，不盯版本——
+    又是一个「声称 ≠ 实际」的空档。
+
+    本测试以 `tdlib/__init__.py` 的 `__version__` 为唯一真源，其余各处必须与它相等。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import __version__ as truth
+
+    skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+    m = re.search(r'^\s*version:\s*["\']([^"\']+)["\']', skill, re.M)
+    assert m, "SKILL.md frontmatter 缺 metadata.version"
+    skill_v = m.group(1)
+
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme_en = (ROOT / "README.en.md").read_text(encoding="utf-8")
+
+    checks = {
+        "SKILL.md metadata.version": skill_v,
+        "README.md 标题": (re.search(r"v(\d+\.\d+\.\d+)", readme.splitlines()[0]) or [None, None])[1],
+        "README.en.md 标题": (re.search(r"v(\d+\.\d+\.\d+)", readme_en.splitlines()[0]) or [None, None])[1],
+        "README.md 能力归属表": (re.search(r"rulai-distill v(\d+\.\d+\.\d+)", readme) or [None, None])[1],
+    }
+    bad = {k: v for k, v in checks.items() if v != truth}
+    assert not bad, (
+        f"版本号声明不一致（真源 tdlib.__version__ = {truth}）：{bad}\n"
+        f"发版前六处必须同步改，漏一处即对外露两个版本")
+    # 「🆕 vX」小节头必须等于当前版本——否则 README 会在旧版本小节下挂新内容
+    fresh = re.findall(r"^## 🆕 v(\d+\.\d+\.\d+)", readme, re.M)
+    assert fresh, "README.md 缺『## 🆕 vX』小节头"
+    assert fresh[0] == truth, (
+        f"README 最新小节头是 v{fresh[0]}，当前版本却是 v{truth}——"
+        f"要么补写发布小节，要么把小节头改对")
 
 
 if __name__ == "__main__":

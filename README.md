@@ -1,4 +1,4 @@
-# rulai-distill · 蒸馏工厂 v1.10.0
+# rulai-distill · 蒸馏工厂 v1.11.0
 
 把书籍 / 长视频 / 播客 / 访谈 / 人物素材，蒸馏成**可执行、可验证、可追溯**的 Agent Skills。
 
@@ -10,12 +10,34 @@
 [![Contract & vendor](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml/badge.svg)](https://github.com/yihexiang/rulai-distill/actions/workflows/contract-check.yml)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![python](https://img.shields.io/badge/python-%E2%89%A53.10-blue)
-![regression](https://img.shields.io/badge/regression-128%20passing%20%2F%209%20skipped-brightgreen)
+![regression](https://img.shields.io/badge/regression-129%20passing%20%2F%209%20skipped-brightgreen)
 
 > ### 别的蒸馏技能解决「生成」，这个解决「证明」。
 > **不打分不发版，而且不由自己打分。**
 
 ---
+
+## 🆕 v1.11.0 · 跨模型异族复评闭环，把「组织独立」从口号变成台账
+
+1. **跨模型复评真跑通**（`scripts/cross_model_recheck.py`）：调 DeepSeek（`deepseek-v4-pro`，
+   不同提供商家族）对人物卡做「异族自出 8 题 → 第一人称作答 → 盲态重评」三步。
+   郑板桥 / 王阳明 / 曾国藩三卡各 1 份，**8/8 一致、均重申 A、`fabrication_flagged=false`**；
+   聚合后台账 `docs/independent-recheck/ORG-INDEPENDENCE-LEDGER.md` 标记 **3/3 组织独立**。
+   这是本项目从「结构独立」（子 Agent 隔离）跨到**跨模型独立**的第一批实证。
+2. **人类复评开工包备好**（`docs/human-review-packages/`）：协议建议每卡 ≥2 份异源
+   （跨模型 + 人类各一），人类这一份此前是缺口。三卡各备好材料路径、出题口径、
+   五维百分制、`review.json` 模板与精确落点——**包备好不等于复评已做，人类复评例数仍为 0**，
+   由守卫强制「凡组织独立的卡必须配包」。
+3. **「声称 = 实际」再加固四处**（都是审计实测挖出来的，不是猜的）：
+   - 新增**三计数单一真源守卫**：交叉复核张数 / n=3 覆盖数 / 跨模型例数改为**从产物推导**再与
+     文档每处声明对账（这三个数此前只活在散文里，一次抓出 15 处欠账）；
+   - 新增**全仓零动态执行守卫**：AST 判定禁 `os.system` / `shell=True` / 裸 `eval` `exec`，
+     并修掉一处真实违反（`cross_model_recheck.py` 曾用 `os.system`）；
+   - **parity 表三态改写**：原 16 行统一写「vendored 直通」不准确（日常 CLI 实际走本包 `tdlib/`），
+     改为「在仓 / 可直通 / 日常走自研」并列，并补上 `cli`、`compile-single` 两个**入口别名**；
+   - **上游路由建议接线**：`prefer_upstream()` 原为死代码（0 调用点）、`upstream list` 的建议是
+     硬编码文本，现改为从 `doctor()` 推导并逐工具打印；同时给直通路加了**真干活的回归**
+     （临时目录实跑 `upstream run chunk` 并断言产出 chunks）。
 
 ## 🆕 v1.10.0 · 这一版把「旗舰证据」补齐，也把自家评分器抓了个现行
 
@@ -246,7 +268,7 @@ python3 scripts/td.py eval-kit utility \
 
 | 维度 | 状态 | 证据 |
 |---|---|---|
-| **机械可靠性** | ✅ 可信 | 128 项回归全绿；`gate` 默认要求交叉复核记录（实测生效）；`verify-quotes`/`anchor`/`lint-quotes` 均在真实素材上抓到过真问题；工具链在 **14 张真实卡**上实跑零崩溃、零假红 |
+| **机械可靠性** | ✅ 可信 | 129 项回归全绿；`gate` 默认要求交叉复核记录（实测生效）；`verify-quotes`/`anchor`/`lint-quotes` 均在真实素材上抓到过真问题；工具链在 **14 张真实卡**上实跑零崩溃、零假红 |
 | **产出正确性** | ⚠️ **已跑通闭环，仍强依赖素材** | `eval-kit` 已在 **14 张卡**上跑通**真实交叉复核**（独立答题 Agent + 2 个独立评分 Agent）：样本卡 `five-affairs` **93/A**、`musk-decisions` **90/A**，guoxue 四张 **93/95/96/96（A）**，开放素材 `lunyu-conduct` **95/A** / `mengzi-refutation` **98/A**，视频卡三张 **100/A**，另 `tongjian-decision-trace` / `hanfei-upward-advice` / `xunzi-learning-order` **100/A**（视频卡与后三张均双评分同分 100，按**质量下限**对待）。⚠️ 这些是**结构独立**而非组织独立（3 张人物卡另有 DeepSeek 跨模型复评，台账见 `docs/independent-recheck/`）；样本卡是精修展示件，**不能代表开放素材的普遍水平**；book-bundle 的 6 张 + 曾国藩在 Phase 4b 严格轮仅 **76–86/B 未过门禁**，**不计入这 14 张** |
 
 具体地说，这个项目目前**做不到**的事：
@@ -327,7 +349,7 @@ python3 scripts/td.py compile books/my-book --out ~/.workbuddy/skills/my-book --
 python3 scripts/td.py rollback ~/.workbuddy/skills/my-book --to latest
 ```
 
-**回归测试**：`python3 tests/e2e.py`（128 项，覆盖全部命令与 vendored 上游实跑）
+**回归测试**：`python3 tests/e2e.py`（129 项，覆盖全部命令与 vendored 上游实跑）
 
 > ⚠️ **「112 全绿」= 112 项实跑且通过，外加 9 项显式未运行，不是 121 项全跑。**
 > 这 9 项依赖作者工作区的真实外部素材（视频 TED 卡、人物马斯克卡、逐字稿等），
@@ -343,7 +365,7 @@ python3 scripts/td.py rollback ~/.workbuddy/skills/my-book --to latest
 
 `rulai-distill` 融合了三个开源项目的长处，并把它们的**契约**升格为权威标准。
 
-| 能力 | 来源 | rulai-distill v1.10.0 |
+| 能力 | 来源 | rulai-distill v1.11.0 |
 |---|---|---|
 | 结构感知分块 + 缓存 | cangjie `build_chunks` | **上游内置** `td.py upstream run chunk`；本包 `td.py chunk` 兜底 |
 | SQLite FTS5 词法索引 + 邻接块 | cangjie `build_index` | **上游内置** `td.py upstream run lexindex` |
@@ -406,7 +428,7 @@ rulai-distill/
 │   │                            / fidelity / evalkit / anchor / lintquotes / strategy / publish
 │   │                            / evals / evolve / promptc / upstream
 │   └── vendor/cangjie/       ← 上游 MIT 原件 + PROVENANCE.md（不改）
-└── tests/e2e.py              ← 端到端回归（128 项，双解释器各跑一遍）
+└── tests/e2e.py              ← 端到端回归（129 项，双解释器各跑一遍）
 ```
 
 ---

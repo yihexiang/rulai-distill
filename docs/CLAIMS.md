@@ -14,7 +14,7 @@
 
 <!-- facts:begin -->
 ```text
-tests = 128
+tests = 129
 subcommands = 37
 defects = 82
 ```
@@ -22,7 +22,7 @@ defects = 82
 
 | 量 | 值 | 怎么数的 |
 |---|---|---|
-| 回归项 | **128** | `tests/e2e.py` 的注册表条目数 |
+| 回归项 | **129** | `tests/e2e.py` 的注册表条目数 |
 | 子命令 | **37** | `td.py --help` 里 argparse 打印的 choices |
 | 缺陷台账 | **82** | `tdlib/defects.py` 的 `DEFECTS` 长度 |
 
