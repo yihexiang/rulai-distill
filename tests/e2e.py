@@ -4826,6 +4826,22 @@ def t_org_independence_ledger():
             assert re.search(rf"^\| {re.escape(card)} \| ✅", md, re.M), \
                 f"{card} 已组织独立，但 md 台账未标 ✅"
 
+    # ③b P1-3：协议建议「每卡 ≥2 份异源（跨模型 + 人类各一）」。当前人类复评 0 例，
+    #    但每张已达成组织独立的卡必须**备好人类复评包**——否则"待补人类复评"会悄悄腐烂成
+    #    "连包都没有"。包放在 docs/human-review-packages/（刻意不在 independent-recheck/ 下：
+    #    空目录会被聚合器记成「缺 review.json」问题，让本测试自己变红）。
+    pkg_dir = ROOT / "docs" / "human-review-packages"
+    for card, info in ledger["cards"].items():
+        if info["org_independent"]:
+            pkg = pkg_dir / f"{card}.md"
+            assert pkg.exists(), (
+                f"{card} 已组织独立但没有人类复评包（应有 {pkg}）——"
+                f"协议要求每卡 ≥2 份异源，包都不备即是腐烂")
+            body = pkg.read_text(encoding="utf-8")
+            for marker in ("reviewer_type\": \"human", "fabrication_flagged",
+                           "independence_note", "docs/independent-recheck/"):
+                assert marker in body, f"{pkg.name} 缺关键要素：{marker}"
+
     # ④ extract_json 健壮性（本次真实踩坑的回归钉子）
     spec2 = importlib.util.spec_from_file_location(
         "cmr", ROOT / "scripts" / "cross_model_recheck.py")
