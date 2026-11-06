@@ -18,7 +18,7 @@ import statistics
 import time
 from pathlib import Path
 
-from . import contracts
+from . import contracts, layers
 from .util import (ToolError, count_tokens, ensure_dir, info, jaccard, ngrams, now_iso,
                    ok, read_json, read_text, token_source, warn, write_json)
 
@@ -500,6 +500,9 @@ def verify_quotes(card: Path, corpus: Path) -> dict:
       3. 片段规范化（去空白）后在语料对应条目中做子串匹配；
       4. 报 unverified（核不到）与 orphaned（语料里没这个编号）。
     """
+    # v1.12.0：核验链入口守卫——AI 观察层不得当语料 / 出处，否则会产出假命中。
+    # 放在库层而非 CLI：绕过 td.py 直接调 verify_quotes 的调用方同样受保护。
+    layers.guard(card, [corpus])
     text = read_text(card)
     corpus_text = read_text(corpus)
     # 语料索引：**按表头位置切片**，不用带前瞻的大正则。

@@ -14,7 +14,7 @@
 
 <!-- facts:begin -->
 ```text
-tests = 133
+tests = 135
 subcommands = 38
 defects = 83
 ```
@@ -22,7 +22,7 @@ defects = 83
 
 | 量 | 值 | 怎么数的 |
 |---|---|---|
-| 回归项 | **133** | `tests/e2e.py` 的注册表条目数 |
+| 回归项 | **135** | `tests/e2e.py` 的注册表条目数 |
 | 子命令 | **38** | `td.py --help` 里 argparse 打印的 choices |
 | 缺陷台账 | **83** | `tdlib/defects.py` 的 `DEFECTS` 长度 |
 
@@ -54,7 +54,7 @@ defects = 83
 | 开放素材 4 张新卡质量分布：独立双盲 LLM 评分 64/64 A（持技能，双评分者共识）＋ eval-kit utility 机械信号对照 3/4 显著 + 1/4 中等增益（区分度主在 `locator_citation`）。⚠️ 评分者为同族 LLM、64/64 全 A 异常干净，可能偏宽松——本结论是质量下限（**收紧 rubric 复评已做，见下条**：该 64/64 **不能复现**） | `docs/quality-distribution-report-2026-10-11.md` · `docs/utility-baseline/{tongjian,mengzi,hanfei,xunzi}/utility-report.json` · `t_open_material_distribution` | 2026-10-11 |
 | **收紧 rubric 复评已跑**：A 档 85→92 + 4 条硬门槛后，64/64 全 A **不能复现**——@1 得 49/64 A、@1.1 得 24/32 A（均约 75% 维持 A），并**查出 xunzi Q7 一题编造**（标准版当时给 A、一票否决未触发）。⚠️ 收紧版自身也被查出缺陷（@1 的 A 档算术上等价于满分 100，已修为 @1.1）；@1.1 仅 1 位评分者，**与 @1 不可直接换算** | `docs/strict-rubric-recheck-2026-10-12.md` · `references/scoring-rubric-strict.md` · `docs/utility-baseline/*/grades-strict-{A,B,v11-A}.json` | 2026-10-12 |
 | **跨模型（异族）复评已实跑 3 张人物卡**：郑板桥 / 王阳明 / 曾国藩各 1 份 DeepSeek（`deepseek-v4-pro`，不同提供商家族）复评，均**重申 A、无编造**，聚合后台账标记「组织独立」；产物 `docs/independent-recheck/<card>/deepseek-v4-pro/review.json` | `t_org_independence_ledger` · `scripts/cross_model_recheck.py` · `scripts/tdlib/independent_recheck.py` | 2026-10-14 |
-| **素材三层机械隔离 + 视频理解授权前披露单**：`lint-quotes` 对 AI 观察层语料 / `source_locator` 判硬失败（正文标记 / 文件名兜底 / JSONL / 卡片指向四态有回归，另含两条负向探针）；`td.py video-understand` 只生成授权前披露单，**零网络、永不上传、不提供 `--execute`**，并把 Uguu 约 3 小时不可撤回、成本两种口径未复核、L2 禁作引语出处三条摊开。⚠️ 诚实边界：本轮只在 `lint-quotes` 落地拦截，绕过体检器直接跑 `anchor` / `verify-quotes` 仍会把 L2 当语料（P2）；单帧 token 消耗与长视频截断行为**均未实测**，费用只是规划估算不是报价 | `t_layer_isolation_lint_quotes` · `t_video_understand_disclosure` · `t_video_understand_zero_network` · `references/media-pipeline.md` 3.5/3.6 | 2026-11-06 |
+| **素材三层机械隔离（三个核验器共用守卫）+ 视频理解授权前披露单**：`verify-quotes` / `anchor` / `lint-quotes` 在**库层**共用 `tdlib.layers.guard()`，AI 观察层语料 / 文件名兜底 / JSONL / 卡片 `source_locator` 四类命中一律硬失败（CLI exit 1，绕过 `td.py` 直调库也拦得住），正负向均有回归；`td.py video-understand` 只生成授权前披露单，**零网络、永不上传、不提供 `--execute`**，并把 Uguu 约 3 小时不可撤回、成本两种口径未复核、L2 禁作引语出处三条摊开。⚠️ 诚实边界：工具只认**带约定标记或约定文件名**的 L2，标记缺失且文件名随意时无从分辨；单帧 token 消耗与长视频截断行为**均未实测**，费用只是规划估算不是报价 | `t_layer_isolation_lint_quotes` · `t_layer_guard_all_verifiers` · `t_layer_guard_docs_in_sync` · `t_video_understand_disclosure` · `t_video_understand_zero_network` · `references/media-pipeline.md` 3.5/3.6 | 2026-11-06 |
 
 ## 逐卡证据（不是"12 张"，实测 15 张）
 

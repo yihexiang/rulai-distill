@@ -1402,6 +1402,94 @@ def t_fetch_subtitle_dryrun():
         assert run(["fetch-subtitle", "https://example.com/v", "--out", d]).returncode == 0
 
 
+def t_layer_guard_all_verifiers():
+    """v1.12.0：三个核验器共用 layers.guard()——四态拦截 + 三条负向探针。
+
+    P1-a 落地时只有 lint-quotes 会拦，绕过它直接跑 anchor / verify-quotes
+    仍会把 AI 观察稿当语料并产出**假 ANCHOR_HIT**。本轮把守卫放进库层，
+    所以 CLI 与「绕过 td.py 直调库函数」两条路径都必须被钉住。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import anchor as A, evals as E, layers as L
+    from tdlib.util import ToolError
+
+    card = ROOT / "examples/sample-bundle/skills/five-affairs-seven-questions/SKILL.md"
+    corpus = ROOT / "examples/sample-bundle/sources/sunzi-ji.txt"
+
+    with tempfile.TemporaryDirectory() as d:
+        d = Path(d)
+        ai = d / "visual-notes.md"
+        ai.write_text(L.AI_OBS_HEADER + "\n画面里有一行公式。\n", encoding="utf-8")
+        fallback = d / "talk.visual-notes.jsonl"      # 漏写标记，但用约定文件名
+        fallback.write_text('{"text": "白板上有公式"}\n', encoding="utf-8")
+        bad_card = d / "bad.md"
+        bad_card.write_text("source_locator: visual-notes.jsonl#t=00:12:00\n"
+                            + card.read_text(encoding="utf-8"), encoding="utf-8")
+
+        def blocked(label, fn):
+            try:
+                fn()
+            except ToolError as e:
+                assert "素材分层违规" in str(e), f"{label} 抛了错但不是分层违规：{e}"
+            else:
+                raise AssertionError(f"{label} 没拦住 AI 观察层 —— 会产出假 ANCHOR_HIT")
+
+        # ① 库层：语料带标记（两个新接入的核验器）
+        blocked("evals.verify_quotes(L2 语料)", lambda: E.verify_quotes(card, ai))
+        blocked("anchor.load_corpora(L2 语料)", lambda: A.load_corpora([ai]))
+        # ② 库层：文件名兜底
+        blocked("anchor.load_corpora(文件名兜底)", lambda: A.load_corpora([fallback]))
+        # ③ 库层：卡片自身 source_locator 指向 L2（语料是正常逐字稿）
+        corpora = A.load_corpora([corpus])
+        blocked("anchor.verify_file(卡片指向 L2)", lambda: A.verify_file(bad_card, corpora))
+        # ④ 共享 guard 直接调用
+        blocked("layers.guard(卡片+语料)", lambda: L.guard(card, [ai]))
+
+        # ⑤ 负向：正常语料 + 正常卡片，四条路径都不得误报（假阳性比漏报更坏）
+        E.verify_quotes(card, corpus)
+        A.load_corpora([corpus])
+        L.guard(card, [corpus])
+        A.verify_file(card, corpora)
+
+        # ⑥ CLI：两个新接入的核验器必须 exit 1 且给可执行改法
+        for argv in (["verify-quotes", str(card), str(ai)],
+                     ["anchor", str(card), "--corpus", str(ai)]):
+            out = run(argv, expect=1).stdout
+            assert "素材分层违规" in out and "假 ANCHOR_HIT" in out, (argv, out[:300])
+            assert "移除" in out, "硬失败必须给可执行下一步"
+
+
+def t_layer_guard_docs_in_sync():
+    """文档口径不许腐烂：三个核验器源码都必须调 guard，且不得再写「只有 lint-quotes 拦」。
+
+    v1.12.0 之前 media-pipeline.md / CLAIMS / videounderstand 都写着「anchor /
+    verify-quotes 尚未识别层标记（P2）」。代码改完后这些文字就成了**声称 ≠ 实际**，
+    这条守卫把口径与实现绑在一起。
+    """
+    import inspect
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import anchor as A, evals as E, lintquotes as Q, layers as L
+
+    for name, fn in (("anchor.load_corpora", A.load_corpora),
+                     ("anchor.verify_file", A.verify_file),
+                     ("evals.verify_quotes", E.verify_quotes)):
+        src = inspect.getsource(fn)
+        assert "layers.guard(" in src, \
+            f"{name} 没有调用共享守卫 —— 绕过 CLI 的路径会漏"
+    assert "layers.find_violations(" in inspect.getsource(Q.lint), \
+        "lint-quotes 的分层检查被删了"
+    assert callable(L.guard), "共享守卫不存在"
+
+    docs = ("references/media-pipeline.md", "docs/CLAIMS.md",
+            "scripts/tdlib/videounderstand.py", "README.md")
+    stale = ("只在 `lint-quotes`", "仍会把 L2 当语料", "尚未识别层标记",
+             "属 P2", "绕过体检器")
+    for name in docs:
+        body = (ROOT / name).read_text(encoding="utf-8")
+        for s in stale:
+            assert s not in body, f"{name} 仍写过时的分层边界「{s}」——代码已改"
+
+
 def t_layer_isolation_lint_quotes():
     """P1-a：可核原文 / AI 观察机械隔离——lint-quotes 必须硬失败，且不许误伤正常语料。
 
@@ -4881,6 +4969,8 @@ def main() -> int:
         ("每次运行独立留痕（runs/）", t_run_traceability),
         ("WriterLock 并发写保护", t_writer_lock),
         ("fetch-subtitle 默认 dry-run 不联网", t_fetch_subtitle_dryrun),
+        ("素材分层守卫扩展到三个核验器（v1.12.0）", t_layer_guard_all_verifiers),
+        ("分层守卫的文档口径与实现同步（v1.12.0）", t_layer_guard_docs_in_sync),
         ("素材三层机械隔离：AI 观察层语料触发 lint-quotes 硬失败（P1-a）", t_layer_isolation_lint_quotes),
         ("video-understand 授权前披露单：隐私/成本/分层/无 --execute（P1-b）", t_video_understand_disclosure),
         ("video-understand 零网络可 AST 验证 + 结果一致性（P1-b）", t_video_understand_zero_network),

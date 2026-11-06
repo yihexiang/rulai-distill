@@ -147,9 +147,24 @@ td.py lint-quotes <card> --corpus visual-notes.jsonl     # L2：❌ 硬失败，
 `source_locator` 是否指向 L2 产物。命中即判 `verdict=fail`，并给可执行的改法。
 正向 / 负向 / 文件名兜底 / JSONL 四态都有回归（`t_layer_isolation_lint_quotes`）。
 
-**已知边界（别写成「已全面拦截」）**：本轮只在 `lint-quotes` 落地硬失败；
-绕过体检器直接跑 `anchor` / `verify-quotes` 仍会把 L2 当语料。未带约定标记、
-文件名也随意的 AI 生成文本，工具无从分辨。把守卫扩展到这两个核验器属 P2。
+**三个核验器共用一道守卫（v1.12.0 起）**：`verify-quotes` / `anchor` /
+`lint-quotes` 在**库层**都调用 `tdlib.layers.guard()`，绕过 `td.py` 直接调库函数
+也拦得住。分工：`anchor.load_corpora` 在**切段前**查语料（切完原始标记就没了）、
+`anchor.verify_file` 查卡片自身、`evals.verify_quotes` 一次查语料与卡片、
+`lintquotes.lint` 查 `--corpus` 与卡片。命中即硬失败（CLI exit 1），
+**不会继续产出 ANCHOR_HIT**。
+
+```bash
+td.py verify-quotes <card> <L2 稿>          # ❌ exit 1：素材分层违规
+td.py anchor <card> --corpus <L2 稿>        # ❌ exit 1
+td.py lint-quotes <card> --corpus <L2 稿>   # ❌ exit 1
+```
+
+**剩余边界（别写成「已全面拦截」）**：工具只能识别**带约定标记、或用约定
+文件名**的 L2。一段既没标记、文件名也随意的 AI 生成文本，工具无从分辨——
+那是产出方 / 使用者的责任；L3 用户推断层仍需按 claim-level 逐条标注，
+工具不替人判断内容真伪。四个正向态 + 三条负向探针见
+`t_layer_guard_all_verifiers`，文档口径由 `t_layer_guard_docs_in_sync` 钉住。
 
 ### 3.6 视频理解：外部引擎与「授权前披露单」
 

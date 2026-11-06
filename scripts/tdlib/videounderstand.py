@@ -196,8 +196,9 @@ def plan(video: Path, *, duration_seconds: float | None = None,
         'execute_supported': False,
         'honest_boundaries': [
             '本模块不验证引擎可用性、不探测网络、不读取代理环境变量、不读取视频内容',
-            '未带约定标记且文件名随意的 AI 生成文本，lint-quotes 无从分辨',
-            '本轮 lint-quotes 之外的 anchor / verify-quotes 尚未识别层标记（P2）',
+            'v1.12.0 起三个核验器共用 layers.guard()，但只认带约定标记 / 约定文件名'
+            '的 AI 观察稿；标记缺失且文件名随意时无从分辨',
+            'L3 用户提供 / 推断层需按 claim-level 逐条标注，工具不替人判断内容真伪',
         ],
     }
 

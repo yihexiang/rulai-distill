@@ -1,4 +1,4 @@
-# rulai-distill · 蒸馏工厂 v1.11.1
+# rulai-distill · 蒸馏工厂 v1.12.0
 
 把书籍 / 长视频 / 播客 / 访谈 / 人物素材，蒸馏成**可执行、可验证、可追溯**的 Agent Skills。
 
@@ -11,7 +11,7 @@
 [![Release](https://img.shields.io/github/v/release/yihexiang/rulai-distill)](https://github.com/yihexiang/rulai-distill/releases)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![python](https://img.shields.io/badge/python-%E2%89%A53.10-blue)
-![regression](https://img.shields.io/badge/regression-133%20passing%20%2B%20explicit%20skips-brightgreen)
+![regression](https://img.shields.io/badge/regression-135%20passing%20%2B%20explicit%20skips-brightgreen)
 ![self-found defects](https://img.shields.io/badge/self--found%20defects-83-blue)
 ![cross-model reviews](https://img.shields.io/badge/cross--model%20reviews-3%2F3-brightgreen)
 ![stars](https://img.shields.io/github/stars/yihexiang/rulai-distill?style=social)
@@ -26,6 +26,22 @@
 ![30 秒 demo：五道出厂门禁 + 跨模型复评台账 + 声称逐条对账，全部真跑](demo/demo.gif)
 
 ---
+
+## 🆕 v1.12.0 · 分层守卫扩到三个核验器，视频蒸馏不再有「假锚定」入口
+
+1. **补齐上一轮留下的 P2**：`verify-quotes` / `anchor` / `lint-quotes` 现在在**库层**
+   共用 `tdlib.layers.guard()`。此前只有 lint-quotes 会拦 AI 观察稿，绕过它
+   直接跑另两个核验器仍会把「模型对画面的理解性复述」当成逐字原文，产出
+   **假 ANCHOR_HIT** 还显示绿色。命中即硬失败（CLI exit 1），且绕过 `td.py`
+   直接调库函数也拦得住；分工写在 `references/media-pipeline.md` 3.5。
+2. **口径同步**：media-pipeline / CLAIMS / 披露单 / README 里关于「另两个核验器
+   未接入守卫」的过时表述全部更新，并由 `t_layer_guard_docs_in_sync` 钉住，
+   防止代码改了文档没改。
+3. **回归 133 → 135 项**：新增 `t_layer_guard_all_verifiers`（四态拦截 +
+   三条负向探针 + 两个 CLI exit 1）与 `t_layer_guard_docs_in_sync`。
+4. **诚实边界仍在**：工具只认带约定标记或约定文件名的 L2；标记缺失且文件名
+   随意的 AI 文本无从分辨。视频理解的单帧 token 消耗与长视频截断行为**均未实测**，
+   `video-understand` 的费用只是规划估算，不是报价。
 
 ## 🆕 v1.11.1 · 修掉 CI 假红 + 补上推广基建（demo / 社区文件 / 发版流水线）
 
@@ -298,7 +314,7 @@ python3 scripts/td.py eval-kit utility \
 
 | 维度 | 状态 | 证据 |
 |---|---|---|
-| **机械可靠性** | ✅ 可信 | 133 项回归全绿；`gate` 默认要求交叉复核记录（实测生效）；`verify-quotes`/`anchor`/`lint-quotes` 均在真实素材上抓到过真问题；工具链在 **14 张真实卡**上实跑零崩溃、零假红 |
+| **机械可靠性** | ✅ 可信 | 135 项回归全绿；`gate` 默认要求交叉复核记录（实测生效）；`verify-quotes`/`anchor`/`lint-quotes` 均在真实素材上抓到过真问题；工具链在 **14 张真实卡**上实跑零崩溃、零假红 |
 | **产出正确性** | ⚠️ **已跑通闭环，仍强依赖素材** | `eval-kit` 已在 **14 张卡**上跑通**真实交叉复核**（独立答题 Agent + 2 个独立评分 Agent）：样本卡 `five-affairs` **93/A**、`musk-decisions` **90/A**，guoxue 四张 **93/95/96/96（A）**，开放素材 `lunyu-conduct` **95/A** / `mengzi-refutation` **98/A**，视频卡三张 **100/A**，另 `tongjian-decision-trace` / `hanfei-upward-advice` / `xunzi-learning-order` **100/A**（视频卡与后三张均双评分同分 100，按**质量下限**对待）。⚠️ 这些是**结构独立**而非组织独立（3 张人物卡另有 DeepSeek 跨模型复评，台账见 `docs/independent-recheck/`）；样本卡是精修展示件，**不能代表开放素材的普遍水平**；book-bundle 的 6 张 + 曾国藩在 Phase 4b 严格轮仅 **76–86/B 未过门禁**，**不计入这 14 张** |
 
 具体地说，这个项目目前**做不到**的事：
@@ -379,7 +395,7 @@ python3 scripts/td.py compile books/my-book --out ~/.workbuddy/skills/my-book --
 python3 scripts/td.py rollback ~/.workbuddy/skills/my-book --to latest
 ```
 
-**回归测试**：`python3 tests/e2e.py`（133 项，覆盖全部命令与 vendored 上游实跑）
+**回归测试**：`python3 tests/e2e.py`（135 项，覆盖全部命令与 vendored 上游实跑）
 
 > ⚠️ **「全绿」≠「所有检查都跑了一遍」**。结尾「⚠️未运行 N 项」是依赖作者工作区
 > 真实外部素材的检查（视频 TED 卡、人物马斯克卡、逐字稿等）：干净 clone 下**不会跑、
@@ -396,7 +412,7 @@ python3 scripts/td.py rollback ~/.workbuddy/skills/my-book --to latest
 
 `rulai-distill` 融合了三个开源项目的长处，并把它们的**契约**升格为权威标准。
 
-| 能力 | 来源 | rulai-distill v1.11.1 |
+| 能力 | 来源 | rulai-distill v1.12.0 |
 |---|---|---|
 | 结构感知分块 + 缓存 | cangjie `build_chunks` | **上游内置** `td.py upstream run chunk`；本包 `td.py chunk` 兜底 |
 | SQLite FTS5 词法索引 + 邻接块 | cangjie `build_index` | **上游内置** `td.py upstream run lexindex` |
@@ -429,7 +445,7 @@ FIDELITY 门槛、独立评测闭环（eval-kit）、引语三层核验、字幕
 | 零第三方依赖 | 内置最小 YAML 解析器 + 字符级 token 估算；PyYAML / tiktoken 缺失时自动降级 |
 | FIDELITY 写进发布 | `compile` 读到低于门槛直接拒发；自测模式（fallback-self）默认**不算通过** |
 | 独立质检闭环 | `eval-kit`：题库 / 答题 / 双评分 / 分差门禁全流程化，产出 `gate` 可直接消费的 JSON |
-| 引语三层核验 | 存在性（verify-quotes）→ 段号归属（anchor）→ 用字体检（lint-quotes） |
+| 引语三层核验 + 素材分层守卫 | 存在性（verify-quotes）→ 段号归属（anchor）→ 用字体检（lint-quotes）；三者库层共用 `layers.guard()`，AI 观察稿一律硬失败（v1.12.0） |
 | 冲突标记 | 调研合并遇到互相矛盾的一手材料不静默取先到 |
 | 写操作默认 dry-run | `repair` / `patch` / `update` 不加 `--apply` 不落盘 |
 | 一屏能力矩阵 | `td.py doctor` 直接打印与三个来源的对应关系 |
@@ -459,7 +475,7 @@ rulai-distill/
 │   │                            / fidelity / evalkit / anchor / lintquotes / strategy / publish
 │   │                            / evals / evolve / promptc / upstream
 │   └── vendor/cangjie/       ← 上游 MIT 原件 + PROVENANCE.md（不改）
-└── tests/e2e.py              ← 端到端回归（133 项，双解释器各跑一遍）
+└── tests/e2e.py              ← 端到端回归（135 项，双解释器各跑一遍）
 ```
 
 ---

@@ -35,6 +35,8 @@ import re
 import sys
 from pathlib import Path
 
+from . import layers
+
 WORD_RE = re.compile(r"[a-z0-9']+")
 TS_RE = re.compile(r"^\[(\d\d:\d\d:\d\d(?:\.\d+)?)\]", re.M)
 # 书类语料用 【第N段】 / 【第N条】 作段号标记（复审 #1：anchor 此前只认 [时间戳]，
@@ -530,6 +532,9 @@ def verify_file(claim_file: Path, corpora: dict[str, dict[int, str] | Corpus],
     这与 CONSTRAINTS C10「引用数 ≠ 核验数」同一个纪律：
     **必须把"引语总数"与"锚定核验数"都报出来，并对账。**
     """
+    # v1.12.0：卡片侧的分层检查。语料侧由 load_corpora 在**切段之前**查——
+    # 传到这里的 corpora 已切成段，原始标记不在其中，查不到了。
+    layers.guard(claim_file, [])
     # #71：入参可能是老测试直接传的 plain dict（{int:str}）——包一层 Corpus 保证接口一致。
     corpora = {s: (c if isinstance(c, Corpus) else Corpus(c)) for s, c in corpora.items()}
     text = claim_file.read_text(encoding="utf-8", errors="replace")
@@ -896,6 +901,8 @@ def _merged(corpora: dict[str, dict[int, str]]) -> dict[int, str]:
 
 
 def load_corpora(paths: list[Path]) -> dict[str, Corpus]:
+    # v1.12.0：必须在**切段之前**查层——切完原始标记就没了，后面再查等于没查。
+    layers.guard(None, paths)
     return {p.stem: index_corpus(p.read_text(encoding="utf-8", errors="replace"))
             for p in paths}
 

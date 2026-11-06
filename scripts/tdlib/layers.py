@@ -37,13 +37,18 @@ JSONL 也可每行带 `"layer": "ai-observation"`。另外按**文件名**兜底
 ## 诚实边界（不要写成「已全面拦截」）
 
 本模块只能拦住**带约定标记、或用约定文件名**的 L2。一段既没标记、文件名也随意的
-AI 生成文本，工具无从分辨——那是产出方/使用者的责任。同理，本轮只在
-`lint-quotes` 落地硬失败；绕过体检器直接跑 `anchor` / `verify-quotes`
-仍会把 L2 当语料（见 references/media-pipeline.md 3.5「已知边界」），属 P2 待办。
+AI 生成文本，工具无从分辨——那是产出方/使用者的责任。
+
+v1.12.0 起，`verify-quotes` / `anchor` / `lint-quotes` **三个核验器在库层共用
+`guard()`**：绕过 `td.py` 直接调库函数也拦得住。剩余边界是「标记缺失且文件名随意」，
+以及 L3 用户推断层需按 claim-level 逐条标注（工具不替人判断内容真伪）。
 """
 from __future__ import annotations
 
 import re
+from pathlib import Path
+
+from .util import ToolError
 
 LAYER_VERBATIM = 'verbatim'
 LAYER_AI_OBSERVATION = 'ai-observation'
@@ -120,3 +125,38 @@ def find_violations(card_text: str,
                                '该产物不能作为逐字原文的出处'})
             break       # 同类只报一条，避免刷屏淹没真信号
     return out
+
+
+def guard(card: Path | None, corpus_paths: list[Path]) -> None:
+    """核验链入口守卫：任何一层命中 AI 观察层就**直接抛 ToolError**（硬阻断）。
+
+    放在**库层**而不只是 CLI：绕过 `td.py` 直接调 `anchor.verify_file` /
+    `evals.verify_quotes` / `anchor.load_corpora` 的调用方同样受保护。
+    这是 P1-a 的 P2 收口——此前只有 `lint-quotes` 会拦，另两个核验器仍会把
+    AI 观察稿当语料并产出假 ANCHOR_HIT。
+
+    - `card` 传 None → 只查语料（`anchor.load_corpora` 拿不到卡片时用）；
+    - `corpus_paths` 传空 → 只查卡片（`anchor.verify_file` 收到的是已切段语料，
+      原始标记不在其中，故语料侧由 load_corpora 在切段前查）。
+    - 语料只读**开头 4000 字符**：标记按约定必须在文件开头，3MB 逐字稿不必
+      为了守卫再全文读一遍（`detect_layer` 自身也只认开头 4000 字符）。
+    """
+    card_text = ''
+    if card is not None:
+        card_text = Path(card).read_text(encoding='utf-8', errors='replace')
+    corpus_texts: dict[str, str] = {}
+    for p in corpus_paths:
+        p = Path(p)
+        corpus_texts[p.stem] = p.read_text(encoding='utf-8', errors='replace')[:4000]
+    violations = find_violations(card_text, corpus_texts)
+    if not violations:
+        return
+    where = '；'.join(v['where'] for v in violations)
+    raise ToolError(
+        f'素材分层违规（{where}）：AI 观察层被当作可核原文 / 引语出处 —— '
+        '继续核验会产出假 ANCHOR_HIT，核验链从源头就断了',
+        '把 AI 观察稿从 --corpus 里移除；可核原文只用平台字幕 / 本地 ASR 逐字稿',
+        'AI 观察稿只能作检索 / 索引线索，产物须带 RULAI_LAYER: ai-observation 标记',
+        'verify-quotes / anchor / lint-quotes 三个核验器共用本守卫；'
+        '规则与剩余边界见 references/media-pipeline.md 3.5',
+    )
