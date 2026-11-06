@@ -29,12 +29,19 @@
 字形表的覆盖是**有边界的**（见 `_S2T_LIST`，人工整理的常用对）。表没覆盖到的简繁对，
 会走"最相近语料句 + 逐字差异"兜底（近似度阈值 0.80，与核验器同一套保守口径），仍能报出
 差异字形对，只是标注为"疑似用字不一致"，不硬说是简繁。
+**P1-a 增补（2026-11-06）**：新增**素材分层违规**（layer_violation）硬失败——
+若 `--corpus` 语料带 `RULAI_LAYER: ai-observation` 标记（或文件名命中 AI 观察层
+约定），说明把「模型对画面的理解性复述」当成了可逐字回源的原文，anchor 会产出
+**假 ANCHOR_HIT**。这类不是启发式，是确证违规，与 glyph 同级判 `fail`。
+判据与诚实边界见 `tdlib/layers.py`。
 """
 from __future__ import annotations
 
 import difflib
 import re
 from pathlib import Path
+
+from . import layers
 
 QUOTE_PATTERNS = [re.compile(r"「([^」]{8,400})」", re.S),
                   re.compile(r'"([^"\n]{8,400})"')]
@@ -210,6 +217,9 @@ def lint(card: Path, corpus_texts: dict[str, str] | None = None) -> dict:
         corpus_sentences += [s for s in (_clean(x) for x in re.split(r"[。！？；\n]+", t))
                              if len(s) >= 8]
 
+    # P1-a：素材分层的检查在引语抽取**之外**独立跑——即使卡片一条引语都没有，
+    # 只要把 AI 观察稿当语料 / 出处，也必须判失败（隔离不依赖引语数量）。
+    layer_violations = layers.find_violations(text, corpus_texts)
     quotes = [q for q in extract_quotes(text) if not q["meta"]]
     lines = text.splitlines()
     findings: list[dict] = []
@@ -223,6 +233,14 @@ def lint(card: Path, corpus_texts: dict[str, str] | None = None) -> dict:
                 continue
             f["line"] = q["line"]
             findings.append(f)
+    for v in layer_violations:
+        findings.append({
+            "kind": "layer_violation",
+            "line": v["line"],
+            "where": v["where"],
+            "quote": v["where"],
+            "why": v["why"],
+        })
     by_kind: dict[str, int] = {}
     for f in findings:
         by_kind[f["kind"]] = by_kind.get(f["kind"], 0) + 1
@@ -245,5 +263,9 @@ def lint(card: Path, corpus_texts: dict[str, str] | None = None) -> dict:
         "vacuous": vacuous,
         "notes": "" if has_corpus else "未提供 --corpus：只做了省略号检查（简繁/归属需语料）",
         # 只有 glyph（确证"近似但不逐字"）判失败；ellipsis/authorship 是启发式，只提示。
-        "verdict": "vacuous" if vacuous else ("fail" if glyph else "pass"),
+        "layer_violations": len(layer_violations),
+        # glyph 与 layer_violation 都是**确证**问题，判硬失败；
+        # ellipsis / authorship 仍是启发式，只提示（不随这次改动收紧）。
+        "verdict": ("vacuous" if vacuous else
+                    ("fail" if (glyph or layer_violations) else "pass")),
     }

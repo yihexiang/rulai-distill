@@ -1,0 +1,122 @@
+# -*- coding: utf-8 -*-
+"""tdlib.layers — 素材三层：把「可核原文」与「AI 观察」机械隔离（P1-a）。
+
+## 为什么需要这个模块
+
+长视频蒸馏里有两类文字长得几乎一样，性质却相反：
+
+| 层 | 例子 | 能不能逐字回源 |
+|---|---|---|
+| L1 可核原文 | 平台字幕、本地 ASR 逐字稿、用户手抄原文 | ✅ 带时间戳，`source_locator` 可核 |
+| L2 AI 观察 | 视觉理解稿、画面描述、屏幕文字归纳、OCR 摘要 | ❌ 是模型对画面的**理解性复述**，不是「视频里说过的话」 |
+
+`verify-quotes` / `anchor` / `lint-quotes` 全部建立在 L1 上：逐字去语料里找，
+找到才算 ANCHOR_HIT。若把 L2 混进 `--corpus`，anchor 会把 AI 生成的句子当成
+「已核实的原文」，产出**假 ANCHOR_HIT**——核验链条从源头就断了，而且显示为绿。
+这正是 #77 那类事故的形态（没有出处的词被伪装成核实过的），只是更隐蔽：
+这次连「原文」本身都是模型编的。
+
+所以隔离不能靠文档叮嘱，必须**机器可判、体检器硬失败**。
+
+## 三层与标记约定
+
+| 层 | 值 | 标记 | 可否作 `--corpus` / 引语出处 |
+|---|---|---|---|
+| L1 可核原文 | `verbatim` | 无（默认） | ✅ 唯一允许 |
+| L2 AI 观察 | `ai-observation` | 必须带 `RULAI_LAYER: ai-observation` | ❌ `lint-quotes` 硬失败 |
+| L3 用户提供/推断 | `user-supplied` | 建议带 `RULAI_LAYER: user-supplied` | ⚠️ 不自动算原文，按 claim-level 逐条标注 |
+
+L2 产物**必须**在文件开头带一行（md/txt/JSONL 通用）：
+
+    <!-- RULAI_LAYER: ai-observation | 禁止作为可核原文 / 引语出处 -->
+
+JSONL 也可每行带 `"layer": "ai-observation"`。另外按**文件名**兜底：
+`*.visual-notes.jsonl` / `*.ai-transcript.md` / `*.vision.md` / `multimodal-transcript*`
+即使漏写标记也判 L2——防「忘了标记就混进去」。
+
+## 诚实边界（不要写成「已全面拦截」）
+
+本模块只能拦住**带约定标记、或用约定文件名**的 L2。一段既没标记、文件名也随意的
+AI 生成文本，工具无从分辨——那是产出方/使用者的责任。同理，本轮只在
+`lint-quotes` 落地硬失败；绕过体检器直接跑 `anchor` / `verify-quotes`
+仍会把 L2 当语料（见 references/media-pipeline.md 3.5「已知边界」），属 P2 待办。
+"""
+from __future__ import annotations
+
+import re
+
+LAYER_VERBATIM = 'verbatim'
+LAYER_AI_OBSERVATION = 'ai-observation'
+LAYER_USER_SUPPLIED = 'user-supplied'
+
+AI_OBS_HEADER = '<!-- RULAI_LAYER: ai-observation | 禁止作为可核原文 / 引语出处 -->'
+USER_HEADER = '<!-- RULAI_LAYER: user-supplied | 逐条标注 [原文]/[通法]/[本卡规则] -->'
+
+# 只认「开头 4000 字符内、独立成行」的标记：正文里讨论这条规则不算标记，
+# 否则把 media-pipeline.md 当语料的人会被误伤（假阳性比漏报更坏，见 lintquotes 纪律）。
+_MARKER_RE = re.compile(
+    r'^\s*(?:<!--|#|//|/\*)?\s*RULAI_LAYER\s*:\s*(ai-observation|user-supplied)\b',
+    re.M)
+_JSON_LAYER_RE = re.compile(r'"layer"\s*:\s*"ai-observation"')
+_AI_FILENAME_HINTS = (
+    'visual-notes', 'ai-transcript', 'vision-notes', '.vision.md',
+    'multimodal-transcript', '.visual.md',
+)
+# 卡片里把 AI 观察层写成出处的形态。只认**产物文件名**，不认裸层名——
+# 否则卡片里一句「AI 观察层禁作语料」的正当说明会被误判成违规。
+_LOCATOR_RE = re.compile(
+    r'(?:source_locator|出处|语料|来源|corpus)[^\n]{0,140}'
+    r'(?:visual-notes|ai-transcript|vision-notes|multimodal-transcript|\.vision\.md)',
+    re.I)
+
+
+def detect_layer(text: str | None = None, name: str | None = None) -> str:
+    """判定一份素材属于哪一层。返回 verbatim / ai-observation / user-supplied。"""
+    if text:
+        head = text[:4000]
+        m = _MARKER_RE.search(head)
+        if m:
+            return (LAYER_AI_OBSERVATION if m.group(1) == 'ai-observation'
+                    else LAYER_USER_SUPPLIED)
+        if _JSON_LAYER_RE.search(head):
+            return LAYER_AI_OBSERVATION
+    if name:
+        low = str(name).lower()
+        if any(h in low for h in _AI_FILENAME_HINTS):
+            return LAYER_AI_OBSERVATION
+    return LAYER_VERBATIM
+
+
+def is_ai_observation(text: str | None = None, name: str | None = None) -> bool:
+    return detect_layer(text, name) == LAYER_AI_OBSERVATION
+
+
+def find_violations(card_text: str,
+                    corpus_texts: dict[str, str] | None = None) -> list[dict]:
+    """找出「AI 观察层被当作可核原文 / 引语出处」的所有位置。
+
+    返回 `[{where, line, why}]`；空列表表示未发现违规。
+    检查三处：① 传入的 `--corpus` 语料（正文标记）；② 语料文件名兜底；
+    ③ 卡片自身正文（被标成 L2、或 source_locator 指向 L2 产物）。
+    """
+    out: list[dict] = []
+    why_corpus = (
+        '该语料属于 AI 观察层（RULAI_LAYER: ai-observation）——它是模型对画面的'
+        '理解性复述，不是可逐字回源的原文；喂给 anchor 会制造假 ANCHOR_HIT')
+    for name, text in (corpus_texts or {}).items():
+        if is_ai_observation(text, name):
+            out.append({'where': f'--corpus {name}', 'line': 0, 'why': why_corpus})
+
+    lines = card_text.splitlines()
+    m = _MARKER_RE.search(card_text[:4000])
+    if m and m.group(1) == 'ai-observation':
+        ln = card_text[:m.start()].count('\n') + 1
+        out.append({'where': f'卡片第 {ln} 行', 'line': ln,
+                    'why': '卡片自身被标成 AI 观察层——它不该进入引语核验链'})
+    for i, line in enumerate(lines, 1):
+        if _LOCATOR_RE.search(line):
+            out.append({'where': f'卡片第 {i} 行', 'line': i,
+                        'why': 'source_locator / 出处指向 AI 观察层产物，'
+                               '该产物不能作为逐字原文的出处'})
+            break       # 同类只报一条，避免刷屏淹没真信号
+    return out

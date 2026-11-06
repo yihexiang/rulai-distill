@@ -5,7 +5,8 @@ td.py — rulai-distill 工具链（薄 CLI）
 
 设计原则
   1. 薄 CLI：脚本只做**确定性文件操作**，语义提取与评分全部交给 Agent。
-  2. 零网络：全包不发起任何外部请求（字幕/调研/评测均离线；触发评测由 Agent 作答、脚本判分）。
+  2. 零网络：除 `fetch-subtitle --execute`（唯一联网动作，默认 dry-run）外，
+     全包不发起任何外部请求；`video-understand` 只生成授权前披露单，本身无联网能力。
   3. 零动态执行：无 eval / exec / subprocess(shell=True)。
   4. 零依赖可跑：PyYAML / tiktoken 缺失时自动降级，不阻断。
   5. 失败可读：异常一律转成「❌ 人话 + 可执行下一步」，绝不抛裸 traceback。
@@ -16,6 +17,7 @@ td.py — rulai-distill 工具链（薄 CLI）
   建包    init <dir>
   长内容  chunk <src> [--sidecar --max-chars --force] ｜ index <sidecar> [--grep] ｜ preview <sidecar>
   字幕    transcript <srt…> [--out --merge --offset --gap]
+  视频理解 video-understand <file> [--duration-seconds --engine --upload-to --json-out]  # 授权前披露单，零网络
   调研    research init <dir> ｜ research merge <files…> --out <f>
   校验    validate <path>
   质检    gate <report> [--min A|B|C|D] [--scores 95,88]
@@ -39,7 +41,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from tdlib import (anchor, chunking, contracts, evalkit, evolve, evals, fidelity as fid, fetch,
                    lintquotes, overlap, promptc, publish, research, strategy, transcript,
-                   upstream, validate as vd)
+                   upstream, validate as vd, videounderstand)
 from tdlib.util import (METHOD_DIR, SCHEMA_DIR, TEMPLATE_DIR, ToolError, VERSION,
                         die, head, info, ok, read_json, read_json_or_jsonl, read_text,
                         warn, write_json)
@@ -618,7 +620,8 @@ def cmd_corpus_anchor(args) -> int:
 
 def cmd_lint_quotes(args) -> int:
     head("引语体检 · 简繁不一致 / 省略号 / 归属可疑")
-    info("提示器：glyph（简繁/用字）确证判失败；省略号与归属可疑是启发式，只提示")
+    info("提示器：glyph（简繁/用字）与 layer_violation（素材分层）确证判失败；"
+         "省略号与归属可疑是启发式，只提示")
     corpora: dict[str, str] = {}
     for p in getattr(args, "corpus", []) or []:
         pp = Path(p).expanduser()
@@ -632,8 +635,11 @@ def cmd_lint_quotes(args) -> int:
         write_json(Path(args.json_out).expanduser(), rep)
         ok(f"已写出 {args.json_out}")
     for f in rep["findings"]:
-        mark = "❌" if f["kind"] == "glyph" else "⚠️"
-        print(f"   {mark} 第 {f['line']} 行 [{f['kind']}] {f['why']}")
+        hard = f["kind"] in ("glyph", "layer_violation")
+        mark = "❌" if hard else "⚠️"
+        loc = (f"第 {f['line']} 行" if f.get("line")
+               else f.get("where", "（未定位）"))
+        print(f"   {mark} {loc} [{f['kind']}] {f['why']}")
         if f.get("pairs"):
             print("        差异字形：" + "，".join(f"{a}→{b}" for a, b in f["pairs"]))
         print(f"        「{f['quote'][:70]}」")
@@ -641,6 +647,12 @@ def cmd_lint_quotes(args) -> int:
         die("⚠️ 空集假绿：卡片含引语候选，却一条都没抽出来 —— 体检器没干活，不是没问题",
             "确认引语写在引号里（「…」/\"…\"），且长度 ≥8 字符")
     if rep["verdict"] == "fail":
+        if any(f["kind"] == "layer_violation" for f in rep["findings"]):
+            die("体检发现**确证**素材分层违规：AI 观察层被当作可核原文 / 引语出处 —— "
+                "它会在 anchor 里制造假 ANCHOR_HIT（核验链从源头就断了）",
+                "把 AI 观察稿从 --corpus 里移除；可核原文只用平台字幕 / 本地 ASR 逐字稿",
+                "AI 观察稿只能作检索/索引线索；产物须带 RULAI_LAYER: ai-observation 标记",
+                "规则与已知边界见 references/media-pipeline.md 3.5「素材三层」")
         die("体检发现**确证**用字不一致（简繁/异体）—— 引语不是逐字原文，核验必然失败",
             "把卡片引语统一成**语料所用字形**（见上列差异字形对），再跑 verify-quotes 确认")
     if rep["findings"]:
@@ -1180,6 +1192,36 @@ def cmd_fetch_subtitle(args) -> int:
     return EXIT_OK
 
 
+def cmd_video_understand(args) -> int:
+    """视频理解**授权前披露单**：只 stat 文件大小，不联网、不上传、不读内容。
+
+    这里刻意没有 `--execute`：把私有视频发布到公网托管（Uguu 约 3 小时不可撤回）
+    必须是人显式做的一次性动作，不能退化成「顺手加个参数」。
+    """
+    head("视频理解 · 授权前披露单（零网络 · 永不上传 · 无 --execute）")
+    video = Path(args.video).expanduser()
+    if not video.exists():
+        die(f"本地视频不存在：{video}",
+            "本命令只读取文件大小，不会读取或上传视频内容",
+            "给一个已存在的本地路径；不需要联网")
+    if not video.is_file():
+        die(f"不是普通文件：{video}", "给一个本地视频文件路径")
+    warn("本命令不会上传任何文件、不发起任何网络请求；"
+         "下面是「假如你决定调用外部视觉引擎」的事前披露")
+    p = videounderstand.plan(
+        video, duration_seconds=args.duration_seconds, engine=args.engine,
+        upload_to=args.upload_to, vision_mode=args.vision_mode,
+        price_in=args.price_in, price_out=args.price_out,
+        price_cache=args.price_cache)
+    print()
+    print(videounderstand.render(p))
+    if args.json_out:
+        write_json(Path(args.json_out).expanduser(), p)
+        ok(f"已写出 {args.json_out}（本地 JSON，可留证）")
+    info("是否调用外部引擎由你显式决定；本命令到此为止")
+    return EXIT_OK
+
+
 # --------------------------------------------------------------------------
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
@@ -1490,6 +1532,24 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("--no-proxy", action="store_true",
                    help="忽略环境代理变量直连（代理隧道 502 时用）")
     q.set_defaults(func=cmd_fetch_subtitle)
+
+    q = sub.add_parser("video-understand",
+                       help="视频理解授权前披露单（零网络，永不上传，无 --execute）")
+    q.add_argument("video", help="本地视频路径（只 stat 大小，不读取内容、不上传）")
+    q.add_argument("--duration-seconds", type=float, default=None,
+                   help="视频时长（秒）；不给则拒绝给 token / 费用估算")
+    q.add_argument("--engine", choices=videounderstand.ENGINES, default="longcat",
+                   help="视觉引擎（可选，不是唯一内核）；none = 纯本地")
+    q.add_argument("--upload-to", choices=videounderstand.UPLOAD_TARGETS, default="uguu",
+                   help="拟用的公网托管方式；none = 不上传（最安全）")
+    q.add_argument("--vision-mode", choices=videounderstand.VISION_MODES,
+                   default="agent-slices", help="切分方式（影响估算假设）")
+    q.add_argument("--price-in", type=float, default=2.0, help="¥/M 输入 token（覆盖默认值）")
+    q.add_argument("--price-out", type=float, default=8.0, help="¥/M 输出 token（覆盖默认值）")
+    q.add_argument("--price-cache", type=float, default=0.04,
+                   help="¥/M 缓存命中 token（仅披露，不参与估算）")
+    q.add_argument("--json-out", help="把披露单写成可留证的本地 JSON")
+    q.set_defaults(func=cmd_video_understand)
     return p
 
 

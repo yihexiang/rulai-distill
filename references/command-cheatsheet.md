@@ -1,6 +1,7 @@
-# reference · 命令速查（37 个子命令）
+# reference · 命令速查（38 个子命令）
 
-> 全部命令纯本地、零网络。`td.py --help` 与各子命令 `--help` 是权威来源，本文是带场景的速查。
+> 除 `fetch-subtitle --execute`（唯一联网动作，默认 dry-run）外全部命令纯本地；
+> `video-understand` 只生成披露单、不上传。`td.py --help` 与各子命令 `--help` 是权威来源，本文是带场景的速查。
 
 ## 场景 → 命令
 
@@ -13,6 +14,7 @@
 | 深度检索（词法 + 邻接块，防断章取义） | `td.py lexindex <chunks.jsonl>` → `td.py lexindex --db <db> --query "…" --neighbors 1` |
 | 看看切得对不对 | `td.py preview <sidecar>` |
 | 取字幕（唯一联网，默认 dry-run） | `td.py fetch-subtitle <URL> --out <dir> [--execute --cookies f]` |
+| 视频理解授权前披露（**零网络、永不上传、无 `--execute`**） | `td.py video-understand <file> [--duration-seconds N --engine longcat\|doubao\|none --upload-to uguu\|self-hosted\|none --json-out plan.json]`；只打印隐私 / 成本 / 分层披露，不调用引擎 |
 | 字幕 → 逐字稿 | `td.py transcript <srt…> [--merge --out]` |
 | 人物六路调研骨架 | `td.py research init <dir> --person 名字` |
 | 合并多路调研 | `td.py research merge <files…> --out merged.md` |
@@ -92,6 +94,7 @@ td.py validate books/x && td.py gate books/x/skills/*/FIDELITY.md --min B
 td.py strategy books/x && td.py compile books/x --out ~/.workbuddy/skills/x
 
 # 视频
+td.py video-understand talk.mp4 --duration-seconds 2700  # 先读隐私/成本披露，再决定是否调外部引擎
 td.py fetch-subtitle "<URL>" --out subs/ --execute     # 不加 --execute 只打印命令
 td.py transcript subs/<id>.srt && td.py chunk subs/<id>.transcript.md --source-id transcript
 # 之后同上

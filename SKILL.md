@@ -9,6 +9,7 @@ description: |
   触发词：「蒸馏」「拆书」「拆解这本书」「做成 skill」「提取方法论」「提取思维方式」「人物思维 Skill」「book to skill」「distill」「extract methodology」。
   English triggers: "distill this book", "turn this into skills", "extract methodology", "persona skill", "cognitive implant".
   不做：书摘、读后感、单纯摘要、作者语气模仿。
+whenToUse: "拆书、拆解长视频或访谈，提取方法论/人物思维并做成技能"
 license: MIT
 compatibility: >-
   Needs Python >= 3.10 and git. Optional extras (auto-degrades when absent):
@@ -293,7 +294,7 @@ td.py count <dir>                                  # token 计量
 - 可选：`PyYAML`（严格 frontmatter）、`tiktoken`（精确 token 计量）、`jsonschema`
 - **无网络调用**：所有脚本纯本地，不访问任何外部 API
 - 自检：`python3 scripts/td.py doctor`
-- 回归：`python3 tests/e2e.py`（130 项，零依赖与完整依赖两种解释器各跑一遍）
+- 回归：`python3 tests/e2e.py`（133 项，零依赖与完整依赖两种解释器各跑一遍）
 - CI：`.github/workflows/pipeline-check.yml`（双版本矩阵 + 红线扫描 + Schema 校验）
 
 ## 许可

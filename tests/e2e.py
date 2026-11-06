@@ -1402,6 +1402,156 @@ def t_fetch_subtitle_dryrun():
         assert run(["fetch-subtitle", "https://example.com/v", "--out", d]).returncode == 0
 
 
+def t_layer_isolation_lint_quotes():
+    """P1-a：可核原文 / AI 观察机械隔离——lint-quotes 必须硬失败，且不许误伤正常语料。
+
+    真缺陷形态：把 LongCat / video-downloader 的视觉理解稿喂给 anchor，会把
+    AI 生成的句子当成已核实原文 → **假 ANCHOR_HIT**（#77 同类，但更隐蔽：
+    这次连「原文」本身都是模型编的）。四个正向态 + 两个负向探针，缺一不可。
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import layers as L, lintquotes as Q
+
+    card_text = "他说「知之者胜，不知者不胜」。\n"
+    ai_md = L.AI_OBS_HEADER + "\n画面里出现一行公式，演讲者指向白板。\n"
+    ai_jsonl = '{"layer": "ai-observation", "text": "白板上写着公式"}\n'
+    good_corpus = "【第1段】知之者胜，不知者不胜。画面里另有一行公式。\n"
+
+    with tempfile.TemporaryDirectory() as d:
+        d = Path(d)
+        card = d / "card.md"
+        card.write_text(card_text, encoding="utf-8")
+
+        # ① 正文标记：AI 观察稿当 --corpus → fail + layer_violation
+        r = Q.lint(card, {"visual": ai_md})
+        assert r["verdict"] == "fail", r
+        assert r["by_kind"].get("layer_violation") == 1, r["by_kind"]
+        assert r["layer_violations"] == 1
+
+        # ② 文件名兜底：漏写标记、但用了约定文件名，仍判 L2
+        r2 = Q.lint(card, {"talk.visual-notes": "白板上写着公式，没有标记。"})
+        assert r2["verdict"] == "fail" and r2["layer_violations"] >= 1, r2
+
+        # ③ JSONL 形式（每行 "layer": "ai-observation"）
+        r3 = Q.lint(card, {"notes": ai_jsonl})
+        assert r3["verdict"] == "fail", r3
+
+        # ④ 卡片自身 source_locator 指向 L2 产物：即使不给 --corpus 也要红
+        bad_card = d / "bad.md"
+        bad_card.write_text("source_locator: visual-notes.jsonl#t=00:12:00\n" + card_text,
+                            encoding="utf-8")
+        r4 = Q.lint(bad_card)
+        assert r4["verdict"] == "fail" and r4["layer_violations"] >= 1, r4
+
+        # ⑤ 负向：正常语料不误报（假阳性比漏报更坏——lintquotes 纪律）
+        ok_card = d / "ok.md"
+        ok_card.write_text(card_text, encoding="utf-8")
+        g = Q.lint(ok_card, {"transcript": good_corpus})
+        assert g["layer_violations"] == 0, g
+        assert g["verdict"] == "pass", g
+
+        # ⑥ 负向：卡片正当讨论「AI 观察层禁作语料」不许被判成违规
+        discuss = d / "discuss.md"
+        discuss.write_text("语料分层：AI 观察层禁作引语出处，见 media-pipeline.md。\n"
+                           + card_text, encoding="utf-8")
+        dd = Q.lint(discuss, {"transcript": good_corpus})
+        assert dd["layer_violations"] == 0, dd
+
+        # ⑦ CLI：exit 1 且给可执行改法，不是静默放行
+        ai_file = d / "visual-notes.md"
+        ai_file.write_text(ai_md, encoding="utf-8")
+        proc = run(["lint-quotes", str(ok_card), "--corpus", str(ai_file)], expect=1)
+        out = proc.stdout + proc.stderr
+        assert "layer_violation" in out and "假 ANCHOR_HIT" in out, out
+
+
+def t_video_understand_disclosure():
+    """P1-b：披露单必须摊开隐私代价 / 成本口径 / 分层契约，且拒不提供 --execute。"""
+    with tempfile.TemporaryDirectory() as d:
+        d = Path(d)
+        v = d / "talk.mp4"
+        v.write_bytes(b"0" * (3 * 1024 * 1024))
+        p1 = d / "plan.json"
+        out = run(["video-understand", str(v), "--duration-seconds", "2700",
+                   "--json-out", str(p1)]).stdout
+        for kw in ("Uguu", "3 小时", "无法提前删除", "公网 URL", "不可撤回"):
+            assert kw in out, f"披露单缺隐私事实 {kw}：{out[:400]}"
+        for kw in ("规划估算", "未实测", "两者不一致", "费用估算"):
+            assert kw in out, f"披露单缺成本口径 {kw}"
+        assert "RULAI_LAYER: ai-observation" in out, "分层标记没写进披露单"
+        assert "network_calls = 0" in out and "execute_supported = false" in out
+
+        p = json.loads(p1.read_text(encoding="utf-8"))
+        assert p["network_calls"] == 0 and p["upload_performed"] is False
+        assert p["execute_supported"] is False
+        assert p["estimate"]["input_tokens"] == 9000, p["estimate"]   # 5 段 × 1800
+        assert p["layer_contract"]["L2"]["value"] == "ai-observation"
+
+        # 缺时长：拒绝编数字，但隐私披露仍然完整
+        p2 = d / "p2.json"
+        out2 = run(["video-understand", str(v), "--json-out", str(p2)]).stdout
+        assert "不给" in out2 and "Uguu" in out2, out2
+        q2 = json.loads(p2.read_text(encoding="utf-8"))
+        assert q2["estimate"]["input_tokens"] is None and q2["estimate"]["cost_cny"] is None
+
+        # 纯本地路线：0 token / ¥0
+        p3 = d / "p3.json"
+        out3 = run(["video-understand", str(v), "--engine", "none", "--upload-to", "none",
+                    "--duration-seconds", "2700", "--json-out", str(p3)]).stdout
+        q3 = json.loads(p3.read_text(encoding="utf-8"))
+        assert q3["estimate"]["input_tokens"] == 0 and q3["estimate"]["cost_cny"] == 0.0
+        assert "文件不出机器" in out3, out3
+
+        # --execute 根本不存在：不能让「不可撤回的上传」退化成顺手加个参数
+        assert run(["video-understand", str(v), "--execute"], expect=None).returncode != 0
+        assert "--execute" not in run(["video-understand", "--help"]).stdout
+
+        # 不存在的文件：中文可执行报错，不抛 traceback
+        bad = run(["video-understand", str(d / "nope.mp4")], expect=1)
+        o = bad.stdout + bad.stderr
+        assert "本地视频不存在" in o and "traceback" not in o.lower(), o
+
+
+def t_video_understand_zero_network():
+    """零网络不是承诺、是可 AST 验证的结构性质；相同输入两次输出必须完全一致（R5）。"""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tdlib import layers as L, videounderstand as V
+
+    tree = ast.parse((ROOT / "scripts" / "tdlib" / "videounderstand.py")
+                     .read_text(encoding="utf-8"))
+    banned_imports = {"urllib", "requests", "socket", "http", "httpx", "aiohttp",
+                      "subprocess", "ftplib", "smtplib", "telnetlib"}
+    imports: set[str] = set()
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Import):
+            imports |= {a.name.split(".")[0] for a in n.names}
+        elif isinstance(n, ast.ImportFrom) and n.module:
+            imports.add(n.module.split(".")[0])
+    assert not (imports & banned_imports), \
+        f"披露单模块引入网络/子进程依赖：{imports & banned_imports}"
+    banned_calls = {"eval", "exec", "system", "popen", "urlopen"}
+    for n in ast.walk(tree):
+        if (isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+                and n.func.id in banned_calls):
+            raise AssertionError(f"披露单模块出现禁用调用 {n.func.id}")
+
+    # P1-a / P1-b 必须共用同一份标记常量，不许各写一份导致漂移
+    assert V.layers.AI_OBS_HEADER == L.AI_OBS_HEADER
+
+    with tempfile.TemporaryDirectory() as d:
+        v = Path(d) / "talk.mp4"
+        v.write_bytes(b"0" * 1024)
+        kw = dict(duration_seconds=2700.0, engine="longcat", upload_to="uguu",
+                  vision_mode="agent-slices")
+        a, b = V.plan(v, **kw), V.plan(v, **kw)
+        assert a == b, "相同输入两次 plan 不一致（R5：不许塞时间戳 / 随机值）"
+        assert V.render(a) == V.render(b)
+        assert a["network_calls"] == 0
+        for mode in V.VISION_MODES:
+            e = V.estimate(2700.0, mode, True, 2.0, 8.0)
+            assert e["input_tokens"] is not None and e["cost_cny"] is not None, mode
+
+
 def t_bigram_tokenizer():
     """CJK bigram + 英文整词——两个方向的回归都在这里。
 
@@ -4731,6 +4881,9 @@ def main() -> int:
         ("每次运行独立留痕（runs/）", t_run_traceability),
         ("WriterLock 并发写保护", t_writer_lock),
         ("fetch-subtitle 默认 dry-run 不联网", t_fetch_subtitle_dryrun),
+        ("素材三层机械隔离：AI 观察层语料触发 lint-quotes 硬失败（P1-a）", t_layer_isolation_lint_quotes),
+        ("video-understand 授权前披露单：隐私/成本/分层/无 --execute（P1-b）", t_video_understand_disclosure),
+        ("video-understand 零网络可 AST 验证 + 结果一致性（P1-b）", t_video_understand_zero_network),
         ("分词器双向回归（CJK bigram / 英文整词）", t_bigram_tokenizer),
         ("lexindex 中英文都能检索", t_lexindex_both_scripts),
         ("lexindex FTS5 + 中文 bigram + 邻接块", t_lexindex),

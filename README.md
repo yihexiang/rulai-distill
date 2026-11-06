@@ -11,7 +11,7 @@
 [![Release](https://img.shields.io/github/v/release/yihexiang/rulai-distill)](https://github.com/yihexiang/rulai-distill/releases)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![python](https://img.shields.io/badge/python-%E2%89%A53.10-blue)
-![regression](https://img.shields.io/badge/regression-130%20passing%20%2F%209%20skipped-brightgreen)
+![regression](https://img.shields.io/badge/regression-133%20passing%20%2B%20explicit%20skips-brightgreen)
 ![self-found defects](https://img.shields.io/badge/self--found%20defects-83-blue)
 ![cross-model reviews](https://img.shields.io/badge/cross--model%20reviews-3%2F3-brightgreen)
 ![stars](https://img.shields.io/github/stars/yihexiang/rulai-distill?style=social)
@@ -298,7 +298,7 @@ python3 scripts/td.py eval-kit utility \
 
 | 维度 | 状态 | 证据 |
 |---|---|---|
-| **机械可靠性** | ✅ 可信 | 130 项回归全绿；`gate` 默认要求交叉复核记录（实测生效）；`verify-quotes`/`anchor`/`lint-quotes` 均在真实素材上抓到过真问题；工具链在 **14 张真实卡**上实跑零崩溃、零假红 |
+| **机械可靠性** | ✅ 可信 | 133 项回归全绿；`gate` 默认要求交叉复核记录（实测生效）；`verify-quotes`/`anchor`/`lint-quotes` 均在真实素材上抓到过真问题；工具链在 **14 张真实卡**上实跑零崩溃、零假红 |
 | **产出正确性** | ⚠️ **已跑通闭环，仍强依赖素材** | `eval-kit` 已在 **14 张卡**上跑通**真实交叉复核**（独立答题 Agent + 2 个独立评分 Agent）：样本卡 `five-affairs` **93/A**、`musk-decisions` **90/A**，guoxue 四张 **93/95/96/96（A）**，开放素材 `lunyu-conduct` **95/A** / `mengzi-refutation` **98/A**，视频卡三张 **100/A**，另 `tongjian-decision-trace` / `hanfei-upward-advice` / `xunzi-learning-order` **100/A**（视频卡与后三张均双评分同分 100，按**质量下限**对待）。⚠️ 这些是**结构独立**而非组织独立（3 张人物卡另有 DeepSeek 跨模型复评，台账见 `docs/independent-recheck/`）；样本卡是精修展示件，**不能代表开放素材的普遍水平**；book-bundle 的 6 张 + 曾国藩在 Phase 4b 严格轮仅 **76–86/B 未过门禁**，**不计入这 14 张** |
 
 具体地说，这个项目目前**做不到**的事：
@@ -379,14 +379,15 @@ python3 scripts/td.py compile books/my-book --out ~/.workbuddy/skills/my-book --
 python3 scripts/td.py rollback ~/.workbuddy/skills/my-book --to latest
 ```
 
-**回归测试**：`python3 tests/e2e.py`（130 项，覆盖全部命令与 vendored 上游实跑）
+**回归测试**：`python3 tests/e2e.py`（133 项，覆盖全部命令与 vendored 上游实跑）
 
-> ⚠️ **「112 全绿」= 112 项实跑且通过，外加 9 项显式未运行，不是 121 项全跑。**
-> 这 9 项依赖作者工作区的真实外部素材（视频 TED 卡、人物马斯克卡、逐字稿等），
-> 在干净 clone 下**不会跑也不计入 112**（设 `RULAI_WORKSPACE=1` 才会跑）。
-> 它们出现在结尾「⚠️未运行 9 项」清单里——**那是「没跑」，不是「通过了」**，请勿当成绿报。
+> ⚠️ **「全绿」≠「所有检查都跑了一遍」**。结尾「⚠️未运行 N 项」是依赖作者工作区
+> 真实外部素材的检查（视频 TED 卡、人物马斯克卡、逐字稿等）：干净 clone 下**不会跑、
+> 也不计入通过数**（设 `RULAI_WORKSPACE=1` 且素材存在才会跑）。**那是「没跑」，不是
+> 「通过了」**，请勿当成绿报。实跑通过数与未运行条数一律以本地运行结果和
+> `docs/CLAIMS.md` 的 facts 段为准，本文不写死这些会变的数字。
 
-> 📖 命令速查见 [`references/command-cheatsheet.md`](./references/command-cheatsheet.md)（37 个子命令）；
+> 📖 命令速查见 [`references/command-cheatsheet.md`](./references/command-cheatsheet.md)（38 个子命令）；
 > 第一次用请看 [`GUIDE.md`](./GUIDE.md) —— 完整流程 + 真实输出 + 故障排查表。
 
 ---
@@ -453,12 +454,12 @@ rulai-distill/
 │   ├── sample-bundle/        ← 一份**真的跑完七阶段**的产物（含交叉复核报告）
 │   └── walkthrough.md        ← 真实跑通记录
 ├── scripts/
-│   ├── td.py                 ← 薄 CLI（37 个子命令）
+│   ├── td.py                 ← 薄 CLI（38 个子命令）
 │   ├── tdlib/                ← util / chunking / transcript / fetch / research / validate
 │   │                            / fidelity / evalkit / anchor / lintquotes / strategy / publish
 │   │                            / evals / evolve / promptc / upstream
 │   └── vendor/cangjie/       ← 上游 MIT 原件 + PROVENANCE.md（不改）
-└── tests/e2e.py              ← 端到端回归（130 项，双解释器各跑一遍）
+└── tests/e2e.py              ← 端到端回归（133 项，双解释器各跑一遍）
 ```
 
 ---
@@ -468,8 +469,9 @@ rulai-distill/
 1. **语义提取由 Agent 完成，不由脚本完成**。`td.py` 只做确定性文件操作。
 2. **FIDELITY 分数不是自证**。无独立 sub-agent 能力时标 `fallback-self`，
    `gate` **默认拒绝**（需显式 `--allow-fallback`），且按 80% 折算、维度 2 作废。
-3. **唯一联网的命令是 `fetch-subtitle`，且默认 dry-run**。其余 36 个子命令纯本地。
-   已有本地字幕时完全不需要联网。
+3. **唯一联网的命令是 `fetch-subtitle`，且默认 dry-run**。其余 37 个子命令纯本地。
+   `video-understand` 连联网能力都没有——只生成授权前披露单，绝不上传
+   （见 `references/media-pipeline.md` 3.6）。已有本地字幕时完全不需要联网。
 4. **`--force` 发布是技术债**。manifest 会留 `forced: true`，事后可审计。
 5. **触发评测不做 LLM 调用**（本包零网络）：Agent 作答、脚本判分，容错 0。
 6. **token 节省已量化，但**是**区间而不是倍数**。实测（tiktoken `cl100k_base`，
